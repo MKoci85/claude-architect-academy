@@ -32,9 +32,9 @@
                   "head": ["Parámetro", "Tipo", "Descripción"],
                   "rows": [
                     ["system", "string", "Instrucciones de contexto, rol y reglas que aplican desde el primer turno. Se envía como campo separado, no dentro de messages."],
-                    ["temperature", "number · 0.0–1.0", "Controla aleatoriedad. Valores bajos = respuestas predecibles y enfocadas. Valores altos = más variación. No disponible en Opus 4.8+."],
-                    ["top_p", "number · 0.0–1.0", "Muestreo por núcleo: considera solo el conjunto de tokens cuya probabilidad acumulada alcanza este umbral. No disponible en Opus 4.8+."],
-                    ["top_k", "integer", "Limita el muestreo a los k tokens más probables en cada paso. Técnica más antigua, rara vez necesaria. No disponible en Opus 4.8+."],
+                    ["temperature", "number · 0.0–1.0", "Controla aleatoriedad. Valores bajos = respuestas predecibles y enfocadas. Valores altos = más variación. Desde Opus 4.7 (incluye Opus 4.8): enviar un valor no-default devuelve error 400."],
+                    ["top_p", "number · 0.0–1.0", "Muestreo por núcleo: considera solo el conjunto de tokens cuya probabilidad acumulada alcanza este umbral. Desde Opus 4.7 (incluye Opus 4.8): enviar un valor no-default devuelve error 400."],
+                    ["top_k", "integer", "Limita el muestreo a los k tokens más probables en cada paso. Técnica más antigua, rara vez necesaria. Desde Opus 4.7 (incluye Opus 4.8): enviar un valor no-default devuelve error 400."],
                     ["stop_sequences", "array de strings", "Secuencias de texto que, al aparecer, detienen la generación de inmediato. Útil para cortar la respuesta en un punto exacto y predecible."],
                     ["stream", "boolean", "Si es true, la respuesta llega incrementalmente vía server-sent events en lugar de esperar el mensaje completo."],
                     ["metadata", "object", "Información adicional, como un user_id propio para rastrear uso por usuario final sin exponer datos identificables a Anthropic."]
@@ -61,6 +61,12 @@
                   "style": "info",
                   "title": "temperature, top_p y top_k son mutuamente excluyentes",
                   "content": "Usar más de uno a la vez produce resultados impredecibles. Para la mayoría de los casos de uso, ajustar solo temperature es suficiente."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Deprecados desde Opus 4.7: usar effort o prompting en su lugar",
+                  "content": "A partir de Opus 4.7 (y en Opus 4.8), enviar `temperature`, `top_p` o `top_k` con un valor distinto al default devuelve **error 400**. La recomendación oficial de Anthropic es omitir estos tres parámetros directamente y controlar el comportamiento del modelo con prompting o con el parámetro `output_config.effort` (`low`/`medium`/`high`/`xhigh`/`max`). Sonnet y Haiku no están afectados por esta restricción."
                 }
               ]
             }

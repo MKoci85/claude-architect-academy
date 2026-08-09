@@ -2,7 +2,7 @@
   "exam": {
     "title": "Claude Certified Architect (CCA-F) - Practice Exam",
     "language": "en",
-    "totalQuestions": 219,
+    "totalQuestions": 225,
     "domains": [
       {
         "id": 1,
@@ -731,7 +731,7 @@
         "id": 2,
         "name": "Claude Code Configuration and Workflows",
         "weight": 20,
-        "questionCount": 42,
+        "questionCount": 44,
         "questions": [
           {
             "text": "You design the CLAUDE.md hierarchy for a fintech monorepo with React frontend, Node.js backend, and shared libraries. You create a root CLAUDE.md and one inside the payments subdirectory. A developer in the payments directory asks what context Claude Code will load. What is the correct answer?",
@@ -824,13 +824,35 @@
           {
             "text": "The team creates a skill for compliance response formatting that should NOT inherit the current conversation history; it needs isolated context. Which frontmatter key enables this?",
             "options": [
-              "isolation: worktree",
+              "context: fork",
               "isolated: true",
               "inherit: false",
               "scope: independent"
             ],
             "correctAnswer": 0,
-            "explanation": "The isolation: worktree key in a skill's frontmatter runs the skill in an isolated git worktree with its own context, independent of the parent conversation. Other values like isolated: true or inherit: false are not valid Claude Code frontmatter keys."
+            "explanation": "The context: fork key in a skill's frontmatter runs the skill in an isolated sub-agent context, separate from the parent conversation, so its output doesn't pollute the main session. Values like isolated: true, inherit: false, or scope: independent are not valid Claude Code frontmatter options."
+          },
+          {
+            "text": "A developer wants to experiment with a customized version of the team's shared /code-review skill (defined in .claude/skills/code-review/) without changing how it behaves for the rest of the team. What is the recommended way to do this?",
+            "options": [
+              "Create a personal variant under a different name in ~/.claude/skills/ (e.g., code-review-experimental), leaving the project-scoped skill untouched.",
+              "Edit .claude/skills/code-review/SKILL.md directly and commit the changes once satisfied with the result.",
+              "Add a personal override block inside the same SKILL.md file guarded by the developer's username.",
+              "Duplicate the project-scoped skill into a new file in .claude/skills/ using the same name plus a version suffix."
+            ],
+            "correctAnswer": 0,
+            "explanation": "Personal skill customization belongs in the user-level ~/.claude/skills/ directory under a distinct name, so it doesn't collide with or alter the team's shared, version-controlled skill. Editing the shared file directly (B) changes behavior for every teammate immediately. There is no per-user override syntax within a single SKILL.md (C). Duplicating with a similar name inside the project directory (D) still risks confusion and does not isolate the experiment from the team."
+          },
+          {
+            "text": "A team's custom skill /deploy-service expects a service name as an argument (e.g., /deploy-service payments-api). Developers keep invoking it as a bare /deploy-service, forcing Claude to guess which service they mean. Which SKILL.md frontmatter option addresses this by prompting developers for the required parameter when they invoke the skill without one?",
+            "options": [
+              "argument-hint: \"<service-name>\" in the skill's frontmatter",
+              "context: fork in the skill's frontmatter",
+              "allowed-tools: [Bash] in the skill's frontmatter",
+              "Renaming the skill file to include the expected argument in its filename"
+            ],
+            "correctAnswer": 0,
+            "explanation": "argument-hint surfaces the expected parameter to the developer when they invoke a skill, prompting them for the required input instead of letting the model guess. context: fork isolates execution context and has nothing to do with argument prompting; allowed-tools restricts tool access; renaming the file has no effect on argument handling."
           },
           {
             "text": "The CTO fears the compliance skill could accidentally access unintended tools. What frontmatter key explicitly restricts the skill's tool scope?",
@@ -1616,7 +1638,7 @@
         "id": 4,
         "name": "Prompt Engineering and Structured Output",
         "weight": 20,
-        "questionCount": 41,
+        "questionCount": 43,
         "questions": [
           {
             "text": "A finance team builds a pipeline that extracts four fields from supplier invoices — vendor name, invoice date, total amount, and currency — and writes them to an ERP system. The current approach asks the model to return a JSON block in free text and parses it with regex. In production, ~12% of records fail parsing due to formatting inconsistencies. What is the most reliable architectural fix?",
@@ -2068,6 +2090,28 @@
             ],
             "correctAnswer": 0,
             "explanation": "Per-file passes guarantee uniform attention and consistent judgment on the same pattern regardless of which file it appears in, while a dedicated integration pass captures the cross-file concerns that per-file analysis alone would miss. Forcing single-file PRs (B) shifts the burden to developers without fixing the underlying attention-dilution problem, and is often impractical for genuinely related multi-file changes. Running three passes and requiring agreement across two (C) suppresses real findings that only one pass happens to catch, trading recall for a false sense of consistency. Increasing max_tokens (D) addresses output length, not the quality of attention paid to each file — the inconsistency is not caused by insufficient output space."
+          },
+          {
+            "text": "You submit a Message Batches API request containing 500 document extraction tasks. The batch completes with 480 successes and 20 failures. What is the correct way to identify exactly which source documents need to be resubmitted?",
+            "options": [
+              "Match each response's custom_id field back to the source document it was assigned when the batch was submitted.",
+              "Resubmit all 500 documents again, since the Batches API does not preserve request-to-response ordering.",
+              "Assume failures occurred in the same position they were submitted and resubmit that number of documents from the end of the original list.",
+              "Re-run the entire batch through the synchronous Messages API to get a clear list of failures."
+            ],
+            "correctAnswer": 0,
+            "explanation": "custom_id is the mechanism the Batches API provides for correlating each response with the request that produced it, so the 20 failures can be identified and resubmitted without touching the 480 successes. Resubmitting everything (B) discards the cost savings the batch already earned. Assuming a fixed position for failures (C) is unreliable since responses are not guaranteed to preserve submission order. Falling back to the synchronous API for the whole batch (D) is unnecessary and defeats the purpose of using batch processing in the first place."
+          },
+          {
+            "text": "Your extraction pipeline must guarantee results within a 30-hour SLA from upload, using the Message Batches API (up to a 24-hour processing window, with no guaranteed latency SLA). What submission cadence is necessary to meet this guarantee?",
+            "options": [
+              "Submit new batches at least every 4 hours, so the longest a document can wait for inclusion in a batch, plus the worst-case 24-hour processing window, still falls within the 30-hour SLA.",
+              "Submit one batch per day, since the Batches API's 24-hour window already fits within the 30-hour SLA regardless of when documents are uploaded.",
+              "Submit a batch only once volume reaches 1,000 documents, to maximize the 50% cost savings before worrying about timing.",
+              "Poll the batch status every 30 hours to confirm processing completed, then submit the next batch."
+            ],
+            "correctAnswer": 0,
+            "explanation": "Because the Batches API gives no latency guarantee within its 24-hour window, the submission cadence itself must be tight enough that the worst-case wait for inclusion plus the worst-case 24-hour processing time stays under the 30-hour SLA — a 4-hour cadence leaves a safe margin. Submitting once a day (B) ignores that a document uploaded right after the daily batch would wait most of a day before even entering the queue, risking a breach once the 24-hour window is added. Batching by volume alone (C) ignores the time constraint entirely. Polling cadence (D) doesn't address when batches are submitted, only when their status is checked."
           }
         ]
       },
@@ -2075,7 +2119,7 @@
         "id": 5,
         "name": "Context Management and Reliability",
         "weight": 15,
-        "questionCount": 34,
+        "questionCount": 36,
         "questions": [
           {
             "text": "A research agent is analyzing a 120-page regulatory document. Its system prompt contains a critical constraint: it must never cite sources older than 2022. After processing ~80 pages with dozens of tool calls, the agent begins citing 2019 sources without flagging them. No error is returned. What is the most likely structural cause of this regression?",
@@ -2450,6 +2494,28 @@
             ],
             "correctAnswer": 1,
             "explanation": "Averaging two conflicting values produces a number that neither source stated, which misrepresents the underlying uncertainty as false precision; the correct approach — as with any inter-source conflict — is to preserve both values with attribution, explicitly mark them as contested, and let a higher level of context (a human reader or reviewing orchestrator) decide how to interpret the discrepancy, rather than resolving it silently. This isn't a rounding issue (C) — the entire premise of manufacturing a blended number is the problem, not its precision. There is no principled reason to default to the government source for non-numeric claims (D); the fix generalizes to any conflict type, and defaulting to one source without disclosure has the same transparency problem as averaging."
+          },
+          {
+            "text": "A multi-agent codebase migration runs for several hours across many subagents. Partway through, the process crashes due to an infrastructure issue. The team wants to resume without re-running completed work or losing track of what each agent had already found. What state persistence design supports this kind of crash recovery?",
+            "options": [
+              "Each agent exports its state to a known location as it completes work, and the coordinator loads a manifest referencing those exports when resuming, injecting the relevant state into each agent's prompt.",
+              "Rely on the conversation history stored by the API provider to reconstruct all prior tool calls automatically after a crash.",
+              "Restart the entire migration from scratch, since partial agent state cannot be reliably persisted outside a single session.",
+              "Have each subagent write its full reasoning trace to a shared log file that the coordinator re-reads as raw text on resume."
+            ],
+            "correctAnswer": 0,
+            "explanation": "Structured state exports plus a manifest let the coordinator know exactly what was completed and inject only the relevant state into each agent's prompt on resume, avoiding redundant work. There is no automatic conversation reconstruction across a crash (B). Restarting from scratch (C) wastes the hours of completed work the exports were meant to preserve. A raw shared log of full reasoning traces (D) lacks the structure needed for the coordinator to know what's done versus in-progress, and dumping raw reasoning back into context reintroduces the verbosity problem structured exports are meant to avoid."
+          },
+          {
+            "text": "After a crash, the coordinator resumes a multi-agent codebase exploration using saved manifests. One subagent's exported state references analysis of a file that a teammate has since modified. What should the coordinator do?",
+            "options": [
+              "Inform the resuming agent about the specific file change so it can perform targeted re-analysis of just that file, rather than treating the entire prior exploration as stale.",
+              "Discard the entire manifest and restart the full exploration from zero, since any file change invalidates all prior findings.",
+              "Ignore the file change and proceed with the stale analysis, since re-analysis would cost additional tokens.",
+              "Pause the resume process indefinitely until every file in the codebase has been re-verified as unchanged."
+            ],
+            "correctAnswer": 0,
+            "explanation": "Manifests and state exports are only useful if stale entries are corrected precisely — informing the agent about the specific changed file lets it re-analyze just that part while reusing everything else that's still valid. Discarding everything (B) throws away work that is still accurate. Ignoring the change (C) risks the agent reasoning from outdated information. Requiring full re-verification of the entire codebase (D) defeats the purpose of persisted state in the first place."
           }
         ]
       }

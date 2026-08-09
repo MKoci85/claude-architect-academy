@@ -612,7 +612,7 @@ body {
 }
 
 .sidebar-group {
-  margin-bottom: 12px;
+  margin-bottom: 4px;
 }
 
 .sidebar-group-label {
@@ -621,12 +621,45 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--text-3);
-  padding: 6px 12px 4px;
+  padding: 6px 12px;
+}
+
+.sidebar-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  border: none;
+  background: var(--bg-hover);
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.12s, color 0.12s;
+}
+.sidebar-group-toggle:hover {
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-hover));
+  color: var(--text-1);
+}
+.sidebar-group.open .sidebar-group-toggle {
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-card));
+  color: var(--accent);
+  font-weight: 700;
+}
+.sidebar-group-chevron {
+  flex-shrink: 0;
+  transform: rotate(90deg);
+  transition: transform 0.15s, filter 0.15s;
+  color: var(--accent);
+  filter: drop-shadow(0 0 2px color-mix(in srgb, var(--accent) 45%, transparent));
+}
+.sidebar-group.open .sidebar-group-chevron {
+  transform: rotate(270deg);
 }
 
 .sidebar-item {
   text-align: left;
   border: none;
+  border-left: 2px solid transparent;
   background: none;
   font-family: inherit;
   font-size: 13px;
@@ -635,7 +668,7 @@ body {
   border-radius: 8px;
   cursor: pointer;
   line-height: 1.4;
-  transition: background 0.12s, color 0.12s;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
   width: 100%;
 }
 .sidebar-item:hover {
@@ -643,8 +676,9 @@ body {
   color: var(--text-1);
 }
 .sidebar-item.active {
-  background: color-mix(in srgb, var(--accent) 12%, var(--bg-card));
-  color: var(--accent);
+  background: var(--bg-hover);
+  border-left-color: var(--accent);
+  color: var(--text-1);
   font-weight: 600;
   cursor: default;
 }

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#20201e"/>
+      <stop offset="100%" stop-color="#161513"/>
+    </linearGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="1.6" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#bg)"/>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="none" stroke="#C96442" stroke-opacity="0.25" stroke-width="1"/>
+
+  <g filter="url(#glow)" fill="none" stroke="#E07A57" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- open book -->
+    <path d="M32 21 C29 18.5 24.5 17.5 20 18 V40 C24.5 39.5 29 40.5 32 43"/>
+    <path d="M32 21 C35 18.5 39.5 17.5 44 18 V40 C39.5 39.5 35 40.5 32 43"/>
+    <line x1="32" y1="21" x2="32" y2="43"/>
+  </g>
+
+  <g filter="url(#glow)" fill="none" stroke="#C96442" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="25 30 21.5 33.5 25 37"/>
+    <polyline points="39 30 42.5 33.5 39 37"/>
+  </g>
+</svg>

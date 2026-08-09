@@ -138,6 +138,28 @@
           "description": "MCP Connector, Extended Thinking, Files API"
         }
       ]
+    },
+    {
+      "title": "Claude en Google Vertex AI",
+      "description": "Curso de Anthropic Partner Academy sobre cómo integrar y desplegar Claude a través de Google Cloud Vertex AI",
+      "isSuper": true,
+      "items": [
+        {
+          "title": "Accediendo a Claude con la API",
+          "file": "vertex-acceso-api.json",
+          "description": "El ciclo completo de una request: servidor propio, request a Vertex, tokenización, embedding, contextualización y generación"
+        },
+        {
+          "title": "Prompt Evaluation",
+          "file": "vertex-prompt-evaluation.json",
+          "description": "La distinción entre prompt engineering y prompt evaluation"
+        },
+        {
+          "title": "Prompt Engineering",
+          "file": "vertex-prompt-engineering.json",
+          "description": "El ciclo iterativo de mejora de prompts apoyado en evaluación"
+        }
+      ]
     }
   ]
 }

@@ -106,9 +106,9 @@ function IconChevronLeft() {
   );
 }
 
-function IconChevronRight() {
+function IconChevronRight({ className }) {
   return (
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={className} width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 18l6-6-6-6" />
     </svg>
   );
@@ -620,6 +620,16 @@ function SubsectionContent({ sub, highlightTerm }) {
 
 function ArticleView({ article, sectionArticles, groupedSections, onArticle, onCollection, onHome, highlightTarget }) {
   const [flashIndex, setFlashIndex] = useState(null);
+  const [openSection, setOpenSection] = useState(null);
+
+  // Abre automáticamente la sección que contiene el artículo activo.
+  useEffect(() => {
+    if (!article || !groupedSections) return;
+    const active = groupedSections.find(section =>
+      section.articles.some(a => a.title === article.title && a.sectionTitle === article.sectionTitle)
+    );
+    if (active) setOpenSection(active.title);
+  }, [article, groupedSections]);
 
   // Al llegar desde un resultado de búsqueda: hace scroll a la subsección
   // encontrada y la resalta durante 2 segundos.
@@ -663,20 +673,29 @@ function ArticleView({ article, sectionArticles, groupedSections, onArticle, onC
             <span className={`badge ${badge}`}>{article.collectionTitle}</span>
           </div>
           <nav className="sidebar-nav">
-            {groupedSections.map(section => (
-              <div key={section.title} className="sidebar-group">
-                <div className="sidebar-group-label">{section.title}</div>
-                {section.articles.map(a => (
+            {groupedSections.map(section => {
+              const isOpen = openSection === section.title;
+              return (
+                <div key={section.title} className={`sidebar-group ${isOpen ? 'open' : ''}`}>
                   <button
-                    key={a.title}
-                    className={`sidebar-item ${isActive(a) ? 'active' : ''}`}
-                    onClick={() => !isActive(a) && onArticle(a)}
+                    className="sidebar-group-label sidebar-group-toggle"
+                    onClick={() => setOpenSection(isOpen ? null : section.title)}
                   >
-                    {a.title}
+                    <span>{section.title}</span>
+                    <IconChevronRight className="sidebar-group-chevron" />
                   </button>
-                ))}
-              </div>
-            ))}
+                  {isOpen && section.articles.map(a => (
+                    <button
+                      key={a.title}
+                      className={`sidebar-item ${isActive(a) ? 'active' : ''}`}
+                      onClick={() => !isActive(a) && onArticle(a)}
+                    >
+                      {a.title}
+                    </button>
+                  ))}
+                </div>
+              );
+            })}
           </nav>
         </aside>
       );
