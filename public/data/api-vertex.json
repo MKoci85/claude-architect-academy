@@ -1,0 +1,54 @@
+{
+  "sections": [
+    {
+      "title": "Claude en Vertex AI",
+      "articles": [
+        {
+          "title": "Usando Claude a través de Google Cloud Vertex AI",
+          "subsections": [
+            {
+              "title": "El cliente AnthropicVertex",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El SDK de Anthropic para Python incluye soporte específico para Vertex AI a través de la clase `AnthropicVertex`, que reemplaza al cliente estándar `Anthropic` cuando el destino es Google Cloud en lugar de la API directa de Anthropic. El resto de la interfaz (`client.messages.create()`, streaming, tool use) funciona igual que con el cliente estándar — solo cambia cómo se autentica y a dónde se enruta el request."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from anthropic import AnthropicVertex\n\nclient = AnthropicVertex(region=\"global\", project_id=\"your-project-id\")\nmodel = \"claude-sonnet-4@20250514\""
+                },
+                {
+                  "type": "text",
+                  "content": "`project_id` es el ID del proyecto de Google Cloud (visible en el selector de proyectos de la consola de GCP), y `region` indica en qué región de Vertex se procesa el request. La autenticación se resuelve con las credenciales de Google Cloud del entorno (ADC), no con una API key de Anthropic."
+                }
+              ]
+            },
+            {
+              "title": "Los IDs de modelo tienen otro formato",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "@ + fecha, no el nombre corto",
+                  "content": "En la API directa de Anthropic los modelos se identifican así: `claude-sonnet-4-6`. En Vertex AI, el mismo modelo se referencia con el formato `claude-sonnet-4@20250514` — el nombre del modelo seguido de `@` y la fecha de esa versión específica. Son IDs distintos para la misma familia de modelos; no son intercambiables entre plataformas."
+                }
+              ]
+            },
+            {
+              "title": "Disponibilidad por región",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "No todos los modelos están en todas las regiones",
+                  "content": "La disponibilidad de cada modelo varía según la región de Vertex. Antes de fijar una región en producción, conviene confirmar en la documentación de Vertex AI que el modelo elegido está habilitado ahí."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
