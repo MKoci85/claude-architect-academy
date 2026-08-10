@@ -657,6 +657,48 @@
                   "content": "**Antes de agregar un servidor MCP al scope project:**\n\n- Nunca hardcodear tokens o secrets en .mcp.json — siempre referencias $VAR.\n- Scope project para servidores del equipo, scope local para experimentos y credenciales personales.\n- El transporte SSE está deprecado — usá HTTP con OAuth 2.1 para servidores remotos.\n- Usá `deny: [\"mcp__servidor\"]` para bloquear servidores completos, o `mcp__servidor__tool` para tools específicas.\n- Con sandboxing activo, agregar el dominio del servidor HTTP a allowedDomains o el servidor fallará.\n- `~/.claude.json` (scope local/user de MCP) ≠ `.claude/settings.local.json` (settings del proyecto). Son archivos distintos."
                 }
               ]
+            },
+            {
+              "title": "Diseño de tools: capacidad acotada, no absoluta",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El error de diseño más caro en un servidor MCP no es de configuración sino de superficie: exponer una única tool de capacidad absoluta — un `run_command` que acepta cualquier string y lo ejecuta, o un acceso de lectura/escritura sin distinción a una base de datos completa — en vez de un conjunto acotado de capacidades con contrato explícito. Con permiso por defecto de ejecución automática, esa tool traslada todo el control de contención al modelo, que no conoce la política de aprobación de quien la invoca."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "label": "Tool de capacidad absoluta ❌",
+                    "items": [
+                      "Un solo `run_command` o acceso total a una base de datos, sin distinguir operación",
+                      "El modelo decide qué tan lejos llegar — la aplicación no tiene un punto de control",
+                      "Lectura y escritura, o consulta y borrado, comparten la misma aprobación",
+                      "Auditar qué se ejecutó exige parsear el string del comando después del hecho"
+                    ]
+                  },
+                  "right": {
+                    "label": "Tools acotadas por contrato ✅",
+                    "items": [
+                      "Capacidades separadas (`consultar_stock`, `actualizar_stock`, `eliminar_registro`)",
+                      "Cada tool declara su propio permiso — granular vía `mcp__servidor__tool`",
+                      "Las operaciones destructivas quedan en `ask` o `deny` sin afectar las de lectura",
+                      "El nombre de la tool invocada ya es el registro de auditoría"
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "kind": "warning",
+                  "icon": "🌀",
+                  "content": "No existe, documentado por Anthropic, un guardrail nativo contra recursión o loops dentro de un servidor MCP — por ejemplo, una tool que internamente vuelve a invocarse a sí misma sin condición de parada. Los únicos mecanismos de contención son operativos, no de diseño: un timeout por servidor (campo `timeout` en `.mcp.json`, en milisegundos) y un tope de tamaño de salida (`MAX_MCP_OUTPUT_TOKENS`, del orden de 25.000 tokens por llamada por defecto). Ninguno detiene una llamada destructiva de un solo paso; solo acotan cuánto tiempo o texto puede consumir un fallo ya en curso. Validar el servidor en sandbox antes de producción y fijar el timeout explícitamente no es opcional — es la única red de seguridad que existe para este caso."
+                },
+                {
+                  "type": "code",
+                  "lang": "json",
+                  "label": "Timeout explícito por servidor — la única red de seguridad ante un loop",
+                  "content": "{\n  \"mcpServers\": {\n    \"inventario\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@mcp/inventario\"],\n      \"timeout\": 30000\n    }\n  }\n}"
+                }
+              ]
             }
           ]
         }

@@ -359,6 +359,35 @@
                   "content": "Internamente, Claude concatena el request siempre en ese orden: primero las tools, después el system prompt, después los mensajes. Un breakpoint cachea todo lo que quedó antes de él según ese orden — no solo el bloque donde lo pusiste. Por eso un breakpoint en la última tool cachea las tools pero no el system prompt, mientras que un breakpoint al final del system prompt cachea tools + system juntos. Conviene poner los breakpoints en lo más estable (tools, luego system) y dejar los mensajes de la conversación sin marcar, porque cambian en cada turno."
                 },
                 {
+                  "type": "compare",
+                  "left": {
+                    "head": "Antipatrón: contenido dinámico antes del breakpoint",
+                    "rows": [
+                      {
+                        "key": "Diseño",
+                        "value": "La hora actual, el ID de usuario o los últimos turnos de la conversación se interpolan antes del bloque estático o antes del breakpoint de cache_control"
+                      },
+                      {
+                        "key": "Impacto técnico",
+                        "value": "Cualquier cambio ahí invalida el cache de todo lo que sigue, incluido el bloque estático de miles de tokens que sí era reutilizable — se paga el costo de escritura (~1.25x-2x) en cada request en vez del ~0.1x de una lectura de cache"
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Solución óptima: estratificar por frecuencia de cambio",
+                    "rows": [
+                      {
+                        "key": "Diseño",
+                        "value": "Lo más estable (tools, system prompt largo) primero con su breakpoint; las variables que cambian en cada request van al final, después del último breakpoint"
+                      },
+                      {
+                        "key": "Impacto técnico",
+                        "value": "El cambio de una variable dinámica no invalida nada cacheado; `cache_read_input_tokens` > 0 de forma consistente en requests repetidos"
+                      }
+                    ]
+                  }
+                },
+                {
                   "type": "callout",
                   "style": "warning",
                   "title": "cache_control exige la forma larga",

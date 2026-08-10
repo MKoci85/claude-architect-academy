@@ -286,6 +286,35 @@
                   "type": "code",
                   "language": "python",
                   "code": "tool_definir_subtareas = {\n    \"name\": \"definir_subtareas\",\n    \"description\": \"Define en qué subtareas independientes dividir un trabajo de investigación\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\"subtareas\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}},\n        \"required\": [\"subtareas\"],\n    },\n}\n\ndef investigar(pregunta_compleja):\n    # orquestador decide la división\n    plan = client.messages.create(\n        model=\"claude-opus-4-8\", max_tokens=400,\n        tools=[tool_definir_subtareas],\n        tool_choice={\"type\": \"tool\", \"name\": \"definir_subtareas\"},\n        messages=[{\"role\": \"user\", \"content\": f\"Dividí en 2 a 4 subtareas independientes: {pregunta_compleja}\"}],\n    )\n    subtareas = plan.content[0].input[\"subtareas\"]\n\n    resultados = asyncio.run(resolver_en_paralelo(subtareas))  # workers en paralelo\n\n    return pedir_a_claude(f\"Sintetizá estos hallazgos en una respuesta coherente:\\n{resultados}\")"
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Antipatrón: agente \"navaja suiza\"",
+                    "rows": [
+                      {
+                        "key": "Diseño",
+                        "value": "Un único agente monolítico con un system prompt kilométrico y 20-30 tools asignadas para cubrir todo el flujo — soporte técnico, facturación, FAQ, escalación — a la vez"
+                      },
+                      {
+                        "key": "Impacto técnico",
+                        "value": "Más tools compitiendo por selección aumenta la tasa de elección incorrecta; un system prompt que mezcla instrucciones para casos que no aplican al turno actual diluye la señal relevante y se factura como tokens de entrada en cada llamada"
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Solución óptima: routing / orchestrator-workers",
+                    "rows": [
+                      {
+                        "key": "Diseño",
+                        "value": "Un primer paso clasifica o divide dinámicamente la tarea y la deriva a agentes especializados, cada uno con system prompt y tool set acotados"
+                      },
+                      {
+                        "key": "Impacto técnico",
+                        "value": "Reduce el espacio de decisión por llamada y mejora la precisión de selección, a costa de más piezas para coordinar entre sí"
+                      }
+                    ]
+                  }
                 }
               ]
             },
@@ -306,6 +335,35 @@
                   "style": "warning",
                   "title": "Siempre definir un límite",
                   "content": "Sin `max_iteraciones` u otro mecanismo de corte, un agente puede entrar en loop infinito frente a un error persistente o una tarea mal definida. El límite no es un edge case: es parte del diseño."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Antipatrón: reintento autónomo sin validación",
+                    "rows": [
+                      {
+                        "key": "Diseño",
+                        "value": "El modelo reintenta un tool call fallido a ciegas, confiando solo en `max_iteraciones` como mecanismo de corte, sin validar el input antes de ejecutar la tool"
+                      },
+                      {
+                        "key": "Impacto técnico",
+                        "value": "Puede quemar todo el presupuesto de iteraciones — y de tokens de API — en llamadas malformadas antes de escalar; cada intento fallido es una llamada facturable completa"
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Solución óptima: validación de schema + escalación",
+                    "rows": [
+                      {
+                        "key": "Diseño",
+                        "value": "`strict: true` en la tool valida el input antes de ejecutarla; tras dos o tres fallos consecutivos del mismo tipo se escala a un humano en vez de seguir reintentando"
+                      },
+                      {
+                        "key": "Impacto técnico",
+                        "value": "El error se detecta antes de ejecutar la tool, no después; el límite de iteraciones queda como red de seguridad, no como único mecanismo de corte"
+                      }
+                    ]
+                  }
                 }
               ]
             },

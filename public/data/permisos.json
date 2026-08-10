@@ -449,6 +449,51 @@
               }
             }
           ]
+        },
+        {
+          "id": "permisos-cicd",
+          "title": "CI/CD: modo no interactivo sin bloqueos ni bypass inseguro",
+          "summary": "Invocar Claude Code en un pipeline sin resolver primero la interactividad produce jobs que se cuelgan esperando una aprobación que nadie puede dar — y la reacción más común, saltarse los permisos por completo, cambia ese problema por uno peor.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Un pipeline que invoca Claude Code como si fuera una sesión de terminal interactiva, sin `-p`/`--print`, se cuelga en el primer tool call que requiera confirmación — no hay nadie del lado del job para responder al prompt, y el step termina fallando por timeout de forma intermitente según qué acción dispare la confirmación en cada corrida. La reacción reflejo suele ser agregar `--dangerously-skip-permissions`: el bloqueo desaparece, pero también desaparece cualquier gate sobre comandos destructivos, justo en el entorno — CI — que normalmente tiene acceso a credenciales de despliegue y tokens de registry."
+            },
+            {
+              "type": "compare",
+              "title": "Bypass inseguro vs. configuración explícita",
+              "left": {
+                "label": "--dangerously-skip-permissions sin sandbox ❌",
+                "items": [
+                  "Resuelve el colgado, pero elimina todo gate de aprobación",
+                  "Cualquier comando que el modelo decida ejecutar corre sin control",
+                  "El entorno de CI suele tener acceso a secretos de despliegue",
+                  "No hay rastro de qué se aprobó y qué no — todo se aprueba"
+                ]
+              },
+              "right": {
+                "label": "--print + dontAsk + allowlist versionada ✅",
+                "items": [
+                  "`-p`/`--print` entra y sale sin prompts; con `--output-format json` la salida se integra estructuradamente al pipeline",
+                  "`--permission-mode dontAsk` deniega automáticamente lo no pre-aprobado, en vez de esperar una respuesta",
+                  "La superficie permitida vive en `.claude/settings.json`, versionada y revisable en code review",
+                  "`--bare` evita cargar hooks, skills o CLAUDE.md de la máquina local — misma corrida en cualquier runner"
+                ]
+              }
+            },
+            {
+              "type": "code",
+              "lang": "bash",
+              "label": "Invocación correcta en un pipeline",
+              "content": "claude --bare -p \"Revisá el diff y corregí los fallos de lint\" \\\n  --output-format json \\\n  --permission-mode dontAsk \\\n  --settings .claude/settings.json"
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "El bypass no es la solución, es cambiar de problema",
+              "content": "`--dangerously-skip-permissions` puede tener sentido dentro de un contenedor efímero y aislado, sin credenciales de producción montadas — nunca como respuesta genérica al colgado de un prompt de permiso. Si el pipeline necesita que una operación específica corra sin fricción, esa operación se agrega a `allow` en `settings.json`; no se apaga el sistema de permisos entero para evitar configurar una regla."
+            }
+          ]
         }
       ]
     }
