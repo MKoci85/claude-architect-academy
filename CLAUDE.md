@@ -25,7 +25,7 @@ public/data/*.json         ← one JSON file per collection/sub-collection
          ↓
 src/searchEngine.js        ← builds flat article index, scores full-text queries
          ↓
-src/App.jsx                ← all UI, routing, and state (single file, ~884 lines)
+src/App.jsx                ← all UI, routing, and state (single file, ~1060 lines)
 ```
 
 ### Content schema
@@ -59,7 +59,7 @@ src/App.jsx                ← all UI, routing, and state (single file, ~884 lin
 
 | File | Role |
 |---|---|
-| `src/App.jsx` | Entire app: all components, state, routing, block renderers |
+| `src/App.jsx` | Entire app: all components, state, routing, block renderers (~1060 lines) |
 | `src/searchEngine.js` | Full-text search with scoring (title 30pt, section 30pt, subsection 20pt, content 10pt, summary 20pt) |
 | `src/styles.css` | Tailwind directives + CSS custom properties for light/dark theme |
 | `public/data/content.json` | Master collection index |
