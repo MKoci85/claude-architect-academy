@@ -96,6 +96,27 @@
                   "style": "warning",
                   "title": "output_config.format es incompatible con prefill",
                   "content": "Ni falta hace combinarlo con prefill: ya resuelve el mismo problema de forma garantizada en lugar de probabilística."
+                },
+                {
+                  "type": "text",
+                  "content": "Existe una alternativa equivalente, más antigua que output_config.format y todavía muy usada: forzar tool_choice sobre una tool que no representa una acción real, sino solo el schema de los datos a extraer. Claude \"llama\" a esa tool con el JSON en su campo input en lugar de generarlo como texto."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "extraccion_schema = {\n    \"name\": \"registrar_datos_articulo\",\n    \"description\": \"Registra los datos estructurados extraídos del artículo\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"titulo\": {\"type\": \"string\"},\n            \"autor\": {\"type\": \"string\"},\n            \"puntos_clave\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        },\n        \"required\": [\"titulo\", \"autor\", \"puntos_clave\"],\n    },\n}\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": f\"Extraé los datos de este artículo:\\n\\n{texto_articulo}\"}],\n    tools=[extraccion_schema],\n    tool_choice={\"type\": \"tool\", \"name\": \"registrar_datos_articulo\"},\n)\n\ndatos = response.content[0].input  # ya es un dict, no hace falta json.loads()"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "No hay segundo request: no es un tool use real",
+                  "content": "Como la tool no ejecuta nada de verdad, el flujo termina apenas se lee `input` — no hay que armar un `tool_result` ni devolverlo a Claude. Esto la distingue del loop normal de tool use (ver El loop multi-turno), donde el `tool_result` es obligatorio para cerrar el turno."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "¿Tool forzada o output_config.format?",
+                  "content": "Ambas dan una garantía real de estructura. output_config.format es más directo cuando el único objetivo es JSON (sin el ruido conceptual de una \"tool\" que no hace nada) y es la opción más nueva. Forzar una tool con tool_choice sigue siendo preferible si el schema necesita `strict: true` con lógica de validación que ya tenías montada para tools reales, o en SDKs/integraciones donde tools ya es el mecanismo establecido para todo output estructurado."
                 }
               ]
             },

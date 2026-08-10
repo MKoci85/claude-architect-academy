@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Examen de Práctica — Claude Certified Architect (CCA-F)</title>
+<title>Examen de Práctica — Claude Certified Architect (CCAR-F)</title>
 <link rel="stylesheet" href="/practice/style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -47,6 +47,7 @@ const DOMAINS = [
 
 const EXAM_COUNTS = {1:16, 2:12, 3:11, 4:12, 5:9};
 const EXAM_LENGTH = Object.values(EXAM_COUNTS).reduce((a,b)=>a+b,0);
+const MIN_MULTI_RATIO = 0.22;
 const TOTAL_SECONDS = 120*60;
 
 function domainName(id){return DOMAINS.find(d=>d.id===id).name;}
@@ -57,15 +58,36 @@ let POOL_TOTAL = 0;
 
 function buildPoolsFromJson(data){
   data.exam.domains.forEach(dom=>{
-    POOLS[dom.id] = dom.questions.map(q=>({
-      domain: dom.id,
-      q: q.text,
-      options: q.options,
-      correct: q.correctAnswer,
-      explanation: q.explanation
-    }));
+    POOLS[dom.id] = dom.questions.map(q=>{
+      const isMulti = Array.isArray(q.correctAnswers);
+      return {
+        domain: dom.id,
+        q: q.text,
+        options: q.options,
+        type: isMulti ? 'multi' : 'single',
+        correct: isMulti ? q.correctAnswers.slice() : q.correctAnswer,
+        explanation: q.explanation
+      };
+    });
   });
   POOL_TOTAL = Object.values(POOLS).reduce((a,arr)=>a+arr.length,0);
+}
+
+/* Compara la respuesta dada contra la(s) correcta(s), sirve para preguntas single y multi */
+function answerMatches(q, ans){
+  if(q.type==='multi'){
+    const a = Array.isArray(ans) ? ans.slice().sort((x,y)=>x-y) : [];
+    const c = q.correct.slice().sort((x,y)=>x-y);
+    return a.length===c.length && a.every((v,idx)=>v===c[idx]);
+  }
+  return ans===q.correct;
+}
+
+/* Considera "respondida" una pregunta single con selección o multi con al menos una opción marcada */
+function isAnswered(ans){
+  if(ans===null || ans===undefined) return false;
+  if(Array.isArray(ans)) return ans.length>0;
+  return true;
 }
 
 function shuffle(arr){
@@ -94,13 +116,26 @@ function interleave(lists){
   return result;
 }
 
+/* Arma la muestra del dominio garantizando un piso de preguntas multi-respuesta, el resto se completa al azar con lo que quede del pool */
+function pickDomainQuestions(domainId, n){
+  const multiPool = shuffle(POOLS[domainId].filter(q=>q.type==='multi'));
+  const singlePool = shuffle(POOLS[domainId].filter(q=>q.type!=='multi'));
+  const guaranteed = Math.min(Math.ceil(n * MIN_MULTI_RATIO), multiPool.length, n);
+  const chosen = multiPool.slice(0, guaranteed);
+  const rest = shuffle(multiPool.slice(guaranteed).concat(singlePool));
+  chosen.push(...rest.slice(0, n - chosen.length));
+  return shuffle(chosen);
+}
+
 function sampleDomain(domainId, n){
-  const pool = shuffle(POOLS[domainId]);
-  return pool.slice(0, n).map(q=>{
-    const order = shuffle([0,1,2,3]);
+  const pool = pickDomainQuestions(domainId, n);
+  return pool.map(q=>{
+    const order = shuffle(q.options.map((_,idx)=>idx));
     const newOptions = order.map(i=>q.options[i]);
-    const newCorrect = order.indexOf(q.correct);
-    return {domain:q.domain, situation:q.situation, q:q.q, options:newOptions, correct:newCorrect, explanation:q.explanation};
+    const newCorrect = q.type==='multi'
+      ? q.correct.map(c=>order.indexOf(c)).sort((a,b)=>a-b)
+      : order.indexOf(q.correct);
+    return {domain:q.domain, situation:q.situation, q:q.q, type:q.type, options:newOptions, correct:newCorrect, explanation:q.explanation};
   });
 }
 
@@ -174,7 +209,16 @@ async function startExam(){
 }
 
 function selectOption(qIdx, optIdx){
-  state.answers[qIdx]=optIdx;
+  const q = QUESTIONS[qIdx];
+  if(q.type==='multi'){
+    const cur = state.answers[qIdx] ? state.answers[qIdx].slice() : [];
+    const pos = cur.indexOf(optIdx);
+    if(pos===-1) cur.push(optIdx); else cur.splice(pos,1);
+    cur.sort((a,b)=>a-b);
+    state.answers[qIdx] = cur;
+  } else {
+    state.answers[qIdx]=optIdx;
+  }
   render();
 }
 
@@ -194,7 +238,7 @@ function finishExam(){
 }
 
 function confirmFinish(){
-  const unanswered = state.answers.filter(a=>a===null).length;
+  const unanswered = state.answers.filter(a=>!isAnswered(a)).length;
   if(unanswered>0){
     const ok = confirm('Tenés '+unanswered+' pregunta(s) sin responder. ¿Querés finalizar igual?');
     if(!ok) return;
@@ -230,7 +274,7 @@ function computeScore(){
   DOMAINS.forEach(d=>byDomain[d.id]={correct:0,total:0});
   QUESTIONS.forEach((q,i)=>{
     byDomain[q.domain].total++;
-    if(state.answers[i]===q.correct){correct++; byDomain[q.domain].correct++;}
+    if(answerMatches(q, state.answers[i])){correct++; byDomain[q.domain].correct++;}
   });
   return {correct, total:TOTAL_Q, byDomain};
 }
@@ -254,15 +298,15 @@ function renderIntro(){
   return `
   <div class="hero">
     <p class="eyebrow">Examen de práctica no oficial</p>
-    <h1>Claude Certified Architect — Foundations (CCA-F)</h1>
-    <p class="subtitle">${EXAM_LENGTH} preguntas · 120 minutos · opción múltiple</p>
+    <h1>Claude Certified Architect — Foundations (CCAR-F)</h1>
+    <p class="subtitle">${EXAM_LENGTH} preguntas · 120 minutos · opción múltiple y multi-respuesta</p>
   </div>
   <div class="intro-cta">
     <button class="btn-primary" onclick="startExam()">Comenzar examen</button>
   </div>
   <div class="domain-list">${rows}</div>
   <div class="disclaimer">
-    Simulación no oficial basada en los dominios y pesos publicados por Anthropic para el CCA-F. No reproduce preguntas reales ni está afiliada a Anthropic. Pool de <b>${POOL_TOTAL} preguntas</b> — cada intento sortea ${EXAM_LENGTH} al azar con opciones mezcladas.
+    Simulación no oficial basada en los dominios y pesos publicados por Anthropic para el CCAR-F. No reproduce preguntas reales ni está afiliada a Anthropic. Pool de <b>${POOL_TOTAL} preguntas</b> — cada intento sortea ${EXAM_LENGTH} al azar con opciones mezcladas.
   </div>
   `;
 }
@@ -271,8 +315,10 @@ function renderExam(){
   const i = state.current;
   const q = QUESTIONS[i];
   const selected = state.answers[i];
+  const isMulti = q.type==='multi';
+  const selectedArr = isMulti ? (selected||[]) : null;
   const optionsHtml = q.options.map((opt,oi)=>{
-    const sel = selected===oi ? ' selected' : '';
+    const sel = isMulti ? (selectedArr.includes(oi)?' selected':'') : (selected===oi?' selected':'');
     const letter = String.fromCharCode(65+oi);
     return `<div class="option${sel}" onclick="selectOption(${i},${oi})">
       <span class="option-letter">${letter}</span>
@@ -282,12 +328,12 @@ function renderExam(){
 
   const navGrid = QUESTIONS.map((qq,qi)=>{
     let cls='navgrid-item';
-    if(state.answers[qi]!==null) cls+=' answered';
+    if(isAnswered(state.answers[qi])) cls+=' answered';
     if(qi===i) cls+=' current';
     return `<div class="${cls}" onclick="goTo(${qi})">${qi+1}</div>`;
   }).join('');
 
-  const answeredCount = state.answers.filter(a=>a!==null).length;
+  const answeredCount = state.answers.filter(a=>isAnswered(a)).length;
 
   return `
   <div class="topbar">
@@ -302,6 +348,7 @@ function renderExam(){
     <p class="q-number">Pregunta ${i+1}</p>
     ${q.situation?`<div class="situation-card"><span class="situation-label">Situación</span>${q.situation}</div>`:''}
     <p class="q-text">${q.q}</p>
+    ${isMulti?`<p style="margin:-8px 0 14px;font-size:14px;color:var(--text-secondary);font-style:italic;">Seleccioná exactamente ${q.correct.length} respuestas (${selectedArr.length} marcadas).</p>`:''}
     <div class="options">${optionsHtml}</div>
 
     ${state.navOpen?`<div class="navgrid-panel"><div class="navgrid">${navGrid}</div></div>`:''}
@@ -339,7 +386,7 @@ function renderResults(){
       <span class="num">${pct}%</span>
       <span class="lbl">${s.correct} / ${s.total} correctas</span>
     </div>
-    <p class="score-note">Anthropic no publica un puntaje de aprobación oficial conocido públicamente. Usá este resultado como referencia de tu dominio por área, no como predicción exacta de aprobar el examen real.</p>
+    <p class="score-note">Anthropic exige un puntaje escalado de 720 sobre 1000 para aprobar el examen real — no es un simple % de aciertos, ya que usan un modelo de escalado para equiparar dificultad entre distintas versiones del examen. Usá este resultado como referencia de tu dominio por área, no como predicción exacta de aprobar.</p>
   </div>
   <h1 style="font-size:20px;margin-bottom:18px;">Desempeño por dominio</h1>
   <div class="domain-bars">${domainBars}</div>
@@ -354,20 +401,24 @@ function renderResults(){
 function renderReview(){
   let items = QUESTIONS.map((q,i)=>({q,i}));
   if(state.reviewFilter==='incorrect'){
-    items = items.filter(({q,i})=>state.answers[i]!==q.correct);
+    items = items.filter(({q,i})=>!answerMatches(q, state.answers[i]));
   }
 
   const html = items.map(({q,i})=>{
     const selected = state.answers[i];
-    const isCorrect = selected===q.correct;
+    const isMulti = q.type==='multi';
+    const selArr = isMulti ? (Array.isArray(selected)?selected:[]) : null;
+    const isCorrect = answerMatches(q, selected);
     const optsHtml = q.options.map((opt,oi)=>{
       let cls='review-opt';
-      if(oi===q.correct) cls+=' correct';
-      else if(oi===selected) cls+=' incorrect-selected';
+      const isCorrectOpt = isMulti ? q.correct.includes(oi) : oi===q.correct;
+      const isSelectedOpt = isMulti ? selArr.includes(oi) : oi===selected;
+      if(isCorrectOpt) cls+=' correct';
+      else if(isSelectedOpt) cls+=' incorrect-selected';
       const letter = String.fromCharCode(65+oi);
       return `<div class="${cls}">${letter}. ${opt}</div>`;
     }).join('');
-    const icon = selected===null
+    const icon = !isAnswered(selected)
       ? '<span class="result-icon bad">SIN RESPONDER</span>'
       : (isCorrect ? '<span class="result-icon ok">CORRECTA</span>' : '<span class="result-icon bad">INCORRECTA</span>');
 
@@ -388,7 +439,7 @@ function renderReview(){
   </div>
   <div class="filter-row">
     <button class="filter-btn${state.reviewFilter==='all'?' active':''}" onclick="setReviewFilter('all')">Todas (${QUESTIONS.length})</button>
-    <button class="filter-btn${state.reviewFilter==='incorrect'?' active':''}" onclick="setReviewFilter('incorrect')">Solo errores (${QUESTIONS.filter((q,i)=>state.answers[i]!==q.correct).length})</button>
+    <button class="filter-btn${state.reviewFilter==='incorrect'?' active':''}" onclick="setReviewFilter('incorrect')">Solo errores (${QUESTIONS.filter((q,i)=>!answerMatches(q, state.answers[i])).length})</button>
   </div>
   ${html || '<p style="color:var(--text-secondary);">No hay preguntas que coincidan con este filtro. ¡Buen trabajo!</p>'}
   <div class="actions" style="margin-top:24px;">

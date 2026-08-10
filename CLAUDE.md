@@ -80,14 +80,17 @@ src/App.jsx                ← all UI, routing, and state (single file, ~884 lin
 2. Register it in `public/data/content.json` (either as a new `collections` entry or as an item inside an existing `isSuper` collection).
 3. No build step needed — files are fetched at runtime.
 
-## CCA-F Exam — Reference for Practice Content
+## CCAR-F Exam — Reference for Practice Content
+
+Official credential: **Claude Certified Architect – Foundations**, exam code **CCAR-F** (formerly referred to as CCA-F).
 
 ### Logistics
-- **60 questions**, multiple choice A/B/C/D, single correct answer
+- **60 questions**, multiple-choice AND multiple-response — some items require selecting more than one correct answer; each item states how many responses to select
 - **120 minutes** (2 min/question)
-- **Passing score:** 720/1000 (scaled)
-- **Platform:** Anthropic Skilljar, proctored online; results immediate with domain breakdown
-- **Validity:** 2 years; retakes allowed with mandatory waiting period
+- **Passing score:** scaled score of 720 on a 100–1,000 scale
+- **Exam fee:** $125 USD per attempt
+- **Platform:** Pearson VUE (online proctored or test center); registration and scheduling via the Anthropic Partner Academy. Score report: pass/fail with scaled score plus percent-correct by domain
+- **Validity:** 12 months from the date the credential is awarded; free non-proctored renewal assessment if done on time. Retake waiting periods after a failed attempt: 14 days (1st fail), 30 days (2nd), 90 days (3rd); max 4 attempts per rolling 12-month period
 
 ### Real exam format: scenario-based
 The exam uses **6 production scenarios**; each candidate gets **4 chosen at random**, each generating ~10 integrated questions. Questions within a scenario share a narrative thread — they are NOT grouped by domain.
@@ -113,12 +116,12 @@ Since 4 of 6 scenarios are random, any scenario skipped carries a real risk of c
 | Context Management & Reliability | 15% | 9 |
 
 ### What the exam tests
-- **Is NOT:** memorization, definitions, drag-and-drop, multi-select, labs
+- **Is NOT:** memorization, definitions, drag-and-drop, labs
 - **Is:** real production systems + architectural decision-making; sophisticated distractors (options that are technically correct but wrong for that specific scenario); tradeoffs like cost vs. reliability, subagents vs. single loop, when to escalate to a human
 - **Difficulty:** harder than expected from theory alone; candidates without hands-on Claude system experience consistently underperform
 
 ### Practice question authoring guidelines
-`examen_cca_f_en.json` holds 200 domain-grouped questions (good conceptual bank). When writing new questions:
+`examen_cca_f_en.json` holds 265 domain-grouped questions (good conceptual bank), including multiple-response items (`correctAnswers` array + `selectCount`) alongside single-answer ones (`correctAnswer`). Each exam attempt guarantees a minimum ~22% multiple-response floor per domain (see `MIN_MULTI_RATIO` in `public/practice/index.html`). When writing new questions:
 
 1. **Frame as a production scenario** — describe a real system, team, or constraint, then ask for a decision or diagnosis.
 2. **One unambiguously best answer** — the correct option must be best *for that context*, not just technically true in isolation.

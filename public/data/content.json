@@ -6,7 +6,7 @@
     },
     {
       "title": "AI Fluency: Framework & Foundations",
-      "description": "El framework 4D (Delegation, Description, Discernment, Diligence) recomendado por Anthropic como preparación para el examen CCA-F",
+      "description": "El framework 4D (Delegation, Description, Discernment, Diligence) recomendado por Anthropic como preparación para el examen CCAR-F",
       "file": "ai-fluency.json"
     },
     {
@@ -80,7 +80,7 @@
         {
           "title": "Tool Use",
           "file": "api-tool-use.json",
-          "description": "Schemas, loop multi-turno, errores, tool_choice, paralelismo, herramientas del servidor, seguridad"
+          "description": "Schemas, loop multi-turno, errores, tool_choice, paralelismo, herramientas del servidor, computer use, seguridad"
         },
         {
           "title": "RAG y búsqueda agéntica",
@@ -108,11 +108,6 @@
           "description": "Tool use, token counting, vision, batch processing"
         },
         {
-          "title": "Endpoints Principales",
-          "file": "api-endpoints.json",
-          "description": "Referencia de endpoints REST con ejemplos"
-        },
-        {
           "title": "Guías Prácticas",
           "file": "api-practicas.json",
           "description": "Streaming, manejo de errores, rate limiting, mejores prácticas"
@@ -135,7 +130,7 @@
         {
           "title": "Capacidades Avanzadas",
           "file": "api-avanzado.json",
-          "description": "MCP Connector, Extended Thinking, Files API"
+          "description": "MCP Connector, Extended Thinking, Files API, Managed Agents"
         },
         {
           "title": "Claude en Vertex AI",

@@ -56,6 +56,50 @@
                   ]
                 }
               ]
+            },
+            {
+              "title": "Consultar modelos disponibles vía API",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El catálogo de arriba es un snapshot: cambia cuando Anthropic lanza o retira modelos. `GET /v1/models` devuelve la lista de modelos habilitados para tu API key en el momento del request, en vez de depender de una tabla fija en tu código o en esta página."
+                },
+                {
+                  "type": "code",
+                  "language": "bash",
+                  "code": "curl https://api.anthropic.com/v1/models \\\n  -H \"x-api-key: $ANTHROPIC_API_KEY\" \\\n  -H \"anthropic-version: 2023-06-01\""
+                },
+                {
+                  "type": "text",
+                  "content": "Tiene sentido usarlo cuando:"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🔀",
+                      "title": "Selector dinámico",
+                      "description": "Poblar un dropdown de modelos en una UI de admin sin hardcodear ni redeployar cada vez que sale un modelo nuevo."
+                    },
+                    {
+                      "icon": "✅",
+                      "title": "Validar antes de fijar un ID",
+                      "description": "Confirmar que un model ID sigue vigente antes de guardarlo en configuración, en vez de descubrir en producción que fue retirado."
+                    },
+                    {
+                      "icon": "🔔",
+                      "title": "Detectar modelos nuevos",
+                      "description": "Un job periódico que chequea si apareció un modelo más nuevo, sin depender de leer el changelog manualmente."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "No hace falta para el uso normal",
+                  "content": "Para simplemente llamar a Claude con un modelo conocido, `GET /models` no es necesario — el `model` se pasa directo en `POST /messages`. Este endpoint importa solo cuando el catálogo en sí es parte de la lógica de la aplicación (selección dinámica, validación, monitoreo de disponibilidad)."
+                }
+              ]
             }
           ]
         },

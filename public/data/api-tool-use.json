@@ -118,6 +118,18 @@
                       "description": "No solo la herramienta en su conjunto. Especialmente en parámetros anidados o con formato específico (fechas, IDs con patrón fijo)."
                     }
                   ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Atajo práctico: pedirle el schema a Claude",
+                  "content": "En vez de escribir el JSON Schema a mano, funciona bien pegarle a Claude la función ya implementada junto con la documentación de tool use y pedirle que genere el `input_schema` siguiendo esas buenas prácticas. Sigue haciendo falta revisar el resultado (nombres de parámetros, cuáles son `required`, si conviene un `enum`), pero ahorra la parte mecánica."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Type safety en Python: ToolParam",
+                  "content": "El SDK de Python expone `anthropic.types.ToolParam` para tipar el diccionario de la herramienta y detectar errores de forma (claves mal escritas, tipos inválidos) en tiempo de desarrollo en vez de en el request. No cambia el comportamiento en runtime — es una ayuda de tipado, no un requisito funcional."
                 }
               ]
             }
@@ -171,6 +183,12 @@
                   "type": "code",
                   "language": "python",
                   "code": "def ejecutar_tool(nombre, input_):\n    if nombre == \"obtener_clima\":\n        return f\"18°C en {input_['ciudad']}\"\n    raise ValueError(f\"tool desconocida: {nombre}\")\n\ndef conversar(mensajes, tools):\n    while True:\n        response = client.messages.create(\n            model=\"claude-sonnet-4-6\", max_tokens=800, tools=tools, messages=mensajes\n        )\n        mensajes.append({\"role\": \"assistant\", \"content\": response.content})\n\n        if response.stop_reason != \"tool_use\":\n            return response\n\n        resultados_tools = []\n        for bloque in response.content:\n            if bloque.type == \"tool_use\":\n                salida = ejecutar_tool(bloque.name, bloque.input)\n                resultados_tools.append({\n                    \"type\": \"tool_result\", \"tool_use_id\": bloque.id, \"content\": salida\n                })\n        mensajes.append({\"role\": \"user\", \"content\": resultados_tools})"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El follow-up request también necesita `tools`",
+                  "content": "Aunque Claude probablemente no vuelva a llamar una herramienta en el siguiente turno, hay que seguir pasando `tools=tools` en cada request de la conversación (como hace el loop de arriba), no solo en el primero. Sin la lista de schemas, Claude no tiene forma de interpretar los bloques `tool_use`/`tool_result` que ya están en el historial de mensajes."
                 }
               ]
             }
@@ -219,45 +237,149 @@
                   "type": "code",
                   "language": "python",
                   "code": "from concurrent.futures import ThreadPoolExecutor\n\n# forzar que use exactamente una herramienta, sin paralelismo\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=500,\n    tools=[tool_clima, tool_calendario],\n    tool_choice={\"type\": \"any\", \"disable_parallel_tool_use\": True},\n    messages=mensajes,\n)\n\n# ejecución paralela de múltiples tool_use en un mismo turno\nbloques_tool_use = [b for b in response.content if b.type == \"tool_use\"]\n\nwith ThreadPoolExecutor() as pool:\n    salidas = list(pool.map(lambda b: ejecutar_tool(b.name, b.input), bloques_tool_use))\n\nresultados_tools = [\n    {\"type\": \"tool_result\", \"tool_use_id\": b.id, \"content\": salida}\n    for b, salida in zip(bloques_tool_use, salidas)\n]\nmensajes.append({\"role\": \"user\", \"content\": resultados_tools})  # un solo mensaje"
-                }
-              ]
-            },
-            {
-              "title": "Herramientas del servidor",
-              "blocks": [
-                {
-                  "type": "text",
-                  "content": "Anthropic provee herramientas que se ejecutan directamente en sus servidores, sin que tu aplicación tenga que implementar nada."
                 },
                 {
-                  "type": "cards",
-                  "items": [
-                    {
-                      "icon": "🔍",
-                      "title": "web_search",
-                      "description": "Búsqueda web administrada por Anthropic. Claude decide cuándo buscar y la cita. Se puede limitar la cantidad de búsquedas por request y filtrar dominios."
-                    },
-                    {
-                      "icon": "💻",
-                      "title": "bash",
-                      "description": "Sesión de shell persistente: instalar paquetes, correr scripts, manejar git. El estado se mantiene entre comandos. Combinar con directorio de trabajo acotado."
-                    },
-                    {
-                      "icon": "✏️",
-                      "title": "str_replace_based_edit_tool",
-                      "description": "Comandos estandarizados para ver y editar archivos (view, str_replace, insert, create). Evita inventar tu propio esquema de edición."
-                    },
-                    {
-                      "icon": "⚙️",
-                      "title": "code_execution",
-                      "description": "Entorno Python aislado (sandbox de Anthropic) para calcular, generar gráficos, procesar archivos. Estado separado del tool bash."
-                    }
-                  ]
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Los modelos Claude 4 y posteriores ya paralelizan por defecto",
+                  "content": "Cuando una tarea se beneficia de varias llamadas independientes (ej. clima de tres ciudades), Claude 4+ agrupa los `tool_use` en un mismo turno sin necesidad de ningún truco adicional. Si aun así conviene reforzar ese comportamiento, la vía recomendada es un system prompt explícito, no un rediseño de las herramientas."
+                },
+                {
+                  "type": "code",
+                  "language": "text",
+                  "code": "For maximum efficiency, whenever you need to perform multiple independent\noperations, invoke all relevant tools simultaneously rather than sequentially."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "El patrón \"batch tool\" quedó obsoleto",
+                  "content": "Antes de Claude 4, Sonnet 3.7 tendía a espaciar llamadas independientes en turnos separados incluso con `tool_choice: auto`. El workaround documentado en su momento era declarar una tool meta (`batch_tool`) que recibía una lista de invocaciones y las despachaba internamente, para forzar a Claude a agruparlas en un único bloque. Con los modelos actuales esto ya no hace falta: agrega una herramienta y una capa de indirección extra sin beneficio real. Si el paralelismo natural no alcanza, ajustar el system prompt (arriba) es la alternativa vigente."
                 },
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "# web_search: Anthropic ejecuta la búsqueda, sin código de tu parte\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=800,\n    tools=[{\"type\": \"web_search_20250305\", \"name\": \"web_search\", \"max_uses\": 3}],\n    messages=[{\"role\": \"user\", \"content\": \"¿Qué pasó esta semana con las tasas en Argentina?\"}],\n)\n\n# bash + editor de texto: agente de codificación completo\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=1024,\n    tools=[\n        {\"type\": \"text_editor_20250728\", \"name\": \"str_replace_based_edit_tool\"},\n        {\"type\": \"bash_20250124\", \"name\": \"bash\"},\n    ],\n    messages=[{\"role\": \"user\", \"content\": \"Instalá 'requests' y corré los tests de /tests\"}],\n)"
+                  "code": "# El shape del workaround (histórico, pre-Claude 4): una tool meta que envuelve\n# a las demás. Claude le manda TODAS las llamadas juntas como una sola invocación\n# de batch_tool, en vez de emitir varios bloques tool_use nativos.\nbatch_tool_schema = {\n    \"name\": \"batch_tool\",\n    \"description\": \"Invoke multiple other tool calls simultaneously\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"invocations\": {\n                \"type\": \"array\",\n                \"description\": \"The tool calls to invoke\",\n                \"items\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"name\": {\"type\": \"string\"},       # nombre de la tool real a invocar\n                        \"arguments\": {\"type\": \"object\"},  # sus argumentos\n                    },\n                },\n            }\n        },\n    },\n}\n\n# El código propio despacha cada invocación de la lista contra el router habitual (run_tool)\n# y devuelve un único resultado combinado como tool_result del batch_tool."
+                },
+                {
+                  "type": "text",
+                  "content": "Si Claude no paraleliza cuando debería, la causa casi siempre es una de estas tres:"
+                },
+                {
+                  "type": "table",
+                  "columns": [
+                    "Causa",
+                    "Cómo se detecta / corrige"
+                  ],
+                  "rows": [
+                    [
+                      "`tool_result` en mensajes separados",
+                      "Cada `tool_result` de un mismo turno debe ir en un único mensaje `user`. Mandarlos por separado le enseña al modelo, turno a turno, a dejar de paralelizar."
+                    ],
+                    [
+                      "Prompting débil",
+                      "El system prompt por defecto puede no ser suficiente para tareas con muchas llamadas independientes; usar la instrucción explícita de arriba."
+                    ],
+                    [
+                      "Llamadas con dependencia real entre sí",
+                      "Si una tool necesita el resultado de otra, agruparlas fuerza fallos artificiales. Se resuelve con `is_error: true` en la que no se pudo ejecutar (Claude la reintenta) o aclarando en el prompt: \"agrupá solo las llamadas independientes entre sí\"."
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Herramientas provistas por Anthropic",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Anthropic define el schema de estas herramientas para no tener que escribirlo a mano, pero eso no dice quién ejecuta la acción. Se dividen en dos grupos según eso."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Server tools (Anthropic ejecuta)",
+                    "rows": [
+                      { "key": "web_search", "value": "Búsqueda web administrada por Anthropic. Claude decide cuándo buscar y la cita. Se puede limitar la cantidad de búsquedas por request y filtrar dominios." },
+                      { "key": "code_execution", "value": "Entorno Python aislado (sandbox de Anthropic) para calcular, generar gráficos, procesar archivos. Estado separado del tool bash." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Client tools (tu app ejecuta)",
+                    "rows": [
+                      { "key": "bash", "value": "Claude solo devuelve el comando a correr en un tool_use. Tu aplicación mantiene la sesión de shell persistente (estado entre comandos) y ejecuta cada comando en su propia infraestructura." },
+                      { "key": "str_replace_based_edit_tool", "value": "Claude pide comandos estandarizados (view, str_replace, create, insert) pero vos escribís el handler que realmente lee y escribe los archivos." },
+                      { "key": "computer (beta)", "value": "Claude pide acciones de mouse/teclado/captura sobre un desktop; tu app las ejecuta en un entorno real (ver detalle más abajo)." }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "bash y el editor de texto NO corren en los servidores de Anthropic",
+                  "content": "A diferencia de web_search y code_execution, Claude \"no ejecuta nada\" con estas dos: solo emite el tool_use con el comando o la operación pedida (ej. `{\"command\": \"str_replace\", \"path\": \"primes.py\", ...}`). Tu código es responsable de correrlo (leer/escribir el archivo real, correr el comando de shell real) y devolver el tool_result — el mismo loop que cualquier tool custom. Que el schema venga dado por Anthropic no exime de implementar la ejecución ni de las validaciones de seguridad de siempre (sandboxing, paths permitidos, límites de recursos)."
+                },
+                {
+                  "type": "text",
+                  "content": "El `type` exacto de la herramienta cambia según el modelo — para modelos Claude 4 y posteriores es `text_editor_20250728` (con soporte para `max_characters`, que trunca archivos grandes al verlos); versiones previas usaban `text_editor_20250124` (Claude 3.7 Sonnet) o `text_editor_20241022` (Claude 3.5 Sonnet), con comandos ligeramente distintos. Conviene resolver la versión según el modelo en uso en vez de hardcodearla."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "# web_search: Anthropic ejecuta la búsqueda, sin código de tu parte\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=800,\n    tools=[{\"type\": \"web_search_20250305\", \"name\": \"web_search\", \"max_uses\": 3}],\n    messages=[{\"role\": \"user\", \"content\": \"¿Qué pasó esta semana con las tasas en Argentina?\"}],\n)\n\n# bash + editor de texto: SOLO define el schema, la ejecución sigue siendo tuya\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=1024,\n    tools=[\n        {\"type\": \"text_editor_20250728\", \"name\": \"str_replace_based_edit_tool\"},\n        {\"type\": \"bash_20250124\", \"name\": \"bash\"},\n    ],\n    messages=[{\"role\": \"user\", \"content\": \"Instalá 'requests' y corré los tests de /tests\"}],\n)\n# response.content puede traer tool_use con name=\"str_replace_based_edit_tool\" o \"bash\" —\n# tu propio handler los despacha igual que cualquier tool custom, con el mismo loop\n# de tool_use / tool_result visto en El loop multi-turno."
+                }
+              ]
+            },
+            {
+              "title": "web_search en detalle",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Además de `max_uses`, el schema acepta `allowed_domains` o `blocked_domains` (mutuamente excluyentes — declarar ambos devuelve 400) y `user_location` para localizar resultados por ciudad/país/timezone."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "web_search_schema = {\n    \"type\": \"web_search_20250305\",\n    \"name\": \"web_search\",\n    \"max_uses\": 5,\n    \"allowed_domains\": [\"nih.gov\"],  # o blocked_domains, no ambos\n}"
+                },
+                {
+                  "type": "text",
+                  "content": "La respuesta trae una secuencia de bloques encadenados, no un único resultado: texto donde Claude anuncia que va a buscar, un `server_tool_use` con la query exacta que ejecutó, un `web_search_tool_result` con la lista de resultados (`url`, `title`, `page_age`, `encrypted_content`), y finalmente texto de respuesta con un array `citations` por cada afirmación respaldada por un resultado (`url`, `title`, `cited_text`, `encrypted_index`)."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "encrypted_content y encrypted_index viajan tal cual en el historial",
+                  "content": "Al reenviar el historial en un turno siguiente, los bloques de `web_search_tool_result` (con su `encrypted_content`) y las `citations` (con su `encrypted_index`) tienen que ir exactamente como se recibieron, sin modificarlos. La API los usa para reconstruir los resultados de búsqueda en el contexto de Claude; si faltan o están alterados, el request falla con 400. Es el mismo principio que preservar `response.content` completo en tool use normal, pero acá con un campo extra que es fácil recortar por accidente si se intenta \"limpiar\" la respuesta antes de guardarla."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Costo: aparte de los tokens",
+                  "content": "Cada búsqueda se cobra $10 cada 1000 usos, además del costo de tokens del contenido que trae. Relevante para decidir `max_uses` en tareas de investigación comparativa (varias entidades) donde Claude puede encadenar 10+ búsquedas si no se lo limita."
+                }
+              ]
+            },
+            {
+              "title": "Computer Use: control de un desktop",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Computer use le da a Claude captura de pantalla y control de mouse/teclado sobre un entorno de escritorio: puede ver qué hay en pantalla, mover el cursor, hacer clic, escribir y usar atajos de teclado. Es una herramienta beta y, como bash y el editor de texto, es una client tool — Anthropic define las acciones, pero tu aplicación tiene que correrlas de verdad sobre un entorno real (típicamente un contenedor con un display virtual X11 vía Xvfb)."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.beta.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=1024,\n    betas=[\"computer-use-2025-11-24\"],\n    tools=[{\n        \"type\": \"computer_20251124\",\n        \"name\": \"computer\",\n        \"display_width_px\": 1024,\n        \"display_height_px\": 768,\n        \"display_number\": 1,\n    }],\n    messages=[{\"role\": \"user\", \"content\": \"Guardá una captura del navegador en el escritorio\"}],\n)\n# el bloque tool_use trae acciones como {\"action\": \"screenshot\"} o\n# {\"action\": \"left_click\", \"coordinate\": [412, 227]} — tu app las traduce\n# a operaciones reales sobre el entorno y devuelve el tool_result"
+                },
+                {
+                  "type": "text",
+                  "content": "El agent loop es el mismo patrón de siempre (Claude pide una acción, tu código la ejecuta, el resultado vuelve como tool_result), con la particularidad de que la mayoría de los tool_result son screenshots — Claude \"ve\" el efecto de cada acción antes de decidir la siguiente."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Riesgos propios de esta herramienta",
+                  "content": "Anthropic marca computer use como una superficie de riesgo distinta al resto de las tools, especialmente si el entorno tiene acceso a internet: contenido de una página (texto, imágenes) puede contener instrucciones encubiertas que intenten anular las tuyas — el mismo problema de prompt injection que con resources de MCP, pero acá con capacidad de ejecutar clics y escritura real. Recomendación oficial: entorno dedicado y con mínimo privilegio, permisos explícitos para acciones sensibles, límites estrictos de sitios accesibles, y confirmación humana antes de acciones con consecuencias reales (pagos, aceptar términos, enviar datos)."
                 }
               ]
             },

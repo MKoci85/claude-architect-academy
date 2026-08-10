@@ -164,6 +164,15 @@
                   "style": "info",
                   "title": "Errores automáticos",
                   "content": "Si la función decorada lanza una excepción, el SDK la traduce automáticamente en un resultado de error hacia el cliente, de forma análoga al is_error: true del módulo de tool use."
+                },
+                {
+                  "type": "text",
+                  "content": "El docstring describe la tool completa, pero cuando una tool tiene varios parámetros cada uno necesita su propia descripción — ahí es donde entra `Field` de Pydantic como valor por defecto del parámetro, en vez de un type hint simple."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from pydantic import Field\n\n@mcp.tool(description=\"Reemplaza una porción de texto en un documento existente.\")\ndef edit_document(\n    doc_id: str = Field(description=\"Id del documento a editar\"),\n    texto_viejo: str = Field(description=\"Texto a reemplazar. Debe coincidir exacto, espacios incluidos.\"),\n    texto_nuevo: str = Field(description=\"Texto que reemplaza al anterior\"),\n):\n    if doc_id not in docs:\n        raise ValueError(f\"No existe el documento {doc_id}\")\n    docs[doc_id] = docs[doc_id].replace(texto_viejo, texto_nuevo)"
                 }
               ]
             },
@@ -178,6 +187,12 @@
                   "type": "code",
                   "language": "python",
                   "code": "@mcp.resource(\"config://politica-devoluciones\")\ndef politica_devoluciones() -> str:\n    return open(\"politica.md\").read()\n\n# resource template: la parte {cliente_id} se completa al leerlo\n@mcp.resource(\"facturas://{cliente_id}\")\ndef facturas_de_cliente(cliente_id: str) -> str:\n    return obtener_facturas_pendientes(cliente_id)\n\n# En el cliente:\n# resultado = await session.read_resource(\"facturas://C-4521\")"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Resource vs. tool: quién decide cuándo se busca el dato",
+                  "content": "Una tool la invoca Claude, a mitad de la conversación, cuando decide que la necesita — control del modelo. Un resource lo lee tu aplicación, típicamente antes de llamar a Claude, y lo inyecta directo en el contexto del mensaje — control tuyo. Ejemplo típico: un selector de \"@documento\" en un chat usa un resource directo para listar los documentos disponibles (autocompletar) y un resource template para traer el contenido del elegido, sin gastar un turno de tool use en pedirle al modelo que decida buscarlo."
                 }
               ]
             },
@@ -192,6 +207,30 @@
                   "type": "code",
                   "language": "python",
                   "code": "@mcp.prompt()\ndef responder_reclamo(reclamo: str, tono: str = \"empático\") -> str:\n    return f\"Redactá una respuesta en tono {tono} a este reclamo:\\n\\n{reclamo}\"\n\n# En el cliente:\n# session.list_prompts()       → lista los disponibles\n# session.get_prompt(nombre, argumentos)  → devuelve el texto armado"
+                },
+                {
+                  "type": "text",
+                  "content": "Devolver un string, como arriba, alcanza para el caso simple. Pero un prompt puede devolver una lista de mensajes (`list[base.Message]`) en vez de un string suelto — eso habilita, por ejemplo, incluir turnos de ejemplo (few-shot) como parte de la plantilla, no solo una instrucción."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from mcp.server.fastmcp.prompts import base\n\n@mcp.prompt()\ndef formatear_documento(doc_id: str = Field(description=\"Id del documento a formatear\")) -> list[base.Message]:\n    prompt = f\"\"\"Reformateá el documento {doc_id} a sintaxis Markdown: agregá\nheaders, bullets y tablas donde corresponda. Usá la tool 'edit_document' para\naplicar los cambios.\"\"\"\n    return [base.UserMessage(prompt)]"
+                },
+                {
+                  "type": "table",
+                  "columns": ["Primitiva", "Quién controla", "Cuándo se dispara"],
+                  "rows": [
+                    ["Tools", "El modelo", "Claude decide en medio de la conversación que necesita ejecutar algo"],
+                    ["Resources", "Tu aplicación", "Tu código decide cuándo buscar el dato — autocompletar, o contexto inyectado antes del request"],
+                    ["Prompts", "El usuario", "El usuario dispara la plantilla a propósito — un botón, un slash command"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Tres capas, tres dueños",
+                  "content": "Es la misma distinción de control que resource-vs-tool de más arriba, pero completando el cuadro con prompts: tools sirven al modelo (le dan capacidades), resources sirven a la aplicación (le dan datos), prompts sirven al usuario (le dan atajos a workflows ya probados). Ante la duda de qué primitiva usar, la pregunta correcta es \"¿quién necesita decidir que esto pase — el modelo, mi código, o el usuario?\", no \"¿qué tan compleja es la lógica?\"."
                 }
               ]
             }
@@ -243,6 +282,46 @@
                   "style": "info",
                   "title": "El inspector: probar antes de integrar",
                   "content": "Antes de conectar un servidor a una aplicación real, mcp dev servidor_mcp.py abre el MCP Inspector: lista las tools, resources y prompts expuestos, y deja invocarlos a mano para verificar que el servidor responde como se espera."
+                }
+              ]
+            },
+            {
+              "title": "El flujo completo: tu servidor en el medio",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Cuando no se usa mcp_servers (ver más abajo), hay dos protocolos distintos en juego, y tu servidor de aplicación es el que media entre ambos: el loop de tool use de la Messages API con Claude, y el protocolo cliente-servidor de MCP con el cliente MCP. Claude nunca habla con el servidor MCP directamente — solo ve tool schemas y tool results, sin saber de dónde salieron."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Descubrir tools",
+                      "body": "Tu servidor le pide al cliente MCP la lista de herramientas (`list_tools()` → internamente un `ListToolsRequest` al servidor MCP, que responde con `ListToolsResult`)."
+                    },
+                    {
+                      "title": "Primer request a Claude",
+                      "body": "Tu servidor arma el mensaje del usuario + esas tools (traducidas al formato de `tools` de la Messages API) y llama a `client.messages.create()`."
+                    },
+                    {
+                      "title": "Claude pide usar una tool",
+                      "body": "La respuesta trae un bloque `tool_use`. Tu servidor lo detecta y sabe que tiene que ejecutar esa tool antes de poder responderle al usuario."
+                    },
+                    {
+                      "title": "Ejecutar vía el cliente MCP",
+                      "body": "Tu servidor le pasa el nombre y los argumentos al cliente MCP (`call_tool()` → `CallToolRequest` al servidor MCP), que hace la llamada real al servicio externo y devuelve un `CallToolResult`."
+                    },
+                    {
+                      "title": "Segundo request a Claude",
+                      "body": "Tu servidor empaqueta ese resultado como `tool_result` y se lo reenvía a Claude en un nuevo turno, junto con todo el historial anterior. Recién ahí Claude genera la respuesta final para el usuario."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Es el mismo loop de tool use de siempre",
+                  "content": "Esta secuencia no es un mecanismo nuevo: es el loop estándar de tool use (ver API de Claude → Tool Use → Loop completo) con un detalle extra — en vez de ejecutar la función vos mismo dentro de tu proceso, delegás esa ejecución al cliente MCP, que a su vez habla con el servidor MCP. MCP resuelve quién escribe y mantiene las tools; el loop de conversación con Claude no cambia."
                 }
               ]
             },

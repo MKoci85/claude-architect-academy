@@ -1,6 +1,6 @@
-# Claude Web — Hub de Conocimiento CCA-F
+# Claude Web — Hub de Conocimiento CCAR-F
 
-> Documentación en español sobre **Claude Code** y la **API de Claude**, con búsqueda full-text y examen de práctica para la certificación **CCA-F**.
+> Documentación en español sobre **Claude Code** y la **API de Claude**, con búsqueda full-text y examen de práctica para la certificación **CCAR-F** (Claude Certified Architect – Foundations).
 
 ---
 
@@ -17,7 +17,7 @@ Un hub editorial estático — sin backend, sin base de datos — que centraliza
 | **Colecciones curadas** | Documentación organizada por dominio, con secciones, artículos y bloques de contenido enriquecido |
 | **Búsqueda full-text** | Puntuación por relevancia en títulos, resúmenes y cuerpo — con debounce de 280 ms |
 | **Tema claro / oscuro** | Detección automática de preferencia del sistema, alternancia persistente |
-| **Examen de práctica** | 60 preguntas con pesos oficiales por dominio, temporizador de 120 min e informe de resultados |
+| **Examen de práctica** | 60 preguntas (opción múltiple y multi-respuesta) con pesos oficiales por dominio, temporizador de 120 min e informe de resultados |
 
 ---
 
@@ -32,12 +32,13 @@ npm run preview   # previsualiza el build local
 
 ---
 
-## Examen de práctica CCA-F
+## Examen de práctica CCAR-F
 
 Disponible en `/practice`. Simula las condiciones reales del examen:
 
-- **60 preguntas** aleatorias extraídas de un pool categorizado por dominio
+- **60 preguntas** aleatorias extraídas de un pool de 265, categorizado por dominio
 - **Distribución ponderada** que respeta los pesos oficiales de cada área
+- **Opción múltiple y multi-respuesta**, con un piso garantizado de ~22% de preguntas multi-respuesta por dominio en cada intento
 - **Temporizador** de 120 minutos (2 min/pregunta)
 - **Informe de rendimiento** por dominio al finalizar
 - **Mapa de navegación** para saltar entre preguntas

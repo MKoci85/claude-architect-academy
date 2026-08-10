@@ -55,6 +55,16 @@
                   "style": "info",
                   "title": "Recomendación práctica",
                   "content": "Empezar por el workflow más simple que resuelva el problema, y subir en complejidad —hacia un agente más autónomo— solo cuando la tarea realmente lo requiere. La mayoría de los casos de uso se resuelven con workflows bien diseñados."
+                },
+                {
+                  "type": "text",
+                  "content": "El tradeoff no es solo estructural, también es operativo: un workflow es fácil de evaluar porque cada paso es conocido de antemano —se puede testear paso por paso y comparar contra un resultado esperado—, mientras que un agente es más difícil de instrumentar porque la secuencia de tools que va a ejecutar no está fijada; evaluarlo requiere mirar el resultado final más que cada paso intermedio. Esto se traduce en una tasa de éxito típicamente más baja para agentes frente a workflows equivalentes, a cambio de la flexibilidad de manejar inputs que un workflow no anticipó."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "El usuario quiere que funcione, no que sea un agente",
+                  "content": "Un agente es más interesante técnicamente, pero el objetivo de ingeniería es resolver el problema de forma confiable. Nadie valora que el sistema sea 'un agente sofisticado' si falla una de cada diez veces — valora que funcione. Por eso la recomendación por defecto es workflows, y agentes solo cuando el camino no se puede predefinir."
                 }
               ]
             }
@@ -74,6 +84,21 @@
                   "type": "code",
                   "language": "python",
                   "code": "import asyncio\nfrom anthropic import AsyncAnthropic\n\nasync_client = AsyncAnthropic()\n\nasync def analizar_reseña(texto):\n    r = await async_client.messages.create(\n        model=\"claude-haiku-4-5-20251001\", max_tokens=100,\n        messages=[{\"role\": \"user\", \"content\": f\"Sentimiento (positivo/negativo/neutro) de: {texto}\"}],\n    )\n    return r.content[0].text\n\nasync def analizar_todas(reseñas):\n    tareas = [analizar_reseña(r) for r in reseñas]\n    return await asyncio.gather(*tareas)  # todas las llamadas en paralelo\n\n# 100 reseñas en paralelo vs. 100 llamadas secuenciales: diferencia de minutos"
+                },
+                {
+                  "type": "text",
+                  "content": "El ejemplo anterior es paralelización sobre **items independientes**: el mismo prompt corre muchas veces sobre datos distintos. Existe una segunda variante —**sectioning**— que paraleliza sobre **aspectos distintos del mismo input**: en vez de un único prompt gigante que le pide a Claude evaluar una pieza contra seis criterios de material a la vez (metal, polímero, cerámica...), se lanzan seis requests especializados en paralelo —cada uno con su propio prompt enfocado en un solo criterio— y un request final de agregación sintetiza los resultados en una recomendación."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "MATERIALES = [\"metal\", \"polímero\", \"cerámica\", \"compuesto\", \"elastómero\", \"madera\"]\n\nasync def evaluar_material(imagen, material):\n    r = await async_client.messages.create(\n        model=\"claude-sonnet-4-6\", max_tokens=300,\n        messages=[{\"role\": \"user\", \"content\": [\n            imagen,\n            {\"type\": \"text\", \"text\": f\"Evaluá esta pieza específicamente para {material}: resistencia, costo, manufactura.\"}\n        ]}],\n    )\n    return {\"material\": material, \"analisis\": r.content[0].text}\n\nasync def recomendar_material(imagen):\n    evaluaciones = await asyncio.gather(*[evaluar_material(imagen, m) for m in MATERIALES])\n    # paso de agregación: un request final compara todas las evaluaciones\n    return pedir_a_claude(f\"Con estas evaluaciones por material, recomendá la mejor opción:\\n{evaluaciones}\")"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Por qué no un solo prompt con seis criterios",
+                  "content": "Pedirle a Claude que evalúe seis criterios distintos en una sola llamada lo obliga a repartir atención entre análisis que no se relacionan entre sí. Separarlos en requests especializados —cada uno con su propio prompt enfocado en un solo criterio— mejora el foco, permite optimizar cada prompt de forma independiente, y escala mejor: agregar un séptimo material no complica los prompts existentes."
                 }
               ]
             },
@@ -115,6 +140,21 @@
                   "style": "info",
                   "title": "Error propagation en pipelines secuenciales",
                   "content": "Este es el otro sentido del término 'error propagation' (el primero es a nivel de excepciones de una tool individual, ver Tool Use → Manejo de errores). Acá se refiere a calidad: sin un gate intermedio, un output débil del primer paso —un outline mal armado, requisitos mal extraídos— fluye sin corrección a través de todos los pasos siguientes y se amplifica, en vez de detectarse a tiempo. Los gates después de pasos de alto apalancamiento (como la extracción de requisitos) son la mitigación; más pasos secuenciales sin checkpoints no mejora la calidad, solo da más oportunidades para que un error temprano se propague."
+                },
+                {
+                  "type": "text",
+                  "content": "Chaining también resuelve un problema distinto: prompts que acumulan una lista larga de restricciones negativas (\"no menciones que sos una IA\", \"no uses emojis\", \"no escribas en tono cringe\"...) y que el modelo termina violando de forma intermitente pese a que cada restricción individual es clara. En vez de seguir agregando negativas al mismo prompt, se separa en dos pasos: un primer request que genera el contenido aceptando que puede quedar imperfecto, y un segundo request de revisión focalizado solo en detectar y corregir esas violaciones puntuales."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "borrador = pedir_a_claude(prompt_original_con_restricciones)\n\nprompt_revision = \"\"\"Revisá el artículo de abajo. Seguí estos pasos:\n1. Identificá dónde el texto revela que el autor es una IA y quitalo\n2. Encontrá y eliminá todos los emojis\n3. Localizá tono cringe y reemplazalo por texto que escribiría un redactor técnico\n\nArtículo:\n{borrador}\"\"\"\n\nversion_final = pedir_a_claude(prompt_revision.format(borrador=borrador))"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Por qué funciona mejor que apilar restricciones",
+                  "content": "Un prompt con muchas restricciones negativas obliga al modelo a vigilar todas simultáneamente mientras genera contenido nuevo — la atención se reparte. Separar generación y revisión le da al segundo paso una tarea acotada y verificable (buscar violaciones específicas en un texto ya escrito), que es más fácil de cumplir de forma consistente que evitarlas todas durante la generación."
                 }
               ]
             },
@@ -151,6 +191,90 @@
         {
           "title": "Agentes autónomos",
           "subsections": [
+            {
+              "title": "Herramientas abstractas y componibles",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Para agentes de propósito abierto —donde no se sabe de antemano qué secuencia de pasos va a necesitar la tarea— conviene dar herramientas primitivas y de propósito general en vez de herramientas atadas a una tarea específica. Claude Code es el ejemplo más claro: no tiene una tool `refactor` ni `run_tests` ni `install_dependencies`. Tiene `bash`, `glob`, `grep`, `read`, `write`, `edit`, `webfetch` — y compone esas primitivas para resolver tareas que nunca se anticiparon explícitamente al diseñar el tool set."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Herramientas específicas de tarea",
+                    "rows": [
+                      {
+                        "key": "Ejemplo",
+                        "value": "`refactor_function`, `run_test_suite`, `install_dependencies`"
+                      },
+                      {
+                        "key": "Ventaja",
+                        "value": "Cada llamada es predecible y fácil de auditar/loggear."
+                      },
+                      {
+                        "key": "Límite",
+                        "value": "Solo cubre las tareas que el diseñador anticipó. Una tarea nueva requiere agregar una tool nueva."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Primitivas componibles",
+                    "rows": [
+                      {
+                        "key": "Ejemplo",
+                        "value": "`bash`, `read`, `write`, `edit`, `grep`, `glob`"
+                      },
+                      {
+                        "key": "Ventaja",
+                        "value": "El agente combina las mismas primitivas para tareas no anticipadas: instalar dependencias es leer el archivo de config y correr el comando adecuado por `bash`."
+                      },
+                      {
+                        "key": "Límite",
+                        "value": "Requiere que el modelo razone bien sobre cómo combinarlas; menos predecible por llamada individual."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Este eje no es lo mismo que granularidad de acción",
+                  "content": "No contradice la guía de Tool Use sobre dividir una tool genérica en tools específicas por acción (ver Tool Use → Granularidad). Ese eje aplica dentro de un dominio ya conocido y cerrado (inventario, facturación): ahí dividir por acción reduce payloads malformados. Este eje aplica al diseño del tool set completo de un agente de propósito abierto: ahí lo que importa es que las primitivas sean generales y combinables, no que cada tarea tenga su propia tool dedicada."
+                }
+              ]
+            },
+            {
+              "title": "Inspección del entorno",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude opera a ciegas frente al efecto real de sus acciones: cuando ejecuta una tool, no sabe automáticamente qué cambió en el entorno como consecuencia. Sin un mecanismo para observar el resultado, no puede confirmar si la acción funcionó ni decidir bien el próximo paso. Por eso toda acción de un agente debería ir seguida de algún tipo de inspección que confirme el resultado obtenido, no solo asumirlo."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Computer use: screenshot tras cada acción",
+                      "body": "Ya cubierto en Tool Use → Computer Use: la tool devuelve automáticamente un screenshot después de cada click o tecleo, porque es la única forma que tiene Claude de saber si el click navegó a otra página, abrió un menú, o no tuvo efecto."
+                    },
+                    {
+                      "title": "Leer antes de escribir",
+                      "body": "Antes de modificar un archivo, primero hay que leer su contenido actual. No es un paso opcional: sin ver el estado real del archivo, una edición puede pisar código existente o asumir una estructura que ya cambió."
+                    },
+                    {
+                      "title": "Verificación guiada por system prompt",
+                      "body": "Para tareas sin un tool de verificación dedicado, el system prompt puede instruir pasos de inspección explícitos: correr whisper.cpp para confirmar el timing de subtítulos, extraer frames con FFmpeg para revisar la calidad visual, chequear tamaño y formato de un archivo antes de subirlo."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "No es lo mismo que un gate de workflow",
+                  "content": "Los gates de la sección Chaining son checkpoints programáticos entre pasos fijos de un pipeline predefinido. La inspección del entorno es más general: aplica a cualquier acción de cualquier agente, incluso en un loop abierto sin pasos predefinidos, porque el problema no es la calidad del output sino que Claude no tiene otra forma de percibir el efecto de sus propias acciones."
+                }
+              ]
+            },
             {
               "title": "Orchestrator-workers",
               "blocks": [

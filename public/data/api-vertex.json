@@ -45,6 +45,26 @@
                   "content": "La disponibilidad de cada modelo varía según la región de Vertex. Antes de fijar una región en producción, conviene confirmar en la documentación de Vertex AI que el modelo elegido está habilitado ahí."
                 }
               ]
+            },
+            {
+              "title": "Embeddings: el modelo de Vertex, no Claude",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude no genera embeddings (ver API de Claude → RAG y búsqueda agéntica → Embeddings y búsqueda vectorial). Cuando la app ya corre sobre Vertex, la opción más directa no es sumar un proveedor externo: Google Cloud expone su propio modelo de embeddings, `text-embedding-005`, a través del SDK `google-genai` — separado del cliente `AnthropicVertex` que se usa para generación de texto."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from google import genai\n\n# cliente distinto al AnthropicVertex: este es el SDK de Google GenAI\nembed_client = genai.Client(project=\"your-project-id\", location=\"global\", vertexai=True)\n\ndef generar_embedding(texto):\n    response = embed_client.models.embed_content(model=\"text-embedding-005\", contents=texto)\n    return [e.values for e in response.embeddings] if response.embeddings else []"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Dos SDKs, dos propósitos",
+                  "content": "`AnthropicVertex` (SDK de Anthropic) genera texto con Claude. `genai.Client` (SDK de Google) genera embeddings con el modelo de Google. Son librerías y credenciales independientes que conviven en la misma app — no hay que forzar todo a pasar por un único cliente."
+                }
+              ]
             }
           ]
         }

@@ -135,7 +135,7 @@ function highlightMatch(text, q) {
   return escaped.replace(new RegExp(`(${escapedQ})`, 'ig'), '<mark>$1</mark>');
 }
 
-function TopBar({ search, onSearch, searchResults, onResultClick, theme, onToggle, onLogoClick }) {
+function TopBar({ search, onSearch, searchResults, onResultClick, theme, onToggle, onLogoClick, onExercises }) {
   const wrapRef = useRef(null);
   const [open, setOpen] = useState(false);
 
@@ -229,6 +229,9 @@ function TopBar({ search, onSearch, searchResults, onResultClick, theme, onToggl
 
       <button className="theme-btn" onClick={onToggle} title="Cambiar tema">
         {theme === 'dark' ? '☀' : '☾'}
+      </button>
+      <button className="exercises-btn" onClick={onExercises}>
+        Ejercicios
       </button>
       <a className="exam-btn" href="/practice" target="_blank" rel="noopener noreferrer">
         Examen de práctica
@@ -374,7 +377,7 @@ function HomeView({ collections, articles, activeCollection, onCollection, onArt
             Domina Claude Code<br /><em>y su ecosistema</em>
           </h1>
           <p className="home-hero-sub">
-            Documentación en español sobre Claude Code, la API de Anthropic, MCP, hooks, subagentes y más&nbsp;— preparada para el examen CCA-F.
+            Documentación en español sobre Claude Code, la API de Anthropic, MCP, hooks, subagentes y más&nbsp;— preparada para el examen CCAR-F.
           </p>
         </div>
       )}
@@ -773,6 +776,80 @@ function ArticleView({ article, sectionArticles, groupedSections, onArticle, onC
   );
 }
 
+// ── ExercisesView ──────────────────────────────────────────
+
+function ExercisesView({ data, activeIndex, onSelect, onHome }) {
+  if (!data) {
+    return (
+      <div className="exercises-scope">
+        <div className="article-layout">
+          <div className="article-view">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <div className="skeleton" style={{ height: 14, width: 120 }} />
+              <div className="skeleton" style={{ height: 32, width: '70%' }} />
+              <div className="skeleton" style={{ height: 16, width: '90%' }} />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const exercises = data.exercises || [];
+  const ex = exercises[activeIndex] || exercises[0];
+
+  return (
+    <div className="exercises-scope">
+      <div className="article-layout fade-in">
+        <aside className="article-sidebar">
+          <button className="sidebar-home-btn" onClick={onHome}>← Inicio</button>
+          <div className="sidebar-collection-label">
+            <span className="badge exercises-badge">Ejercicios prácticos</span>
+          </div>
+          <nav className="sidebar-nav">
+            {exercises.map((e, i) => (
+              <button
+                key={e.id}
+                className={`sidebar-item ${i === activeIndex ? 'active' : ''}`}
+                onClick={() => i !== activeIndex && onSelect(i)}
+              >
+                <span className="exercise-num">{e.number}</span> {e.title}
+              </button>
+            ))}
+          </nav>
+        </aside>
+
+        <div className="article-view">
+          <div className="breadcrumb">
+            <button className="breadcrumb-btn breadcrumb-home" onClick={onHome}>Inicio</button>
+            <IconChevronRight />
+            <span className="breadcrumb-current">Ejercicio {ex.number}</span>
+          </div>
+
+          <h1 className="article-title">{ex.title}</h1>
+          {ex.objective && <p className="article-lead">{ex.objective}</p>}
+
+          {ex.subsections && ex.subsections.length > 0 ? (
+            <div>
+              {ex.subsections.map((sub, i) => (
+                <div key={i} className="sub-group">
+                  {sub.title && <div className="subsection-title">{sub.title}</div>}
+                  <SubsectionContent sub={sub} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="empty-state">
+              <div style={{ fontSize: 32 }}>⊘</div>
+              <p>Resolución en camino — próximamente.</p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── App ────────────────────────────────────────────────────
 
 export default function App() {
@@ -787,6 +864,8 @@ export default function App() {
   const [view, setView] = useState('home');
   const [activeArticle, setActiveArticle] = useState(null);
   const [highlightTarget, setHighlightTarget] = useState(null);
+  const [exercisesData, setExercisesData] = useState(null);
+  const [activeExercise, setActiveExercise] = useState(0);
 
   // Cargar índice desde JSON
   useEffect(() => {
@@ -892,6 +971,16 @@ export default function App() {
     setActiveCollection('Todos');
   }, []);
 
+  const goExercises = useCallback(() => {
+    setView('ejercicios');
+    if (!exercisesData) {
+      fetch('/data/ejercicios.json')
+        .then(r => r.json())
+        .then(setExercisesData)
+        .catch(() => {});
+    }
+  }, [exercisesData]);
+
   const goHomeToCollection = useCallback((collectionTitle) => {
     setView('home');
     setActiveArticle(null);
@@ -922,8 +1011,16 @@ export default function App() {
         theme={theme}
         onToggle={toggleTheme}
         onLogoClick={goHome}
+        onExercises={goExercises}
       />
-      {view === 'home' ? (
+      {view === 'ejercicios' ? (
+        <ExercisesView
+          data={exercisesData}
+          activeIndex={activeExercise}
+          onSelect={setActiveExercise}
+          onHome={goHome}
+        />
+      ) : view === 'home' ? (
         <HomeView
           collections={collections}
           articles={displayedArticles}

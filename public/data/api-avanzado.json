@@ -148,7 +148,33 @@
                   "type": "callout",
                   "style": "info",
                   "title": "Thinking con tool use multi-turno",
-                  "content": "`budget_tokens` debe ser menor que `max_tokens`. Presupuestos mayores a 32K generalmente no mejoran la calidad. En conversaciones multi-turno con tools, el bloque `thinking` incluye una `signature` que lo autentica y debe reenviarse intacto dentro del mensaje `assistant`. Modificarlo, truncarlo o eliminarlo invalida la firma y produce un error."
+                  "content": "`budget_tokens` tiene un mínimo de 1024 tokens (la API rechaza valores menores) y debe ser menor que `max_tokens`. Presupuestos mayores a 32K generalmente no mejoran la calidad. En conversaciones multi-turno con tools, el bloque `thinking` incluye una `signature` que lo autentica y debe reenviarse intacto dentro del mensaje `assistant`. Modificarlo, truncarlo o eliminarlo invalida la firma y produce un error."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Este modo (`type: \"enabled\"`) está en camino a desaparecer",
+                  "content": "Esta forma manual con `budget_tokens` funciona en Sonnet 4.6, pero ya está deprecada ahí, y directamente rechazada con error 400 en Opus 4.7, Opus 4.8 y toda la familia Claude 5 (Sonnet 5, Opus 5, Fable 5). El reemplazo es `thinking: {\"type\": \"adaptive\"}`, donde Claude decide si piensa y cuánto según la dificultad del request, controlando la profundidad con `output_config: {\"effort\": \"low\"|\"medium\"|\"high\"}` en vez de un presupuesto fijo en tokens. Vale la pena conocer `budget_tokens` porque así se enseña y se pregunta en el examen CCAR-F, pero en un proyecto nuevo sobre un modelo Opus 4.7+ hay que usar el modo adaptativo."
+                }
+              ]
+            },
+            {
+              "title": "Redacted thinking",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A veces el razonamiento interno de Claude activa los sistemas de seguridad de Anthropic. En vez de un bloque `thinking` legible, la respuesta trae un bloque `redacted_thinking` con el contenido cifrado en un campo `data` — no se puede leer, pero Claude sigue necesitándolo para no perder contexto en el resto de la conversación."
+                },
+                {
+                  "type": "code",
+                  "language": "json",
+                  "code": "{\n  \"type\": \"redacted_thinking\",\n  \"data\": \"...\"  // contenido cifrado, opaco\n}"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Reenviarlo intacto, igual que un thinking normal",
+                  "content": "Si tu código filtra bloques por tipo antes de reenviarlos en un turno multi-turno con tools (por ejemplo `if block.type == \"thinking\"`), hay que incluir también `block.type == \"redacted_thinking\"` — filtrar solo por `\"thinking\"` descarta silenciosamente estos bloques y rompe el protocolo de conversación multi-turno."
                 }
               ]
             },
@@ -194,6 +220,26 @@
                   "style": "info",
                   "title": "El costo escala con la resolución",
                   "content": "El consumo de tokens de una imagen crece con su tamaño en píxeles. Para capturas muy grandes o fotos en alta resolución donde el detalle fino no es necesario, redimensionarlas antes de enviarlas reduce el costo sin perder la información relevante."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Límite", "Valor"],
+                  "rows": [
+                    ["Imágenes por request", "100, sumando todos los mensajes"],
+                    ["Tamaño por imagen", "5MB máximo"],
+                    ["Dimensión con una sola imagen", "8000px de ancho/alto máximo"],
+                    ["Dimensión con varias imágenes", "2000px de ancho/alto máximo cada una"],
+                    ["Costo en tokens", "(ancho_px × alto_px) / 750"]
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "Visión no es infalible por default: en tareas de conteo o detalle fino, un prompt simple (\"¿cuántas canicas hay?\") falla más seguido de lo esperado incluso con la imagen nítida. Las mismas técnicas de prompt engineering que funcionan con texto — desglosar en pasos, pedir una verificación con un método distinto, dar un ejemplo resuelto (one-shot) — mejoran notablemente la precisión en tareas visuales complejas."
+                },
+                {
+                  "type": "code",
+                  "language": "text",
+                  "code": "Analizá esta imagen y determiná el conteo exacto con esta metodología:\n1. Identificá cada canica una por una, asignándole un número.\n2. Verificá el resultado contando con un método distinto: empezando desde\n   abajo a la izquierda, fila por fila.\n\n¿Cuál es el número exacto y verificado de canicas?"
                 }
               ]
             },
@@ -219,6 +265,21 @@
                   "content": "Activando `citations` sobre un documento fuente, Claude ancla cada afirmación de su respuesta a un fragmento exacto del documento original, devolviendo referencias verificables. Funciona sobre PDFs (citando por página) y sobre documentos de texto plano (citando por rango de caracteres). Es especialmente valioso en RAG: pasar cada chunk recuperado como un documento independiente con citas habilitadas permite mostrar en la UI exactamente de qué chunk vino cada frase."
                 },
                 {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El campo title no es cosmético",
+                  "content": "Además de `citations: {\"enabled\": true}`, conviene mandar `title` en el bloque `document` — es el nombre que va a aparecer identificando la fuente en cada citación devuelta. Sin él, la UI no tiene forma de mostrarle al usuario de qué documento salió cada referencia cuando hay varios."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Campo", "PDF (page_location)", "Texto plano (char_location)"],
+                  "rows": [
+                    ["Texto citado", "cited_text", "cited_text"],
+                    ["Qué documento", "document_index / document_title", "document_index / document_title"],
+                    ["Ubicación", "start_page_number / end_page_number (1-indexed)", "start_char_index / end_char_index (0-indexed, end exclusivo)"]
+                  ]
+                },
+                {
                   "type": "code",
                   "language": "python",
                   "code": "# citations sobre un documento de texto\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\n                \"type\": \"document\",\n                \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": texto_politica},\n                \"citations\": {\"enabled\": True},\n            },\n            {\"type\": \"text\", \"text\": \"¿Cuánto tiempo se conservan los datos del usuario?\"},\n        ],\n    }],\n)\n# cada bloque de texto de la respuesta puede traer un campo \"citations\"\n# con el documento y el rango exacto que respalda esa frase\n\n# citations en RAG: cada chunk como documento independiente\ndocumentos = [\n    {\n        \"type\": \"document\",\n        \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": chunk_texto},\n        \"citations\": {\"enabled\": True},\n    }\n    for chunk_texto, _ in top_k\n]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": documentos + [{\"type\": \"text\", \"text\": \"¿cuál es la política de devoluciones?\"}]}],\n)"
@@ -235,7 +296,11 @@
               "blocks": [
                 {
                   "type": "text",
-                  "content": "Cuando una parte grande y estable del prompt se repite entre llamadas (un system prompt largo, definiciones de herramientas, un documento de referencia), marcarla con `cache_control: {\"type\": \"ephemeral\"}` hace que el servidor reutilice ese procesamiento en requests siguientes. Una lectura de cache cuesta una fracción del precio normal de input, aunque escribir el cache por primera vez cuesta algo más que una request sin cache."
+                  "content": "Antes de generar una sola palabra, Claude tiene que procesar todo el input: tokenizarlo, calcularle el contexto interno a cada token respecto al resto del prompt (attention). Sin caching, ese trabajo se descarta apenas termina la respuesta — y en la próxima llamada, aunque el 90% del prompt sea idéntico al anterior (mismo system prompt, mismas tools, todo el historial de la conversación repetido palabra por palabra), Claude lo vuelve a procesar de cero. En una conversación de varios turnos eso significa reprocesar un historial cada vez más largo en cada mensaje nuevo, aunque nada de lo viejo haya cambiado."
+                },
+                {
+                  "type": "text",
+                  "content": "`cache_control: {\"type\": \"ephemeral\"}` le dice al servidor: guardá el resultado de procesar todo el contenido hasta acá. En la siguiente llamada, si ese mismo contenido aparece de nuevo con el breakpoint en la misma posición, se lee el resultado guardado en vez de recalcularlo — de ahí que una lectura de cache cueste una fracción del input normal. La primera escritura no es gratis: cuesta algo más que una request sin cache, porque además de procesar el contenido hay que persistirlo. El ahorro aparece a partir de la segunda llamada que reutiliza ese prefijo."
                 },
                 {
                   "type": "table",
@@ -244,6 +309,12 @@
                     ["5 minutos (default)", "Más barato", "Sesiones interactivas con turnos frecuentes (cada lectura renueva el temporizador)"],
                     ["1 hora (extendido)", "Más caro", "Agentes con pausas largas, jobs programados, cuando el hueco entre requests supera los 5 minutos"]
                   ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Coincidencia exacta, no \"parecido\"",
+                  "content": "El cache no es una búsqueda semántica ni tolera cambios: si un solo carácter cambia en cualquier punto antes del breakpoint (o se cambia de modelo), es un cache miss completo — se reprocesa todo desde ese punto, no solo la parte modificada. Por eso los breakpoints se ponen sobre lo que es literalmente idéntico entre llamadas (system prompt, definición de tools), nunca sobre contenido que varía turno a turno."
                 }
               ]
             },
@@ -274,6 +345,28 @@
                   "type": "code",
                   "language": "python",
                   "code": "herramientas = [tool_clima, tool_calendario]\nherramientas[-1][\"cache_control\"] = {\"type\": \"ephemeral\"}  # breakpoint #1: cachea todas las tools\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=500,\n    tools=herramientas,\n    system=[\n        {\n            \"type\": \"text\",\n            \"text\": documentacion_interna_completa,  # varios miles de tokens, estable\n            \"cache_control\": {\"type\": \"ephemeral\", \"ttl\": \"1h\"},  # breakpoint #2: TTL extendido\n        }\n    ],\n    messages=[{\"role\": \"user\", \"content\": \"¿Cómo configuro el rate limiting?\"}],\n)\n\n# verificar si se usó el cache\nprint(response.usage.cache_creation_input_tokens, response.usage.cache_read_input_tokens)"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "No mutar las tools originales",
+                  "content": "El ejemplo de arriba modifica `herramientas[-1]` directamente, lo cual está bien si esa lista es descartable. Pero si tus schemas de tools viven en una variable compartida entre requests (una constante a nivel módulo, por ejemplo), mutarla in-place le pega el `cache_control` permanentemente y puede romper cosas si después reordenás o filtrás las tools. Más seguro es clonar antes de tocar: `tools_clone = [t.copy() for t in herramientas]; tools_clone[-1] = {**tools_clone[-1], \"cache_control\": {\"type\": \"ephemeral\"}}`."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El orden importa: tools → system → messages",
+                  "content": "Internamente, Claude concatena el request siempre en ese orden: primero las tools, después el system prompt, después los mensajes. Un breakpoint cachea todo lo que quedó antes de él según ese orden — no solo el bloque donde lo pusiste. Por eso un breakpoint en la última tool cachea las tools pero no el system prompt, mientras que un breakpoint al final del system prompt cachea tools + system juntos. Conviene poner los breakpoints en lo más estable (tools, luego system) y dejar los mensajes de la conversación sin marcar, porque cambian en cada turno."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "cache_control exige la forma larga",
+                  "content": "`\"content\": \"texto\"` (string directo) no admite `cache_control`. Para marcar un breakpoint hay que usar la forma de bloques: `\"content\": [{\"type\": \"text\", \"text\": \"texto\", \"cache_control\": {...}}]`, igual que se hace con `system` en el ejemplo de arriba."
+                },
+                {
+                  "type": "text",
+                  "content": "Read y write no son mutuamente excluyentes dentro de la misma request: si mantenés las mismas tools pero cambiás el system prompt, vas a ver `cache_read_input_tokens` > 0 (por las tools, que sí matchearon) y `cache_creation_input_tokens` > 0 al mismo tiempo (por el system prompt nuevo, que se escribe de cero). Es el resultado esperado de tener varios breakpoints independientes, no un bug."
                 }
               ]
             }
@@ -435,6 +528,77 @@
                   "style": "info",
                   "title": "Combinar con Files API",
                   "content": "La herramienta de code execution y la Files API se complementan: podés subir un dataset CSV con la Files API para que code execution lo procese, y recuperar los gráficos generados también por file_id. Los archivos generados por code execution sí son descargables, a diferencia de los que subiste vos."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Managed Agents",
+          "subsections": [
+            {
+              "title": "Un harness de agente ya armado, en infraestructura de Anthropic",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Hasta acá, todo lo que corre un agente (el loop de tool use, la persistencia de la conversación, el sandbox donde se ejecutan bash/code execution) lo arma y mantiene tu aplicación, request por request. Managed Agents es la alternativa: en vez de un endpoint stateless al que le mandás mensajes, es una API con estado que provee el harness completo — loop de agente, sandbox, prompt caching y compactación ya resueltos por Anthropic — pensada para tareas largas y asincrónicas, no para el request-respuesta típico de Messages API."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Concepto", "Qué es"],
+                  "rows": [
+                    ["Agent", "Modelo, system prompt, tools, servidores MCP y skills — se crea una vez y se referencia por id en cada sesión"],
+                    ["Environment", "Dónde corre la sesión: un sandbox cloud administrado por Anthropic, o uno self-hosted en tu propia infraestructura"],
+                    ["Session", "Una instancia corriendo de un agente dentro de un environment, ejecutando una tarea concreta"],
+                    ["Events", "Los mensajes que se intercambian con la sesión: turnos de usuario, resultados de tools, updates de estado — vía server-sent events"]
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from anthropic import Anthropic\n\nclient = Anthropic()\n\nagent = client.beta.agents.create(\n    name=\"Asistente de código\",\n    model=\"claude-opus-5\",\n    system=\"Sos un asistente de programación. Escribí código limpio y documentado.\",\n    tools=[{\"type\": \"agent_toolset_20260401\"}],  # set de tools pre-armado: bash, archivos, web\n)\n\nenvironment = client.beta.environments.create(\n    name=\"mi-entorno\",\n    config={\"type\": \"cloud\", \"networking\": {\"type\": \"unrestricted\"}},\n)\n\nsession = client.beta.sessions.create(agent=agent.id, environment_id=environment.id)\n\nwith client.beta.sessions.events.stream(session.id) as stream:\n    client.beta.sessions.events.send(session.id, events=[\n        {\"type\": \"user.message\", \"content\": [{\"type\": \"text\", \"text\": \"Generá los primeros 20 Fibonacci en fibonacci.txt\"}]},\n    ])\n    for event in stream:\n        if event.type == \"agent.tool_use\":\n            print(f\"[usando tool: {event.name}]\")\n        elif event.type == \"session.status_idle\":\n            break  # la sesión sigue viva: se le pueden mandar más eventos después"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Sesiones con estado real, no un historial que reenviás vos",
+                  "content": "A diferencia del loop manual de Messages API (donde vos guardás y reenviás el array de messages en cada request), acá el historial, el filesystem del sandbox y los resultados quedan persistidos del lado del servidor. La sesión se puede pausar y retomar más tarde, o interrumpirse a mitad de ejecución mandando un evento nuevo para redirigir al agente — no hace falta reconstruir el contexto desde cero."
+                }
+              ]
+            },
+            {
+              "title": "Cuándo elegir Managed Agents",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Messages API (loop propio)",
+                    "rows": [
+                      { "key": "Control", "value": "Total: vos decidís cada paso del loop, dónde corre cada tool." },
+                      { "key": "Infraestructura", "value": "El sandbox, la persistencia y el scheduling son responsabilidad tuya." },
+                      { "key": "Ideal para", "value": "Tareas cortas, request-respuesta, o cuando ya tenés tu propia infraestructura de ejecución." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Managed Agents",
+                    "rows": [
+                      { "key": "Control", "value": "Delegado: Anthropic corre el loop, vos mandás eventos y los consumís." },
+                      { "key": "Infraestructura", "value": "Sandbox (cloud o self-hosted), caching y compactación ya resueltos." },
+                      { "key": "Ideal para", "value": "Tareas largas (minutos u horas), asincrónicas, con múltiples llamadas a tools y necesidad de retomar la sesión después." }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Deployments programados: el equivalente server-side de un cron",
+                  "content": "Managed Agents soporta correr un agente en un horario recurrente (cron) directamente en la infraestructura de Anthropic, sin que tu propia app tenga que quedar prendida disparándolo. Es la versión API del patrón de debugging autónomo visto en Introducción a Claude Code → Debugging autónomo: un agente programado que monitorea algo y actúa, sin sesión interactiva de por medio."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Beta, y sin elegibilidad de Zero Data Retention",
+                  "content": "Managed Agents requiere el beta header `managed-agents-2026-04-01` y está en beta. Por ser stateful por diseño (guarda historial, estado del sandbox y outputs del lado del servidor), no es elegible para Zero Data Retention ni para BAA de HIPAA — a diferencia de Messages API, donde ZDR sí es una opción. Relevante si el proyecto tiene requisitos de compliance sobre retención de datos."
                 }
               ]
             }

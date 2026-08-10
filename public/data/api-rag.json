@@ -60,6 +60,20 @@
                   "type": "code",
                   "language": "python",
                   "code": "def chunk_por_tamano(texto, tamano=800, solape=150):\n    chunks = []\n    inicio = 0\n    while inicio < len(texto):\n        fin = inicio + tamano\n        chunks.append(texto[inicio:fin])\n        inicio = fin - solape  # retrocede para mantener continuidad\n    return chunks"
+                },
+                {
+                  "type": "text",
+                  "content": "Existe una tercera estrategia, semántica: en vez de cortar por cantidad de caracteres o por marcas estructurales, se mide la similitud de significado entre oraciones consecutivas (con embeddings) y se agrupan las que están temáticamente relacionadas, cortando donde el tema cambia. Produce los chunks más coherentes de las tres, pero es la más costosa de calcular (un embedding por oración, no por chunk) y la más compleja de implementar — para la mayoría de los casos, tamaño fijo con overlap o por estructura alcanza."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Tipo de documento", "Estrategia recomendada"],
+                  "rows": [
+                    ["Markdown, HTML u otro formato con estructura consistente (headers, secciones)", "Por estructura — corta en los límites naturales del documento"],
+                    ["Documentos mixtos o sin estructura confiable (texto plano, PDFs variados)", "Por oraciones o por tamaño fijo con overlap — más simple y predecible"],
+                    ["Código fuente", "Por tamaño fijo (o por función/bloque sintáctico si el lenguaje lo permite) — la estructura semántica de prosa no aplica"],
+                    ["Corpus donde la coherencia temática es crítica y el costo de cómputo no es problema", "Semántica — mayor calidad de chunk a cambio de más preprocesamiento"]
+                  ]
                 }
               ]
             }
@@ -85,6 +99,15 @@
                   "style": "info",
                   "title": "Costo de esta técnica",
                   "content": "Generar contexto por chunk implica una llamada extra por fragmento durante la indexación (proceso offline, no en el camino crítico de cada consulta). Para corpus grandes conviene paralelizar estas llamadas y usar un modelo barato como Haiku para esta tarea."
+                },
+                {
+                  "type": "text",
+                  "content": "El código de arriba asume que `documento_completo` entra en la ventana de contexto. Con documentos largos (cientos de páginas) eso deja de ser cierto. La solución no es truncar sin criterio: se arma un contexto reducido con los primeros chunks del documento (suelen tener el resumen o la estructura general) más los chunks inmediatamente anteriores al que se está contextualizando — suficiente para que Claude entienda dónde está parado el fragmento, sin mandar el documento entero."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "num_chunks_iniciales = 2\nnum_chunks_previos = 2\n\nfor i, chunk in enumerate(chunks):\n    contexto_reducido = chunks[:num_chunks_iniciales]\n    inicio = max(0, i - num_chunks_previos)\n    contexto_reducido += chunks[inicio:i]\n\n    contexto = generar_contexto_de_chunk(\"\\n\".join(contexto_reducido), chunk)\n    chunk_enriquecido = f\"{contexto}\\n\\n{chunk}\"\n    retriever.add_document({\"content\": chunk_enriquecido})"
                 }
               ]
             },
@@ -93,12 +116,58 @@
               "blocks": [
                 {
                   "type": "text",
-                  "content": "Un embedding es una representación numérica (un vector) de un texto, donde textos con significado parecido quedan cerca en ese espacio vectorial. La Claude API no expone un endpoint de embeddings propio; en la práctica se combina con un proveedor externo (por ejemplo, Voyage AI) para esa etapa, y se usa Claude para la generación final."
+                  "content": "Un embedding es una representación numérica (un vector) de un texto, donde textos con significado parecido quedan cerca en ese espacio vectorial. La Claude API no expone un endpoint de embeddings propio; en la práctica se combina con un proveedor externo (por ejemplo, Voyage AI) para esa etapa, y se usa Claude para la generación final. Si la app corre sobre Google Cloud, Vertex AI ofrece su propio modelo de embeddings como alternativa — ver API de Claude → Claude en Vertex AI → Embeddings."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Indexación (offline, una vez por documento)",
+                      "body": "Cada chunk pasa por el modelo de embedding y se guarda en la base vectorial junto a un id y el texto original del chunk — el vector solo sirve para comparar, la respuesta final necesita el texto."
+                    },
+                    {
+                      "title": "Query (en cada request)",
+                      "body": "La pregunta del usuario pasa por el mismo modelo de embedding, generando un vector de consulta comparable con los ya indexados."
+                    },
+                    {
+                      "title": "Retrieve",
+                      "body": "La base vectorial compara el vector de consulta contra todos los vectores guardados (similitud coseno o distancia) y devuelve los ids con mayor similitud, junto a su score."
+                    },
+                    {
+                      "title": "Recuperar el texto original",
+                      "body": "Con esos ids se busca el texto real de cada chunk (no el vector) — es lo que efectivamente se arma en el prompt junto con la pregunta del usuario."
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "columns": ["Campo", "Contenido"],
+                  "rows": [
+                    ["id", "Identificador del chunk, para recuperarlo después de la búsqueda"],
+                    ["vector", "El embedding normalizado, ej. [0.12, -0.4, ...] — cientos o miles de dimensiones"],
+                    ["texto", "El contenido original del chunk. Nunca se reconstruye desde el vector: se guarda aparte porque el embedding no es reversible"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Indexar y consultar con el mismo modelo de embedding",
+                  "content": "El vector de la query solo es comparable contra los vectores del corpus si ambos salieron del mismo modelo de embedding — cada modelo define su propio espacio vectorial, no intercambiable con el de otro. Cambiar de modelo (o de versión) requiere reindexar todo el corpus desde cero, no solo la query."
                 },
                 {
                   "type": "code",
                   "language": "python",
                   "code": "import numpy as np\n\ndef similitud_coseno(a, b):\n    a, b = np.array(a), np.array(b)\n    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))\n\n# vectores ya calculados por el proveedor de embeddings\nchunks_embeddings = [(chunk_id, vector) for chunk_id, vector in base_vectorial]\nquery_vector = obtener_embedding(\"¿cuál es la política de devoluciones?\")\n\nranking = sorted(\n    chunks_embeddings,\n    key=lambda par: similitud_coseno(par[1], query_vector),\n    reverse=True,\n)\ntop_k = ranking[:5]"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Los vectores se normalizan antes de guardarse",
+                  "content": "Antes de indexarlos, los embeddings suelen escalarse a magnitud 1.0 (normalización) — el proveedor de embeddings lo hace automáticamente. Con vectores normalizados, similitud coseno y producto punto dan el mismo ranking, lo que permite que la base vectorial use el cálculo más barato (dot product) sin perder precisión."
+                },
+                {
+                  "type": "text",
+                  "content": "Muchas bases vectoriales exponen \"cosine distance\" en vez de similitud: es simplemente `1 - similitud_coseno`, así que se invierte la escala (0 = idéntico, 2 = opuesto) y `ORDER BY distance ASC` da los más relevantes primero."
                 }
               ]
             },
@@ -134,6 +203,27 @@
                   "type": "code",
                   "language": "python",
                   "code": "from rank_bm25 import BM25Okapi\n\n# búsqueda léxica con BM25\ncorpus_tokenizado = [chunk.lower().split() for chunk in todos_los_chunks]\nbm25 = BM25Okapi(corpus_tokenizado)\nquery_tokens = \"código de error E04 fallo de pago\".lower().split()\nscores = bm25.get_scores(query_tokens)\ntop_k_bm25 = sorted(zip(todos_los_chunks, scores), key=lambda x: x[1], reverse=True)[:5]\n\n# fusión de rankings: vectorial + BM25\ndef reciprocal_rank_fusion(ranking_vectorial, ranking_bm25, k=60):\n    scores = {}\n    for rank, (chunk_id, _) in enumerate(ranking_vectorial):\n        scores[chunk_id] = scores.get(chunk_id, 0) + 1 / (k + rank)\n    for rank, (chunk_id, _) in enumerate(ranking_bm25):\n        scores[chunk_id] = scores.get(chunk_id, 0) + 1 / (k + rank)\n    return sorted(scores.items(), key=lambda x: x[1], reverse=True)\n\n# re-ranking con Claude (para corpus moderados)\ntool_relevancia = {\n    \"name\": \"puntuar_relevancia\",\n    \"description\": \"Puntúa qué tan relevante es un fragmento para la pregunta\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\"puntaje\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1}},\n        \"required\": [\"puntaje\"],\n    },\n}\n\ndef puntuar(pregunta, chunk):\n    r = client.messages.create(\n        model=\"claude-haiku-4-5-20251001\", max_tokens=50,\n        tools=[tool_relevancia], tool_choice={\"type\": \"tool\", \"name\": \"puntuar_relevancia\"},\n        messages=[{\"role\": \"user\", \"content\": f\"Pregunta: {pregunta}\\nFragmento: {chunk}\"}],\n    )\n    return r.content[0].input[\"puntaje\"]\n\ncandidatos_reordenados = sorted(candidatos_top_20, key=lambda c: puntuar(pregunta, c), reverse=True)[:5]"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Empates en el RRF score",
+                  "content": "El algoritmo de RRF en sí no define cómo desempatar: solo describe cómo sumar 1/(k+rank). Con floats reales los empates exactos son raros, pero pueden darse (corpus chico, o un chunk en la misma posición en ambos rankings). El código de arriba resuelve el empate implícitamente con el orden estable de `sorted()`, favoreciendo al que apareció primero en el diccionario — no es un criterio diseñado. Las dos formas explícitas de desempatar son: (1) usar el score original (similitud coseno o score BM25 crudo) como criterio secundario, o (2) dejarlo así, ya que en producción el impacto de un empate ocasional en el top-k es marginal frente al costo de añadir lógica extra."
+                },
+                {
+                  "type": "text",
+                  "content": "El `puntuar()` de arriba hace una llamada a Claude por candidato (N llamadas para N candidatos). Una alternativa más eficiente es una sola llamada que reciba todos los candidatos con un ID corto cada uno y devuelva la lista de IDs ordenada por relevancia — evita que Claude tenga que copiar el texto completo de cada chunk en la respuesta."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def reranking_batch(pregunta, candidatos, k=5):\n    documentos = \"\\n\".join(\n        f'<document><document_id>{c[\"id\"]}</document_id><document_content>{c[\"texto\"]}</document_content></document>'\n        for c in candidatos\n    )\n    prompt = f\"\"\"Selecciona los {k} documentos más relevantes para responder la pregunta.\n\n<question>{pregunta}</question>\n<documents>{documentos}</documents>\n\nRespondé solo con JSON: {{\"document_ids\": [...]}} con {k} ids, ordenados de mayor a menor relevancia.\"\"\"\n\n    r = client.messages.create(\n        model=\"claude-haiku-4-5-20251001\", max_tokens=200,\n        messages=[{\"role\": \"user\", \"content\": prompt}],\n    )\n    ids_ordenados = json.loads(r.content[0].text)[\"document_ids\"]\n    por_id = {c[\"id\"]: c for c in candidatos}\n    return [por_id[i] for i in ids_ordenados]"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "N llamadas vs. 1 llamada: no es solo estilo",
+                  "content": "Puntuar candidato por candidato escala mal: 20 candidatos son 20 requests secuenciales (o paralelos, pero sigue siendo 20x costo). El batch de una sola llamada resuelve el mismo problema con 1 request, a costa de un prompt más largo — casi siempre gana en latencia y costo total salvo con candidatos tan largos que no entran juntos en el contexto."
                 }
               ]
             }

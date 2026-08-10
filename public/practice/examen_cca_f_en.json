@@ -1,6 +1,6 @@
 {
   "exam": {
-    "title": "Claude Certified Architect (CCA-F) - Practice Exam",
+    "title": "Claude Certified Architect – Foundations (CCAR-F) - Practice Exam",
     "language": "en",
     "totalQuestions": 225,
     "domains": [
@@ -724,6 +724,102 @@
             ],
             "correctAnswer": 1,
             "explanation": "Resuming is appropriate when most of the prior context is still valid, but the developer must explicitly inform the session about what changed — otherwise Claude may reason from stale tool results (old file contents, old function names) cached in its history. Assuming automatic detection (A) is unsafe; Claude has no mechanism to know files changed unless told. Sessions do not expire automatically after 24 hours (C). fork_session (D) branches from a baseline but does not automatically re-execute prior tool calls against updated state — that is not what it does."
+          },
+          {
+            "text": "A team is debugging an agentic loop that sometimes terminates prematurely and sometimes spins through dozens of unproductive tool calls. The current implementation stops as soon as the assistant's response contains any plain text content, and separately hard-caps execution at 5 iterations regardless of stop_reason. Which two changes correctly align this loop with the intended pattern?",
+            "selectCount": 2,
+            "options": [
+              "Stop checking for text content as a completion signal — a valid tool_use turn can legitimately include explanatory text alongside the tool call.",
+              "Remove the fixed iteration cap and terminate the loop exactly when stop_reason is \"end_turn\".",
+              "Replace the iteration cap with a token budget cap, since tokens are a more precise unit than turns.",
+              "Keep the text-content check but raise the iteration cap to 20 to reduce premature termination."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Both root causes need to be fixed independently: checking for text content is unreliable because assistant turns can legitimately mix commentary with a tool_use block, and a fixed iteration cap is an anti-pattern as the primary stopping mechanism — control flow should key off stop_reason instead. Swapping to a token budget (C) still uses an arbitrary cap as the primary mechanism rather than stop_reason. Raising the cap (D) keeps the flawed signal and only masks the symptom."
+          },
+          {
+            "text": "You are designing a coordinator agent for a multi-agent research system with hub-and-spoke orchestration. Which two responsibilities should remain with the coordinator rather than being delegated to subagents?",
+            "selectCount": 2,
+            "options": [
+              "Routing all inter-subagent communication so error handling and information flow stay observable in one place.",
+              "Deciding which subagents to invoke based on the complexity and scope of the incoming query.",
+              "Performing the actual web searches and document parsing that feed the research.",
+              "Formatting each subagent's raw tool outputs into publication-ready prose before the subagents receive it."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Hub-and-spoke orchestration means the coordinator owns communication routing and delegation decisions, not the execution of specialized work. Options C and D describe subagent-level execution that belongs inside the specialized subagents, not the coordinator."
+          },
+          {
+            "text": "A coordinator spawns a synthesis subagent after web-search and document-analysis subagents finish. The synthesis subagent produces oddly generic output that ignores specific facts the other subagents found, even though all three subagents report success. Which two of the following are plausible causes worth checking first?",
+            "selectCount": 2,
+            "options": [
+              "The coordinator's prompt to the synthesis subagent references that prior findings exist but doesn't include their complete content.",
+              "The coordinator's allowedTools configuration is missing \"Task\", so subagent invocation silently fails.",
+              "The prior findings were passed to the synthesis subagent as unstructured text, without separating content from source metadata.",
+              "The synthesis subagent is running with a smaller context window than the other subagents."
+            ],
+            "correctAnswers": [0, 2],
+            "explanation": "Subagents do not automatically inherit context, so generic output results when findings are only referenced rather than included directly (A), or when they aren't structured to separate content from metadata (C). If allowedTools were missing \"Task\" (B), the coordinator couldn't spawn any subagent at all — the whole pipeline would fail, not just degrade. Per-subagent context window size (D) isn't independently configurable in this way and doesn't match the symptom."
+          },
+          {
+            "text": "A checkout support agent must (1) verify a customer's identity before it is allowed to call process_refund, and (2) include a structured summary — customer ID, root cause, recommended action — whenever it escalates to a human. Which two implementation choices correctly enforce these two requirements?",
+            "selectCount": 2,
+            "options": [
+              "A programmatic prerequisite that blocks process_refund from executing until get_customer has returned a verified customer ID.",
+              "A system prompt instruction reminding the agent to verify identity before refunding, reinforced with few-shot examples.",
+              "A required output schema for the escalation path that the agent must populate with customer ID, root cause, and recommended action before the handoff is sent.",
+              "A confidence threshold: the agent escalates only when its self-reported confidence in the refund decision falls below 7/10."
+            ],
+            "correctAnswers": [0, 2],
+            "explanation": "Identity verification before a financial operation needs deterministic, programmatic enforcement (A), not prompt-based guidance (B), which has a non-zero failure rate. A structured handoff is best guaranteed by requiring a populated output schema (C), not by a self-reported confidence score (D), which is an unrelated and poorly calibrated signal for handoff content quality."
+          },
+          {
+            "text": "Your agent pulls order data from three different MCP tools, each returning dates in a different format (Unix timestamp, ISO 8601, and a custom \"MM/DD/YYYY\" string). The agent frequently reasons incorrectly about which order is most recent. Which two of the following are appropriate fixes?",
+            "selectCount": 2,
+            "options": [
+              "Add a PostToolUse hook that normalizes each tool's date field into one consistent format before the result is appended to the conversation.",
+              "Instruct the agent in the system prompt to mentally convert every date format to ISO 8601 before comparing them.",
+              "Modify or wrap the underlying MCP tools so they all return dates in one agreed-upon format at the source.",
+              "Increase max_tokens so the agent has more room to reason through the date conversions."
+            ],
+            "correctAnswers": [0, 2],
+            "explanation": "A PostToolUse normalization hook and fixing the format at the source both provide deterministic guarantees that heterogeneous formats never reach the model inconsistently. Relying on the agent to mentally convert formats (B) is probabilistic and known to fail under load. More tokens (D) doesn't address a format-parsing problem."
+          },
+          {
+            "text": "Your team must decompose two different tasks: (1) reviewing a pull request that touches 12 files with well-understood, independent local changes, and (2) investigating an open-ended production incident whose root cause is unknown. Which two decomposition strategies are correctly matched to their task?",
+            "selectCount": 2,
+            "options": [
+              "Prompt chaining with a fixed sequence — per-file analysis followed by a cross-file integration pass — for the pull request review.",
+              "Prompt chaining with the same fixed sequence for the incident investigation, since chaining always produces more thorough results.",
+              "Dynamic, adaptive decomposition that generates new subtasks based on what is discovered at each step, for the incident investigation.",
+              "A single subagent handling the entire 12-file review in one pass to avoid the overhead of multiple analysis steps."
+            ],
+            "correctAnswers": [0, 2],
+            "explanation": "Predictable, multi-aspect reviews over independent files fit a fixed prompt-chaining pipeline (A). Open-ended investigations where the next step depends on what's discovered need dynamic decomposition (C) — a fixed chain (B) can't adapt to an unpredictable investigation path. Option D reintroduces the attention-dilution problem that splitting the review into passes is meant to avoid."
+          },
+          {
+            "text": "After a long Claude Code investigation session, a developer faces three separate situations: (1) exploring two different refactoring approaches starting from the same completed codebase analysis, (2) continuing tomorrow with no changes to the code since yesterday, and (3) resuming after a teammate significantly rewrote the investigated files. Which two session strategies are correctly matched to their situation?",
+            "selectCount": 2,
+            "options": [
+              "Use fork_session to branch from the shared analysis baseline for situation (1).",
+              "Use --resume with the named session for situation (2), since the prior context remains valid.",
+              "Use --resume with the named session for situation (3), trusting Claude to automatically detect and re-analyze the changed files.",
+              "Use fork_session for situation (3), since forking automatically re-executes prior tool calls against the current file state."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "fork_session is the right tool for exploring divergent approaches from a shared baseline (1), and plain --resume is reliable when nothing has changed since the prior session (2). For situation (3), resuming without explicitly describing the changes (C) risks reasoning from stale tool results, and fork_session does not automatically re-execute anything against updated file state (D) — both are incorrect matches."
+          },
+          {
+            "text": "A coordinator needs to research three independent subtopics in parallel using three subagents. Which two implementation choices correctly achieve true parallel execution consistent with the Agent SDK's design?",
+            "selectCount": 2,
+            "options": [
+              "Emit all three Task tool calls within a single coordinator response, rather than issuing them across separate turns.",
+              "Issue the three Task tool calls across three separate coordinator turns, waiting for each subagent to finish before starting the next.",
+              "Give each subagent its own scoped subtopic and context directly in its prompt so results can be aggregated independently.",
+              "Route all three subagents through a shared, live conversation history so they can see each other's progress in real time."
+            ],
+            "correctAnswers": [0, 2],
+            "explanation": "Parallel subagent execution requires emitting multiple Task calls within one response (A); issuing them across separate turns (B) is sequential, not parallel. Each subagent also needs its scoped context passed explicitly (C), since subagents don't share memory or a live conversation feed (D) — that would break context isolation and isn't how subagent execution works."
           }
         ]
       },
@@ -1216,6 +1312,102 @@
             ],
             "correctAnswer": 1,
             "explanation": "The interview pattern is exactly this: explicitly asking Claude to pose questions before implementing, in order to surface non-obvious design considerations the requirements didn't specify. Writing tests first (A) is a valid iteration technique but doesn't reliably surface unstated design questions — failing tests only reveal what was tested, not what was never considered. Few-shot examples (C) bias toward whatever patterns were shown, which may not fit this system's actual constraints. Splitting into design and implementation steps (D) doesn't by itself guarantee the design step asks about invalidation, concurrency, or fallback — that only happens if explicitly instructed to interview first, which is the interview pattern itself."
+          },
+          {
+            "text": "Your monorepo has a root CLAUDE.md and separate payments/CLAUDE.md and billing/CLAUDE.md files. A shared file, ../shared/security-standards.md, should load only for the payments and billing packages, not for every package in the repo. Which two configuration choices correctly achieve this selective loading?",
+            "selectCount": 2,
+            "options": [
+              "Add \"@import ../shared/security-standards.md\" inside payments/CLAUDE.md and billing/CLAUDE.md so only those packages pull it in.",
+              "Create a .claude/rules/security.md file with YAML frontmatter paths: [\"payments/**\", \"billing/**\"] containing the same standards, so it loads only when editing matching files.",
+              "Paste the full contents of security-standards.md directly into the root CLAUDE.md so every package inherits it uniformly.",
+              "Rely on Claude Code auto-detecting \"security-sensitive\" directory names and loading relevant standards files by convention."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "@import lets a specific package selectively pull in a shared file (A), and a path-scoped rule with a glob-matched paths field achieves the same selective loading (B). Pasting into the root CLAUDE.md (C) loads it for every package, including ones that don't need it, defeating the selective intent. Claude Code has no directory-name auto-detection convention for \"sensitive\" paths (D)."
+          },
+          {
+            "text": "Your team wants a codebase-analysis skill that (1) is shared with the whole team via version control and (2) runs its verbose exploration output in isolation so it doesn't pollute the main conversation. Which two configuration choices correctly satisfy both requirements?",
+            "selectCount": 2,
+            "options": [
+              "Place the skill in .claude/skills/ within the project repository rather than in ~/.claude/skills/.",
+              "Place the skill in ~/.claude/skills/ so each developer can customize it independently.",
+              "Set context: fork in the skill's SKILL.md frontmatter.",
+              "Set allowed-tools: [] in the skill's frontmatter so it cannot run any tools at all."
+            ],
+            "correctAnswers": [0, 2],
+            "explanation": "Project-scoped skills live in .claude/skills/ within the repo and are shared via version control (A); ~/.claude/skills/ (B) is explicitly for individual, unshared customization. context: fork isolates the skill's execution and output in a sub-agent context (C). Setting allowed-tools to an empty list (D) would prevent the skill from doing any exploration at all, defeating its purpose."
+          },
+          {
+            "text": "Your React component tests (Button.test.tsx, Modal.test.tsx, etc.) live next to the components they test, spread across dozens of directories, and must all follow one shared testing convention. Which two statements about enforcing this with .claude/rules/ are correct?",
+            "selectCount": 2,
+            "options": [
+              "A single rule file with paths: [\"**/*.test.tsx\"] in its YAML frontmatter applies the convention regardless of which directory a matching file lives in.",
+              "The rule loads only when a file matching the glob pattern is actually being edited, not on every request in the repo.",
+              "Achieving the same result with directory-level CLAUDE.md files would require only one additional file, placed at the repo root.",
+              "Glob-pattern rules and directory-level CLAUDE.md files are functionally interchangeable for this use case, so the choice is purely stylistic."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Glob-pattern rules match files by pattern anywhere in the tree (A) and load conditionally only for matching files (B) — exactly why they suit conventions spread across many directories. Directory-level CLAUDE.md files are bound to a directory, so covering test files scattered across dozens of directories would require one CLAUDE.md per directory, not a single root file (C); the two mechanisms are not interchangeable for this case (D), since directory-level files can't express a pattern spanning arbitrary directories."
+          },
+          {
+            "text": "You're using Claude Code to help onboard onto a legacy codebase you've never seen, with an open-ended task: \"understand how the billing reconciliation job works end to end.\" Which two practices are appropriate for this kind of exploratory, unfamiliar-codebase task?",
+            "selectCount": 2,
+            "options": [
+              "Use the Explore subagent to run the verbose discovery phase — tracing files, reading configs — and return a condensed summary, preserving the main session's context budget.",
+              "Enter plan mode before making any changes, since exploring an unfamiliar system with no predetermined scope benefits from investigation before commitment.",
+              "Immediately begin editing files in the reconciliation job as you discover them, since understanding by direct modification is faster than passive reading.",
+              "Avoid Grep and Glob and instead have Claude read every file in the repository sequentially to guarantee full coverage."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "The Explore subagent isolates verbose discovery output from the main conversation (A), and plan mode suits open-ended investigation without a predetermined scope (B). Editing files before understanding them (C) risks changes based on incomplete understanding, and reading every file sequentially instead of using Grep/Glob to target the search (D) wastes context and time without improving coverage."
+          },
+          {
+            "text": "A code-formatting task has produced inconsistent results: trailing commas and semicolon handling interact (semicolons are dropped only when a trailing comma is also present), while a separate, unrelated bug causes import statements to be sorted incorrectly. Which two approaches correctly apply the guidance on providing feedback for interacting versus independent issues?",
+            "selectCount": 2,
+            "options": [
+              "Report the trailing-comma and semicolon issues together in a single detailed message, since they interact with each other.",
+              "Report the import-sorting bug as a separate, sequential follow-up, since it's independent of the other two issues.",
+              "Report all three issues together in one message regardless of whether they interact, since more context is always better.",
+              "Fix the import-sorting bug first without mentioning it, then report the trailing-comma and semicolon issues only once import sorting is confirmed fixed."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Issues that interact should be described together so the fix accounts for both simultaneously (A); independent issues are better handled sequentially so each fix can be verified in isolation (B). Bundling everything regardless of interaction (C) ignores that distinction, and silently fixing one issue before reporting the others (D) removes traceability without any benefit."
+          },
+          {
+            "text": "You're wiring Claude Code into a GitHub Actions workflow that must (1) never hang waiting for input and (2) produce inline PR comments generated from machine-parseable findings. Which two CLI configurations correctly satisfy both requirements?",
+            "selectCount": 2,
+            "options": [
+              "Run with the -p (--print) flag so Claude Code executes non-interactively and exits after producing output.",
+              "Run with --output-format json and --json-schema to constrain findings to a machine-parseable structure the pipeline can post as inline comments.",
+              "Run in default interactive mode but redirect stdout to a log file that a separate script parses with regular expressions.",
+              "Run with a --batch flag to process the pull request through the Message Batches API for cost savings."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "The -p flag prevents Claude Code from hanging on interactive input in an automated pipeline (A), and --output-format json with --json-schema is the documented mechanism for machine-parseable structured findings the pipeline can post as comments (B). Interactive mode with regex log-scraping (C) is fragile and doesn't solve the hanging problem. There is no --batch flag on the Claude Code CLI (D) — that references the separate Message Batches API, which is not how Claude Code itself is invoked."
+          },
+          {
+            "text": "Your team currently has the same Claude Code session that generated a bug fix also review its own diff before opening the PR. Reviewers report this self-review rarely catches anything. Which two changes are consistent with the guidance on session context isolation for review quality?",
+            "selectCount": 2,
+            "options": [
+              "Run the review in a fresh, independent Claude Code invocation that does not share the generating session's conversation history.",
+              "Ask the same session to \"review your own work critically, as if you were someone else,\" using a stronger prompt instruction.",
+              "Include prior review findings (if any) in the new independent review's context, and instruct it to report only new or unaddressed issues on re-runs.",
+              "Increase the temperature of the generating session before asking it to self-review, so it produces more varied critique."
+            ],
+            "correctAnswers": [0, 2],
+            "explanation": "An independent instance without the generator's reasoning context is more effective at catching issues than self-review (A), and feeding prior findings into subsequent independent reviews avoids duplicate comments on re-runs (C). Asking the same session to role-play as an independent reviewer (B) doesn't remove the retained reasoning context that causes self-review blindness. Changing temperature (D) doesn't address the structural cause — retained context, not randomness — and isn't a documented fix for this problem."
+          },
+          {
+            "text": "A new team member complains that Claude Code isn't applying the team's documented code style rules, even though the rules file clearly exists in the repository. Which two diagnostic/fix steps are correct for tracking this down?",
+            "selectCount": 2,
+            "options": [
+              "Run /memory to check which configuration files are actually being loaded in the current session, to confirm whether the rules file is present.",
+              "Check whether the rules file was placed in the new member's personal ~/.claude/CLAUDE.md instead of the shared project-level configuration.",
+              "Assume the rules file is corrupted and regenerate it from scratch, since CLAUDE.md files can silently become invalid.",
+              "Have the new team member manually paste the contents of the rules file into every prompt, since CLAUDE.md loading is inconsistent across sessions."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "/memory surfaces exactly which configuration files are loaded, making it the right first diagnostic step (A); a very common root cause of \"my teammate isn't getting the rules\" is that they landed in user-level config instead of shared project-level config (B). CLAUDE.md files don't silently corrupt (C) — that isn't a real failure mode — and loading is deterministic, not something requiring a manual-paste workaround (D)."
           }
         ]
       },
@@ -1631,6 +1823,102 @@
             ],
             "correctAnswer": 1,
             "explanation": "When Edit fails due to a non-unique anchor match, the documented fallback is Read followed by Write: load the full file, apply the change with full context of every occurrence, and write it back — this sidesteps the uniqueness requirement entirely. Retrying the identical Edit call (A) will fail again since the ambiguity is structural, not transient. Using a shell one-liner (C) is unsafe and inconsistent with the workflow used for the other 28 files, and technically viable but not the documented, safer built-in pattern that the tool set already provides. Expanding the anchor to the entire file (D) is a valid uniqueness trick in theory but is exactly what the Read+Write fallback replaces more reliably, without constructing a fragile giant anchor string."
+          },
+          {
+            "text": "Your agent has two tools: analyze_content (description: \"Analyzes content\") and analyze_document (description: \"Analyzes a document\"). Production logs show consistent misrouting between them for web-page analysis requests. Which two remediation steps are correct?",
+            "selectCount": 2,
+            "options": [
+              "Rename analyze_content to extract_web_results and rewrite its description to be web-specific, including input format, example queries, and when to use it versus analyze_document.",
+              "Expand both descriptions to include input formats, example queries, and explicit boundary explanations distinguishing one tool from the other.",
+              "Remove both descriptions entirely and let the model infer each tool's purpose from its name alone.",
+              "Keep both descriptions as-is and add a system prompt instruction saying \"always prefer analyze_document over analyze_content.\""
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Renaming plus a specific, differentiated description directly resolves the functional overlap causing misrouting (A), and enriching both descriptions with formats, examples, and boundaries is the general fix for ambiguous tool selection (B). Removing descriptions (C) makes the ambiguity worse. A blanket system-prompt preference (D) doesn't fix the underlying ambiguity and would misroute genuine analyze_content use cases."
+          },
+          {
+            "text": "An MCP tool currently returns {isError: true, message: \"Operation failed\"} for every failure — a network timeout, an invalid customer ID, and a policy violation all look identical to the calling agent. Which two changes would let the agent make appropriate recovery decisions?",
+            "selectCount": 2,
+            "options": [
+              "Add an errorCategory field (transient / validation / permission / business) so the agent can distinguish failure types.",
+              "Add an isRetryable boolean so the agent knows whether attempting the call again is worth doing.",
+              "Remove the isError flag entirely and have the tool always return isError: false, with the failure described only in free-form text.",
+              "Standardize on a single generic message string across all error types to keep responses consistent and predictable."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "errorCategory and isRetryable are exactly the structured metadata that let the agent decide whether to retry, explain a business rule to the user, or escalate (A, B). Removing isError (C) actively hides failure from the agent. Standardizing to one generic message (D) is the anti-pattern the scenario describes — it's what's already broken."
+          },
+          {
+            "text": "A synthesis subagent in a research pipeline has been given all 18 of the system's tools \"just in case it needs them,\" including several web-search tools meant for the search subagent. Which two changes are correct given the principle of scoped tool access?",
+            "selectCount": 2,
+            "options": [
+              "Restrict the synthesis subagent's tool set to only what its role requires, removing tools meant for other specialized roles.",
+              "If the synthesis subagent has a genuine, high-frequency need to verify a fact, give it a narrow, scoped verify_fact tool rather than the full web-search toolset.",
+              "Leave all 18 tools available, since more tool options never reduce a well-prompted model's selection accuracy.",
+              "Force tool_choice to \"any\" for the synthesis subagent so it always calls some tool on every turn, regardless of role."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Giving an agent far more tools than its role needs degrades selection reliability and invites cross-specialization misuse (A); a scoped, purpose-built tool for a specific high-frequency cross-role need (B) is the documented middle ground. More tools do measurably degrade selection reliability, so C is false. Forcing tool_choice: any on every turn (D) doesn't address scoping and would force irrelevant tool calls even on turns where synthesis just needs to write prose."
+          },
+          {
+            "text": "You're building a developer-productivity agent with the Agent SDK. One MCP server — a shared Jira integration — should be available to the whole team via the repository, while another — an experimental personal notes server one developer is testing — should not affect teammates. Which two configuration choices are correct?",
+            "selectCount": 2,
+            "options": [
+              "Configure the shared Jira MCP server in the project-scoped .mcp.json, checked into the repository, with credentials referenced via environment variable expansion (e.g., ${JIRA_TOKEN}).",
+              "Configure the personal notes MCP server in the developer's user-scoped ~/.claude.json rather than the project's .mcp.json.",
+              "Configure both servers in .mcp.json and instruct developers to comment out the notes server locally before committing.",
+              "Hardcode the Jira API token directly into .mcp.json so the shared server works immediately for every teammate without setup."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Project-scoped .mcp.json with environment variable expansion is exactly how shared, team-wide MCP servers should be configured without committing secrets (A); user-scoped ~/.claude.json is for personal/experimental servers that shouldn't affect teammates (B). Putting both in .mcp.json and relying on manual comment-out discipline (C) is fragile and will eventually leak into a commit. Hardcoding a token (D) commits a secret directly into version control."
+          },
+          {
+            "text": "A developer-productivity agent frequently needs to know which Jira issues exist and their summaries before deciding whether to investigate further, currently done via repeated exploratory search-tool calls. Which two changes reduce this exploratory overhead consistent with MCP design guidance?",
+            "selectCount": 2,
+            "options": [
+              "Expose the issue catalog as an MCP resource, giving the agent visibility into available issues without requiring a tool call for every exploratory check.",
+              "Enhance the existing MCP tool descriptions to explain their capabilities and output detail clearly, so the agent doesn't default to a less-capable built-in tool like Grep out of uncertainty.",
+              "Remove all MCP tools and rely solely on the built-in Grep tool to search a local cache of Jira data instead.",
+              "Force tool_choice to a single named search tool on every turn so the agent never needs to decide whether a tool call is necessary."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "MCP resources are the documented mechanism for exposing content catalogs — issue summaries, schemas, doc hierarchies — so the agent doesn't need exploratory tool calls just to see what's available (A); detailed tool descriptions prevent the agent from defaulting to a less-capable built-in tool out of uncertainty about the MCP tool's capabilities (B). Discarding MCP tools for a local Grep-based cache (C) throws away the live-data advantage MCP provides. Forcing one named tool on every turn (D) doesn't address exploratory overhead and misfires on turns that don't need a search at all."
+          },
+          {
+            "text": "A developer-productivity agent is asked to trace every caller of a function named calculateShipping across a large codebase, including calls that go through two wrapper modules that re-export it under different names. Which two tool-use strategies are correct for this task?",
+            "selectCount": 2,
+            "options": [
+              "Start with Grep to find calculateShipping's definition and initial direct callers, then identify the wrapper modules' exported names and Grep again for each of those names.",
+              "Use Glob to locate all files matching a naming pattern like **/shipping*.ts before reading any of them, to scope the investigation before searching content.",
+              "Use Read to open every file in the repository sequentially, scanning each one visually for the string \"calculateShipping\".",
+              "Use Write to create a new file listing the callers the agent expects based on its general knowledge of typical shipping-calculation code, without actually searching the codebase."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Tracing a function across re-exporting wrapper modules requires first finding direct callers, then identifying and searching for each re-exported name (A) — the documented incremental-search pattern. Glob is appropriate for narrowing scope by file-naming pattern before deeper content search (B). Reading every file sequentially (C) is exactly what Grep exists to avoid, and fabricating a caller list from general knowledge instead of searching (D) produces an unverified, likely-wrong result."
+          },
+          {
+            "text": "A subagent's tool call times out. Its retry-with-backoff logic succeeds on the second attempt. Which two statements correctly describe what the subagent should report in this case versus a case where all retries are exhausted?",
+            "selectCount": 2,
+            "options": [
+              "If the retry succeeds, the subagent should simply proceed and return its normal successful result — no error needs to be surfaced to the coordinator.",
+              "If all retries are exhausted, the subagent should propagate a structured error to the coordinator including the failure type, what was attempted, and any partial results.",
+              "If the retry succeeds, the subagent should still report the transient failure to the coordinator as an error, since any failure — recovered or not — must be surfaced.",
+              "If all retries are exhausted, the subagent should silently return an empty result marked as successful so the pipeline doesn't halt."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Transient failures resolved locally don't need to be surfaced — that's the point of local recovery (A); only errors the subagent cannot resolve itself should propagate, and they should do so with structured context enabling the coordinator to decide next steps (B). Escalating an already-recovered transient failure (C) adds noise without value. Silently marking an exhausted-retry failure as a successful empty result (D) is the anti-pattern of suppressing errors, hiding real problems from the coordinator."
+          },
+          {
+            "text": "An extraction pipeline must always run extract_metadata before any enrichment tool executes. Separately, when the document type is unknown and multiple extraction schemas exist, the pipeline must guarantee some extraction tool is called rather than getting back conversational text. Which two tool_choice configurations correctly satisfy these two needs?",
+            "selectCount": 2,
+            "options": [
+              "tool_choice: {\"type\": \"tool\", \"name\": \"extract_metadata\"} to force that specific tool to run first, then process enrichment in a follow-up turn.",
+              "tool_choice: \"any\" when multiple extraction schemas exist and the document type is unknown, to guarantee a tool call happens without dictating which one.",
+              "tool_choice: \"auto\" for both cases, since the model reliably infers the correct ordering and always prefers calling a tool over returning text.",
+              "tool_choice: {\"type\": \"tool\", \"name\": \"extract_metadata\"} for the unknown-document-type case too, since forcing the same tool everywhere guarantees consistency."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Forced tool selection naming the specific tool guarantees extract_metadata runs first (A); tool_choice: any guarantees some tool is called without dictating which one, appropriate when the right extraction schema isn't known in advance (B). \"auto\" (C) allows the model to return text instead of calling a tool, which guarantees nothing here. Forcing extract_metadata specifically for the unknown-document-type case (D) is wrong when the document might not need metadata extraction at all — that's exactly the case tool_choice: any exists for."
           }
         ]
       },
@@ -2112,6 +2400,102 @@
             ],
             "correctAnswer": 0,
             "explanation": "Because the Batches API gives no latency guarantee within its 24-hour window, the submission cadence itself must be tight enough that the worst-case wait for inclusion plus the worst-case 24-hour processing time stays under the 30-hour SLA — a 4-hour cadence leaves a safe margin. Submitting once a day (B) ignores that a document uploaded right after the daily batch would wait most of a day before even entering the queue, risking a breach once the 24-hour window is added. Batching by volume alone (C) ignores the time constraint entirely. Polling cadence (D) doesn't address when batches are submitted, only when their status is checked."
+          },
+          {
+            "text": "A code review prompt currently says \"only report high-confidence findings\" and \"be conservative about what you flag.\" False positive rates remain high across every category. Which two changes are consistent with the guidance on improving precision?",
+            "selectCount": 2,
+            "options": [
+              "Replace the vague confidence-based instruction with explicit categorical criteria defining exactly which issues to report (e.g., bugs, security) versus skip (e.g., minor style, local patterns).",
+              "Define explicit severity criteria with concrete code examples for each severity level, so classification doesn't depend on the model's internal confidence estimate.",
+              "Keep \"be conservative\" but add the word \"extremely\" to strengthen the instruction's emphasis.",
+              "Remove all criteria and lower max_tokens, since shorter responses are inherently more conservative."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "General instructions like \"be conservative\" or \"only report high-confidence findings\" don't reliably improve precision — explicit categorical criteria (A) and concrete per-severity examples (B) give the model an actual decision boundary to apply. Intensifying the same vague wording (C) doesn't add any new information the model can act on. Shortening output via max_tokens (D) has no bearing on classification accuracy."
+          },
+          {
+            "text": "Your automated review flags four categories: bugs, security, style, and performance. Developer trust has collapsed because the style category alone produces 80% false positives, drowning out otherwise-accurate bug and security findings. Which two immediate actions are appropriate?",
+            "selectCount": 2,
+            "options": [
+              "Temporarily disable the style category in production while you improve its prompt criteria, keeping bugs, security, and performance active.",
+              "Work on defining more explicit, example-backed criteria specifically for the style category before re-enabling it.",
+              "Disable all four categories until every single one reaches a 0% false-positive rate.",
+              "Keep style enabled as-is, reasoning that any signal — even noisy — is better than no signal at all."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Temporarily disabling the specific high-false-positive category (A) restores trust in the accurate categories immediately, while targeted prompt work (B) addresses the actual root cause before re-enabling it. Disabling everything (C) discards categories that are already working well. Leaving the noisy category active (D) is exactly the behavior causing developers to distrust the whole system, including its accurate findings."
+          },
+          {
+            "text": "You're adding few-shot examples to a request-classification prompt that struggles with ambiguous customer messages. Which two practices are consistent with the guidance on effective few-shot prompting?",
+            "selectCount": 2,
+            "options": [
+              "Include 2-4 targeted examples for genuinely ambiguous scenarios, each showing the reasoning for why one action was chosen over a plausible alternative.",
+              "Select examples that explicitly demonstrate the desired output format (e.g., category, confidence, reasoning), so formatting stays consistent on novel inputs.",
+              "Include as many examples as possible — 40 or more — covering every historical ticket, so the model matches only against previously seen patterns.",
+              "Choose only unambiguous, clear-cut examples, since ambiguous examples might confuse the model about the correct answer."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Targeted examples for ambiguous cases with visible reasoning (A) and examples that demonstrate the exact desired output format (B) are what let few-shot prompting generalize to novel inputs. Covering every historical case (C) misunderstands the goal — few-shot should teach generalizable judgment, not memorized matching, and adds token overhead without necessarily helping. Excluding ambiguous examples (D) removes exactly the cases few-shot examples are most needed for."
+          },
+          {
+            "text": "You design an invoice-extraction tool with a JSON schema. Some invoices lack a purchase_order_number entirely. Which two schema design choices prevent the model from fabricating a value to satisfy the schema?",
+            "selectCount": 2,
+            "options": [
+              "Mark purchase_order_number as optional/nullable in the schema, rather than required.",
+              "Add an explicit instruction (in the tool description or prompt) that null is an acceptable, expected value when the field doesn't appear in the source document.",
+              "Mark purchase_order_number as required, with a hardcoded default value of \"N/A\" whenever it's missing.",
+              "Leave the field required and trust that a few few-shot examples alone will teach the model when to fabricate a plausible placeholder."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Making the field nullable (A) removes the structural incentive to fabricate a value, and explicitly telling the model that null is acceptable (B) reinforces that omission is the correct behavior under uncertainty, not a failure. A hardcoded \"N/A\" default (C) still fabricates a value where none exists, corrupting downstream logic that expects a real order number. Keeping the field required and hoping examples alone fix it (D) leaves the schema-level incentive to fabricate in place."
+          },
+          {
+            "text": "An extraction pipeline validates output against a schema. Two failure types occur: (1) the model returns a total that doesn't equal the sum of its line items — a semantic error — and (2) a required field is genuinely absent from the source document because that information was never printed on the invoice. Which two statements about handling these with a retry loop are correct?",
+            "selectCount": 2,
+            "options": [
+              "Retrying with the specific validation error (the mismatched sum) appended to the prompt is likely to succeed for failure type (1), since it's a correction the model can act on.",
+              "Retrying will not reliably fix failure type (2), since the required information simply doesn't exist in the source document for the model to extract.",
+              "Both failure types should be retried identically without including the specific error, since retries are equally effective for structural and missing-information problems.",
+              "Failure type (2) should be retried with progressively higher temperature settings until the model produces a plausible value."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Appending the specific validation error gives the model something concrete to correct, which works for structural/semantic mismatches like a wrong sum (A). No amount of retrying recovers information that was never in the source document (B) — retries only help with format or structural errors, not absent data. Treating both failure types the same without the specific error (C) throws away the one thing that makes retries effective. Raising temperature to coax out a value for missing data (D) would produce a fabricated number, not a correct one."
+          },
+          {
+            "text": "Your team runs two workflows: an urgent, same-day customer-facing document upload that blocks a UI response, and a weekly compliance audit processing 5,000 archived documents with no user waiting. Which two decisions correctly apply Message Batches API guidance?",
+            "selectCount": 2,
+            "options": [
+              "Use the Message Batches API for the weekly 5,000-document compliance audit, taking advantage of the 50% cost savings since latency isn't a constraint.",
+              "Use the synchronous Messages API for the same-day customer-facing upload, since the Batches API has no guaranteed latency SLA and can take up to 24 hours.",
+              "Use the Batches API for the customer-facing upload too, since batch requests are usually processed much faster than 24 hours in practice.",
+              "Use custom_id only for the synchronous workflow, since the Batches API automatically correlates every request to its response without needing an identifier."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "The compliance audit is exactly the latency-tolerant, non-blocking workload the Batches API is designed for (A), while the blocking customer-facing upload needs the synchronous API's predictable response time (B). \"Usually faster in practice\" (C) is not a guarantee, and a blocking UI flow can't rely on best-case behavior from an API with no latency SLA. custom_id is the Batches API's own request/response correlation mechanism (D reverses this) — it's needed for the batch workflow, not the synchronous one."
+          },
+          {
+            "text": "A code-review pipeline currently has the same Claude session generate a fix and then, within that same session, review its own diff. Separately, a 20-file pull request reviewed in a single pass produces contradictory findings — a pattern flagged as problematic in one file is approved in another. Which two architectural changes correctly address these two problems?",
+            "selectCount": 2,
+            "options": [
+              "Use a second, independent Claude instance without the generator's reasoning context to review the generated fix.",
+              "Split the 20-file review into focused per-file passes plus a separate cross-file integration pass to reduce attention dilution.",
+              "Ask the generating session to enable extended thinking before self-review, since more reasoning steps reliably substitute for independent review.",
+              "Increase max_tokens for the single-pass 20-file review so the model has enough room to give every file equal attention within the same context."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "An independent review instance without the generator's retained reasoning context is more effective at catching issues than self-review (A), and splitting a large multi-file review into per-file passes plus an integration pass directly addresses attention dilution and contradictory findings (B). Extended thinking within the same session (C) doesn't remove the retained context that causes self-review blindness. More max_tokens (D) doesn't fix attention dilution across many files — it's a token budget, not an attention mechanism."
+          },
+          {
+            "text": "Your team wants to understand why developers frequently dismiss a specific category of automated review finding as a false positive, in order to improve the prompt over time. Which two design choices support this systematically?",
+            "selectCount": 2,
+            "options": [
+              "Add a detected_pattern field to each structured finding, recording which code construct triggered it, so dismissal patterns can be analyzed in aggregate.",
+              "Track which findings get dismissed by developers and periodically review the detected_pattern values behind the most-dismissed findings to refine that category's criteria.",
+              "Rely on the reviewing developers to remember and informally report which findings felt wrong, without capturing anything in the structured output.",
+              "Remove the false-positive-prone category from the output schema permanently, without running any systematic analysis first."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "A detected_pattern field captures the systematic data needed for later analysis (A), and periodically reviewing dismissed findings by their triggering pattern is how that data turns into concrete prompt improvements (B). Relying on developers to informally recall issues (C) loses the systematic signal entirely. Permanently removing the category without analysis (D) discards the underlying problem instead of diagnosing and fixing it."
           }
         ]
       },
@@ -2516,6 +2900,102 @@
             ],
             "correctAnswer": 0,
             "explanation": "Manifests and state exports are only useful if stale entries are corrected precisely — informing the agent about the specific changed file lets it re-analyze just that part while reusing everything else that's still valid. Discarding everything (B) throws away work that is still accurate. Ignoring the change (C) risks the agent reasoning from outdated information. Requiring full re-verification of the entire codebase (D) defeats the purpose of persisted state in the first place."
+          },
+          {
+            "text": "A customer support agent's conversation history has grown to 40 turns. The agent recently forgot the exact refund amount ($847.32) mentioned in turn 6, instead referencing \"the refund amount\" vaguely in turn 38. Which two changes correctly address this?",
+            "selectCount": 2,
+            "options": [
+              "Extract transactional facts (amounts, dates, order numbers) into a persistent \"case facts\" block included in every prompt, separate from the summarized turn history.",
+              "Place key figures near the beginning or end of the aggregated context, since models reliably process information at the edges of long inputs but may drop details from the middle.",
+              "Increase max_tokens on the response so the model has more room to search back through all 40 turns for the figure.",
+              "Instruct the model to always re-read the entire 40-turn history verbatim before every response, rather than relying on any summarization."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "A persistent case-facts block keeps critical numbers available regardless of how the surrounding history gets summarized (A), and placing key figures at the beginning or end mitigates the \"lost in the middle\" effect (B). max_tokens governs the length of the model's own response, not how much of the input history it attends to (C). Re-reading the full verbatim history every turn doesn't fix an attention/position problem and doesn't scale as the conversation grows (D)."
+          },
+          {
+            "text": "An order-lookup tool returns 40+ fields (shipping carrier metadata, warehouse codes, internal SKUs, etc.), but a return-processing agent only needs 5 of them (order ID, item, purchase date, return window, refund amount). Which two changes correctly manage context here?",
+            "selectCount": 2,
+            "options": [
+              "Trim the tool's raw response to only the relevant fields before it's appended to the conversation, discarding the rest.",
+              "If some of the discarded fields might be needed for a distinct future task, retrieve them via a separate, targeted tool call only when that task actually requires them, rather than keeping them in context \"just in case.\"",
+              "Keep all 40+ fields in every turn, since dropping any field risks losing information the model might need later.",
+              "Summarize all 40+ fields into a single vague sentence like \"order details were retrieved\" to save the most tokens possible."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Trimming to only the relevant fields (A) keeps tool results from consuming tokens disproportionately to their relevance, and re-fetching specific fields on demand for a distinct future need (B) avoids paying that cost speculatively. Keeping everything (C) is exactly the accumulation problem being solved. Collapsing the result into a vague sentence (D) discards even the fields the current task actually needs, which is worse than trimming precisely."
+          },
+          {
+            "text": "A customer says, mid-conversation, \"I want to talk to a person.\" Separately, another customer's request falls into a genuine gap in policy — competitor price matching, which the written policy only addresses for the company's own site. Which two escalation behaviors are correct for these two cases?",
+            "selectCount": 2,
+            "options": [
+              "Escalate the first customer to a human immediately, honoring the explicit request without first attempting further investigation or persuasion.",
+              "Escalate the second customer because the policy is silent on their specific situation, not because the request is inherently too complex to reason about.",
+              "Continue attempting to resolve the first customer's issue for a few more turns, since a request for a human doesn't by itself justify immediate escalation.",
+              "Resolve the second customer's request by applying the closest analogous policy rule automatically, without surfacing the gap to a human."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "An explicit customer request for a human should be honored immediately (A), not deferred while the agent keeps trying to resolve the issue itself (C). A genuine policy gap — not just complexity — is exactly the escalation trigger for the second case (B); silently applying an analogous rule the policy never actually authorized (D) resolves an exception the agent wasn't authorized to make on its own."
+          },
+          {
+            "text": "An escalation system currently escalates automatically whenever sentiment analysis detects strong negative language, and also whenever the model's self-reported confidence score is below 6/10. Both heuristics perform poorly in practice. Which two statements correctly explain why?",
+            "selectCount": 2,
+            "options": [
+              "Sentiment doesn't reliably correlate with actual case complexity — a frustrated customer can have a simple request, and a calm customer can have a genuinely complex one.",
+              "Self-reported confidence is poorly calibrated, especially on hard cases where the model is often confidently wrong rather than appropriately uncertain.",
+              "Both heuristics are fundamentally sound and simply need their thresholds tuned to more extreme values until performance improves.",
+              "Both heuristics are individually unreliable, but combining sentiment and self-reported confidence into a single weighted score corrects for each one's weaknesses."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Sentiment measures emotional tone, not case complexity (A), and self-reported confidence is known to be poorly calibrated on exactly the hard cases where it matters most (B) — the model is often confidently wrong rather than appropriately uncertain. Threshold-tuning (C) doesn't fix a signal that isn't measuring the right thing in the first place. Combining two unreliable, uncorrelated-with-complexity signals (D) doesn't produce a reliable one — it compounds the same underlying problem."
+          },
+          {
+            "text": "A search subagent's tool call fails. The team is deciding how to report this to the coordinator. Which two of the following are consistent with sound error propagation design?",
+            "selectCount": 2,
+            "options": [
+              "Return structured error context including the failure type, the attempted query, any partial results already gathered, and possible alternative approaches.",
+              "Distinguish clearly between an access failure (e.g., a timeout, which may warrant a retry decision) and a valid empty result (a successful query that simply found nothing).",
+              "Return a generic status like \"search unavailable\" for every failure type, to keep the coordinator's error-handling logic simple.",
+              "Silently return an empty result marked as successful, so the overall workflow doesn't need to handle a partial-failure case."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Structured error context (A) gives the coordinator what it needs to make an intelligent recovery decision, and distinguishing access failures from valid empty results (B) prevents the coordinator from misreading a successful no-match query as a problem, or vice versa. A generic status (C) hides exactly the context the coordinator needs, and silently marking a failure as a successful empty result (D) is the anti-pattern of suppressing errors — it hides real problems instead of surfacing them."
+          },
+          {
+            "text": "During a long codebase-exploration session, the agent starts giving inconsistent answers and referencing \"typical patterns\" instead of the specific classes it identified earlier in the same session. Which two changes correctly address this context degradation?",
+            "selectCount": 2,
+            "options": [
+              "Maintain a scratchpad file recording key findings as they're discovered, and reference it explicitly for subsequent questions instead of relying on the model recalling details from much earlier in the same long session.",
+              "Delegate verbose exploration sub-questions (e.g., \"find all test files,\" \"trace this dependency chain\") to subagents, so the main session preserves high-level coordination without accumulating all the exploratory noise itself.",
+              "Continue in the same session and simply ask the model to \"try harder to remember\" the specific classes discovered earlier.",
+              "Restart with a completely empty context and no summary at all, so the model isn't influenced by any potentially stale prior findings."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "A scratchpad file persists key findings outside the model's fallible in-context recall (A), and subagent delegation for verbose exploration keeps that noise out of the main session's accumulating context (B). Asking the model to \"try harder\" (C) doesn't address the structural cause of degradation — accumulated context, not effort. Restarting with zero context (D) throws away everything already established, forcing costly re-exploration instead of preserving what's valid."
+          },
+          {
+            "text": "An extraction system reports 97% overall accuracy, but a spot-check reveals accuracy on handwritten invoices specifically is closer to 70%, while typed invoices are near 99%. The 97% aggregate had hidden this gap. Which two practices correctly prevent this kind of blind spot going forward?",
+            "selectCount": 2,
+            "options": [
+              "Analyze accuracy by document type and field segment, rather than relying on a single aggregate accuracy number, to catch performance gaps hidden within specific segments.",
+              "Use stratified random sampling across document types, not just high-confidence extractions in aggregate, to measure error rates and catch novel error patterns in underperforming segments.",
+              "Continue reporting only the aggregate 97% figure, since the overall number is what matters for the automation go/no-go decision.",
+              "Stop measuring accuracy on handwritten invoices entirely, since they are inherently harder and will always underperform typed documents."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Segmenting accuracy by document type and field (A) is exactly what surfaces a gap an aggregate number hides, and stratified sampling (B) ensures underperforming segments get measured rather than being diluted into an overall average. Relying only on the aggregate (C) is the practice that caused the blind spot in the first place. Excluding handwritten invoices from measurement (D) doesn't fix the accuracy problem — it just stops looking at it."
+          },
+          {
+            "text": "A synthesis agent combines findings from two credible sources reporting different GDP growth figures for the same quarter (2.1% vs. 3.4%), and separately combines two reports published six months apart that show different revenue figures for the same company. Which two synthesis practices are correct?",
+            "selectCount": 2,
+            "options": [
+              "Preserve both conflicting GDP figures in the output with explicit source attribution for each, rather than arbitrarily selecting one or averaging them.",
+              "Require subagents to include publication or data-collection dates in their structured outputs, so a six-month gap is correctly interpreted as a temporal difference rather than a contradiction.",
+              "Average the two conflicting GDP figures into a single blended number to present a clean, unambiguous result to the reader.",
+              "Omit the revenue figures entirely from the final report, since any numeric discrepancy between sources should be treated as unreliable and excluded."
+            ],
+            "correctAnswers": [0, 1],
+            "explanation": "Preserving both figures with source attribution (A) lets the reader see the actual disagreement instead of a fabricated middle ground, and requiring publication dates (B) prevents a legitimate temporal difference from being misread as a contradiction. Averaging the GDP figures (C) invents a number neither source reported and hides the real disagreement. Omitting the revenue figures entirely (D) discards real information instead of correctly attributing the difference to when each report was published."
           }
         ]
       }

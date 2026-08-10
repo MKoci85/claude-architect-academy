@@ -351,6 +351,150 @@
           ]
         }
       ]
+    },
+    {
+      "title": "Flujos avanzados",
+      "articles": [
+        {
+          "id": "paralelizar-claude-code",
+          "title": "Paralelizar Claude Code con worktrees",
+          "summary": "Correr varias sesiones de Claude Code al mismo tiempo sin que se pisen los cambios, usando git worktrees.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "El problema: una sola sesión, un solo checkout",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Dos sesiones de Claude Code trabajando sobre el mismo directorio compiten por los mismos archivos: si una está a mitad de una feature y la otra corrige un bug, los cambios se pisan. Un git worktree es un checkout separado (su propio directorio y su propia branch) que comparte el historial del mismo repositorio — cada sesión edita su propio conjunto de archivos, sin conflicto."
+                },
+                {
+                  "type": "code",
+                  "language": "bash",
+                  "code": "claude --worktree feature-auth\n# en otra terminal, con otro nombre:\nclaude --worktree fix-bug-123"
+                },
+                {
+                  "type": "text",
+                  "content": "Cada llamada crea el worktree en `.claude/worktrees/<nombre>/` sobre una branch nueva `worktree-<nombre>`, y arranca la sesión ahí. Al terminar una sesión sin nombrar y sin cambios pendientes, Claude Code borra el worktree solo; si hay trabajo sin commitear, pregunta antes de borrar."
+                }
+              ]
+            },
+            {
+              "title": "Qué se comparte y qué no",
+              "blocks": [
+                {
+                  "type": "table",
+                  "columns": ["Se comparte entre worktrees", "Es propio de cada worktree"],
+                  "rows": [
+                    ["El directorio .git y su historial", "Los archivos de trabajo (working tree)"],
+                    ["Permisos aprobados (\"no preguntar de nuevo\")", "La branch activa"],
+                    ["Plugins instalados a nivel proyecto", "Archivos sin trackear (.env, etc. — salvo .worktreeinclude)"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Un worktree nuevo es un checkout limpio",
+                  "content": "No trae archivos gitignored como .env. Para que esos archivos aparezcan automáticamente en cada worktree nuevo, hay que declarar un archivo .worktreeinclude en la raíz del proyecto, con sintaxis de .gitignore."
+                }
+              ]
+            },
+            {
+              "title": "Aislar subagentes con worktrees",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El mismo mecanismo aplica a subagentes: agregando `isolation: worktree` al frontmatter de un subagente definido en `.claude/agents/`, ese subagente corre siempre en su propio worktree temporal. Útil para agentes que aplican cambios mecánicos a muchos archivos (refactors grandes) en paralelo con la sesión principal, sin arriesgar el checkout que el usuario está mirando."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Worktrees vs. subagentes: aíslan cosas distintas",
+                  "content": "Un worktree aísla archivos en disco. Un subagente (ver Subagentes) aísla contexto de conversación. Son complementarios, no alternativos: se puede tener un subagente que además corre en su propio worktree cuando su trabajo implica editar archivos en paralelo al resto de la sesión."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "debugging-con-claude-code",
+          "title": "Depuración efectiva con Claude Code",
+          "summary": "El patrón reproducir → diagnosticar → corregir → verificar, y cómo hacer que Claude Code lo siga en vez de proponer parches a ciegas.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "El loop de debugging",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Un bug no está resuelto por una explicación plausible ni por un parche con apariencia razonable: está resuelto cuando el comportamiento que fallaba se puede reproducir, y después de aplicar el fix, ya no ocurre. Claude Code rinde mejor en debugging cuando la sesión se estructura como un loop cerrado, no como una sola pregunta-respuesta."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Reproducir",
+                      "body": "Darle a Claude el comando exacto que dispara el error (no solo el mensaje pegado), para que pueda correrlo y ver el stack trace completo por sí mismo."
+                    },
+                    {
+                      "title": "Diagnosticar",
+                      "body": "Dejar que explore el código relevante y proponga una causa raíz antes de tocar nada — pedir el diagnóstico como paso separado evita que salte directo a un parche superficial."
+                    },
+                    {
+                      "title": "Corregir",
+                      "body": "Aplicar el fix. Si el bug es reproducible con un test, pedir primero un test que falle por la causa identificada, y recién después el fix que lo hace pasar — así el bug no puede reaparecer sin que un test lo detecte."
+                    },
+                    {
+                      "title": "Verificar",
+                      "body": "Correr la reproducción original de nuevo (no solo la suite de tests) para confirmar que el síntoma reportado realmente desapareció."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Contexto que cambia el diagnóstico",
+                  "content": "Decir si el error es intermitente o consistente cambia por completo qué hipótesis son plausibles — una condición de carrera y un bug determinístico se investigan distinto. Ese dato rara vez se menciona espontáneamente y vale la pena darlo siempre."
+                }
+              ]
+            },
+            {
+              "title": "Automatizar partes del loop con hooks",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Pedirle a Claude que \"corra los tests después de cada cambio\" depende de que se acuerde de hacerlo en cada turno. Un hook PostToolUse que corre el test relevante automáticamente después de cada Edit convierte ese paso en determinístico — no importa si Claude lo pide o no, el loop de verificación ocurre igual. Ver Sistema de Hooks para la configuración completa."
+                }
+              ]
+            },
+            {
+              "title": "Debugging autónomo: de la sesión interactiva al monitoreo continuo",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Todo lo anterior asume una sesión interactiva: un humano trae el error. Pero el mismo loop reproducir → diagnosticar → corregir → verificar se puede correr sin que nadie lo dispare a mano, si Claude Code tiene acceso al lugar donde vive el error. Conectando un servidor MCP de observabilidad (por ejemplo, uno que exponga CloudWatch, Sentry o Datadog) como tool, Claude puede preguntar directamente \"¿qué errores hubo en las últimas 24 horas?\", identificar cuáles ameritan un fix, aplicar la corrección con el mismo loop de siempre, y abrir un pull request — sin que el error haya sido reportado por un humano primero."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Mecanismo", "Dónde corre", "Cuándo usarlo"],
+                  "rows": [
+                    ["Routines", "Cloud, administrado por Anthropic", "Corre aunque tu máquina esté apagada; puede dispararse por horario o por eventos de GitHub/API"],
+                    ["Tareas programadas del Desktop App", "Tu máquina, vía la app de escritorio", "Necesita acceso directo a archivos locales, tools o cambios sin commitear"],
+                    ["GitHub Actions", "Tu pipeline de CI", "Tareas atadas a eventos del repo (PR abierto) o a un cron que ya vive junto al resto de la config de CI"],
+                    ["/loop", "La sesión de CLI actual", "Polling rápido mientras una sesión sigue abierta; se corta al empezar una conversación nueva"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "El humano no desaparece, se mueve al gate del PR",
+                  "content": "Este patrón no elimina la revisión humana: la mueve de \"antes de que Claude investigue\" a \"antes de mergear\". Claude sigue proponiendo (el PR), una persona sigue decidiendo (el merge) — la regla de oro del proyecto (Claude propone, vos decidís) no cambia, solo cambia en qué punto del proceso entra el humano."
+                }
+              ]
+            }
+          ]
+        }
+      ]
     }
   ]
 }

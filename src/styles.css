@@ -248,6 +248,55 @@ body {
 }
 .exam-btn:hover { background: var(--accent-hover); }
 
+.exercises-btn {
+  flex-shrink: 0;
+  height: 30px;
+  padding: 0 13px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, #7C3AED 45%, transparent);
+  background: color-mix(in srgb, #7C3AED 12%, var(--bg-card));
+  color: #7C3AED;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+[data-theme="dark"] .exercises-btn { color: #C4B5FD; }
+.exercises-btn:hover { background: color-mix(in srgb, #7C3AED 22%, var(--bg-card)); }
+
+/* ── Ejercicios prácticos: paleta propia (violeta), reutiliza layout de artículo ── */
+.exercises-scope {
+  --accent:       #7C3AED;
+  --accent-hover: #6D28D9;
+}
+[data-theme="dark"] .exercises-scope {
+  --accent:       #A78BFA;
+  --accent-hover: #C4B5FD;
+}
+.exercises-badge {
+  background: color-mix(in srgb, #7C3AED 14%, var(--bg-card));
+  color: var(--accent);
+}
+.exercise-num {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 18%, var(--bg-card));
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 700;
+  margin-right: 4px;
+}
+
 /* ── Home ─────────────────────────────────────────── */
 
 .home-hero {
