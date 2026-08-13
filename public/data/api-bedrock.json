@@ -1,0 +1,352 @@
+{
+  "sections": [
+    {
+      "title": "Claude en AWS Bedrock",
+      "articles": [
+        {
+          "title": "Accediendo a Claude a través de AWS Bedrock",
+          "subsections": [
+            {
+              "title": "API de Anthropic vs. AWS Bedrock",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "No son lo mismo",
+                  "content": "Llamar a Claude directamente contra la API de Anthropic (api.anthropic.com) y llamar a Claude a través de AWS Bedrock son dos integraciones distintas. Bedrock es el servicio de AWS que expone varios modelos de fundación (incluido Claude) bajo una interfaz y una facturación propias de AWS, con autenticación por credenciales de AWS (IAM) en lugar de una API key de Anthropic."
+                }
+              ]
+            },
+            {
+              "title": "El flujo de una app de chat",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "En una app de chat típica, el usuario ve una interfaz simple — escribe un mensaje y recibe una respuesta — pero detrás hay un flujo de varios pasos entre el navegador, tu servidor y AWS Bedrock."
+                },
+                {
+                  "type": "steps",
+                  "steps": [
+                    {
+                      "step": 1,
+                      "title": "El usuario envía su mensaje",
+                      "description": "A través de la interfaz web de la app"
+                    },
+                    {
+                      "step": 2,
+                      "title": "El servidor recibe el request",
+                      "description": "Con el texto del mensaje del usuario"
+                    },
+                    {
+                      "step": 3,
+                      "title": "El servidor llama a AWS Bedrock",
+                      "description": "Usando el cliente de Bedrock para hacer el request"
+                    },
+                    {
+                      "step": 4,
+                      "title": "El request incluye el mensaje y el model ID",
+                      "description": "Por ejemplo, el ID correspondiente a Claude Haiku o Claude Sonnet en Bedrock"
+                    },
+                    {
+                      "step": 5,
+                      "title": "El modelo procesa el request",
+                      "description": "Y genera el texto de respuesta"
+                    },
+                    {
+                      "step": 6,
+                      "title": "Bedrock devuelve un mensaje de assistant",
+                      "description": "Con la respuesta generada por el modelo"
+                    },
+                    {
+                      "step": 7,
+                      "title": "El servidor reenvía la respuesta al navegador",
+                      "description": "Y el usuario la ve en la interfaz de chat"
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "Tu servidor es el intermediario",
+                  "content": "El navegador del usuario nunca habla directamente con AWS Bedrock. Tu servidor backend es quien tiene las credenciales de AWS y hace el request al modelo — el mismo patrón de intermediación que se usa con la API directa de Anthropic o con Vertex AI, para no exponer credenciales en el cliente."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tu primer request a AWS Bedrock",
+          "subsections": [
+            {
+              "title": "Los tres componentes de un request",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Hacer un primer request a Bedrock requiere tres componentes: un cliente de Bedrock Runtime para conectarte al servicio, un Model ID que especifica qué modelo querés ejecutar, y un User Message con el texto que le enviás al modelo."
+                }
+              ]
+            },
+            {
+              "title": "Configurar el cliente de Bedrock",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El SDK de AWS para Python (boto3) es el que se usa para conectarse a Bedrock — no el SDK de Anthropic. Se crea un cliente para el servicio `bedrock-runtime` indicando la región de AWS:"
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import boto3\n\nclient = boto3.client(\"bedrock-runtime\", region_name=\"us-west-2\")"
+                }
+              ]
+            },
+            {
+              "title": "Model IDs y disponibilidad regional",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "No todos los modelos están en todas las regiones",
+                  "content": "Si intentás invocar un modelo que no existe en la región configurada en el cliente, el request falla con un error críptico de tipo 'modelo no existe'. Por ejemplo, si Claude Sonnet está disponible en us-west-2 pero el cliente apunta a us-east-1, el request va a fallar."
+                }
+              ]
+            },
+            {
+              "title": "Inference profiles: la solución al problema regional",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Un inference profile resuelve el problema de disponibilidad regional enrutando automáticamente el request a una región donde el modelo elegido sí está disponible. En vez de tener que llevar la cuenta manualmente de qué modelo está en qué región, el inference profile ya sabe que el modelo está hospedado en varias regiones (por ejemplo us-west-2 y us-east-2) y AWS elige la correcta por vos, incluso si el cliente se conectó desde otra región."
+                },
+                {
+                  "type": "text",
+                  "content": "AWS le llama a esto **cross-Region inference (CRIS)**. Un inference profile define un modelo y el conjunto de regiones (destino) a las que Bedrock puede enrutar el request. El ID sigue un formato con prefijo geográfico + el ID del modelo, por ejemplo:"
+                },
+                {
+                  "type": "code",
+                  "language": "text",
+                  "code": "us.anthropic.claude-3-haiku-20240307-v1:0\neu.anthropic.claude-sonnet-4-20250514-v1:0"
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "Dónde encontrar el inference profile ID",
+                  "content": "En la consola de AWS Bedrock, el ID del inference profile no está en el catálogo principal de modelos — hay que buscarlo en la sección 'Cross-region inference', o en la página de detalle de cada modelo, tabla 'Regional availability' → 'Inference profile IDs'. Ese es el ID que se usa como `modelId` en el request, no el ID del catálogo general."
+                },
+                {
+                  "type": "compare",
+                  "title": "Geographic vs. Global cross-Region inference",
+                  "items": [
+                    {
+                      "title": "Geographic (us., eu., apac.)",
+                      "rows": [
+                        "Enruta solo dentro de la geografía del prefijo (US, EU, APAC, etc.)",
+                        "Precio estándar del modelo",
+                        "Pensado para requisitos de residencia de datos / compliance regional"
+                      ]
+                    },
+                    {
+                      "title": "Global (global.)",
+                      "rows": [
+                        "Enruta a cualquier región comercial de AWS en el mundo",
+                        "Aproximadamente 10% más barato que el pricing estándar",
+                        "Pensado para optimizar costo cuando no hay restricción de residencia de datos",
+                        "Por ahora solo disponible para Claude Sonnet 4"
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Detalles que vale la pena conocer",
+                  "content": "No hay costo adicional por el enrutamiento en sí — el precio se calcula según la región desde la que invocás el inference profile, no la región destino real. Cross-Region inference puede enrutar a regiones que no están habilitadas manualmente en tu cuenta de AWS (no hace falta hacer opt-in a cada una). Todo el tráfico entre regiones viaja por la red interna de AWS, cifrado, sin pasar por internet público. CloudTrail registra estos requests en la región de origen, con el campo `additionalEventData.inferenceRegion` indicando dónde se procesó realmente."
+                }
+              ]
+            },
+            {
+              "title": "Estructura de un user message",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Los mensajes de usuario en Bedrock tienen una estructura que puede parecer sobrecargada al principio, pero tiene una razón de ser:"
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "user_message = {\n    \"role\": \"user\",\n    \"content\": [\n        {\"text\": \"What's 1+1?\"}\n    ]\n}"
+                },
+                {
+                  "type": "text",
+                  "content": "`content` es una lista porque un mismo mensaje puede combinar distintos tipos de contenido — texto, imágenes u otros tipos de media. Esa estructura es la que permite armar requests multimodales."
+                }
+              ]
+            },
+            {
+              "title": "Hacer el request con converse",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.converse(\n    modelId=model_id,\n    messages=[user_message]\n)"
+                },
+                {
+                  "type": "text",
+                  "content": "El método usado para invocar el modelo es `converse`, no `messages.create` como en el SDK de Anthropic. La respuesta trae bastante metadata; para llegar al texto generado hay que navegar la estructura del response:"
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response[\"output\"][\"message\"][\"content\"][0][\"text\"]"
+                }
+              ]
+            },
+            {
+              "title": "User messages vs. assistant messages",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Hay dos tipos principales de mensaje: los **user messages** (contenido que le enviás al modelo, `role: \"user\"`) y los **assistant messages** (contenido que el modelo generó, `role: \"assistant\"`). Ambos comparten la misma estructura de `role` + lista de `content`."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Misma forma, distinto rol",
+                  "content": "El assistant message que devuelve Bedrock sigue exactamente el mismo formato que el user message que enviaste, solo cambia el `role`. Esa simetría es la que permite encadenar mensajes fácilmente para armar conversaciones de varios turnos, reusando cada respuesta del modelo como parte del historial del próximo request."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Conversaciones multi-turno",
+          "subsections": [
+            {
+              "title": "Bedrock no guarda mensajes",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Cada request es independiente",
+                  "content": "Ni Bedrock ni Claude almacenan los mensajes que enviás o las respuestas que recibís. Cada llamada al Converse API es completamente stateless — si le mandás solo la pregunta de seguimiento '¿Y 3 más?' sin el historial previo, el modelo no tiene forma de saber a qué se refiere '3 más'."
+                },
+                {
+                  "type": "text",
+                  "content": "Para mantener el contexto de una conversación, tu aplicación tiene que llevar la lista completa de mensajes y reenviarla entera en cada request — incluyendo tanto los mensajes de usuario como las respuestas del modelo que ya recibiste."
+                }
+              ]
+            },
+            {
+              "title": "Funciones helper para manejar mensajes",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def add_user_message(messages, text):\n    messages.append({\n        \"role\": \"user\",\n        \"content\": [{\"text\": text}]\n    })\n\ndef add_assistant_message(messages, text):\n    messages.append({\n        \"role\": \"assistant\",\n        \"content\": [{\"text\": text}]\n    })\n\ndef chat(messages):\n    response = client.converse(\n        modelId=model_id,\n        messages=messages\n    )\n    return response[\"output\"][\"message\"][\"content\"][0][\"text\"]"
+                }
+              ]
+            },
+            {
+              "title": "Armando la conversación paso a paso",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "messages = []\n\nadd_user_message(messages, \"What's 1+1?\")\nanswer = chat(messages)\nadd_assistant_message(messages, answer)\n\nadd_user_message(messages, \"And 3 more added to that?\")\nanswer = chat(messages)\nprint(answer)\n# \"Starting with the result of 1+1 = 2, if we add 3 more to that, we get: 2 + 3 = 5\""
+                },
+                {
+                  "type": "text",
+                  "content": "Cada respuesta del modelo se agrega de vuelta a `messages` como mensaje de assistant antes de la siguiente pregunta. Es ese historial completo — no solo el último mensaje — el que le da a Claude el contexto para entender que '3 más' se suma al resultado anterior."
+                }
+              ]
+            },
+            {
+              "title": "Los roles tienen que alternar estrictamente",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La lista de mensajes debe seguir el patrón user → assistant → user → assistant. Nunca dos mensajes de usuario seguidos ni dos de assistant seguidos."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "No es solo una convención, es una validación del API",
+                  "content": "Si rompés la alternancia — por ejemplo, agregás dos mensajes de usuario seguidos sin una respuesta de assistant en el medio — el Converse API rechaza el request con un `ValidationException` explícito ('roles must alternate between \"user\" and \"assistant\"'). Si necesitás enviar contenido adicional del mismo rol, tenés que combinarlo en un único mensaje antes de mandarlo, no agregarlo como mensaje separado."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "System prompts en Bedrock",
+          "subsections": [
+            {
+              "title": "El parámetro system del Converse API",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Mismo concepto que en la API de Anthropic",
+                  "content": "Asignarle un rol a Claude vía system prompt en lugar de listar reglas en cada mensaje de usuario es la misma técnica de **role prompting** que ya se explica en API de Claude → Prompt Engineering → Role prompting: el rol condiciona vocabulario, nivel de detalle y criterios de forma consistente, sin tener que anticipar cada caso posible en el mensaje del usuario. Lo que cambia en Bedrock es solo la forma de pasarlo al request."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "system_prompt = \"\"\"\nYou are an AWS cloud support specialist. Your job is to answer user queries related \nto cloud hosting services on AWS.\n\"\"\"\n\nresponse = client.converse(\n    modelId=model_id,\n    messages=messages,\n    system=[{\"text\": system_prompt}]\n)"
+                },
+                {
+                  "type": "text",
+                  "content": "A diferencia del SDK de Anthropic (donde `system` es un string), en el Converse API de Bedrock `system` es una **lista** de `SystemContentBlock` — objetos con una clave `text`. En la práctica casi siempre se usa un solo bloque de texto, pero la estructura de lista es la misma razón por la que `content` es una lista en los mensajes: deja lugar a otros tipos de bloque, como `cachePoint` (prompt caching) o `guardContent` (contenido a evaluar con un guardrail)."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "El texto del system prompt no puede ser un string vacío",
+                  "content": "El campo `text` de `SystemContentBlock` tiene un mínimo de 1 carácter. Pasar `system=[{\"text\": \"\"}]` es inválido — si no hay system prompt, hay que omitir el parámetro `system` por completo en vez de mandarlo vacío."
+                }
+              ]
+            },
+            {
+              "title": "Función chat() con system prompt opcional",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def chat(messages, system=None):\n    params = {\"modelId\": model_id, \"messages\": messages}\n\n    if system:\n        params[\"system\"] = [{\"text\": system}]\n\n    response = client.converse(**params)\n\n    return response[\"output\"][\"message\"][\"content\"][0][\"text\"]"
+                },
+                {
+                  "type": "text",
+                  "content": "El `if system` evita justamente el problema del string vacío: si no se pasa system prompt, la clave `system` ni siquiera se incluye en `params`, en vez de mandarla como lista vacía o con texto vacío."
+                }
+              ]
+            },
+            {
+              "title": "Especificación vs. rol: un ejemplo concreto",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Para un asistente de soporte de AWS, la alternativa a un system prompt sería algo así en cada mensaje de usuario — frágil porque hay que anticipar cada caso, y el usuario ve todas las instrucciones internas mezcladas con su pregunta:"
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "add_user_message(messages, f\"\"\"\nDO:\n  - Mention how to host things on AWS\n  - List some setup steps\n  - Mention related AWS services\n\nDONT:\n  - Mention how to host services outside AWS\n  - Answer questions not related to AWS\n\n{users_question}\n\"\"\")"
+                },
+                {
+                  "type": "text",
+                  "content": "Con el system prompt del asistente AWS activo, una pregunta fuera de tema como \"dame una receta de pan\" no se responde — Claude declina y se mantiene en su rol, sin necesidad de una regla explícita para ese caso puntual. Esa es la ventaja frente al enfoque de lista de reglas: cubre casos que nunca se anticiparon."
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "El system prompt se fija por conversación, no por turno",
+                  "content": "Se puede cambiar el system prompt entre una conversación y otra, pero no a mitad de una conversación en curso — se aplica una vez, antes de que el modelo vea cualquier mensaje de usuario, y se mantiene fijo durante todo ese hilo de mensajes."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
