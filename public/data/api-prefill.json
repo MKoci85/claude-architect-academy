@@ -27,6 +27,26 @@
               ]
             },
             {
+              "title": "El mismo truco existía en AWS Bedrock",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El Converse API de Bedrock soportaba exactamente el mismo mecanismo: agregar un mensaje con `role: \"assistant\"` al final de `messages` para que Claude continuara desde ahí en lugar de generar desde cero (ver API de Claude → Claude en AWS Bedrock → Conversaciones multi-turno para los helpers `add_user_message` / `add_assistant_message`)."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "messages = []\nadd_user_message(messages, \"Is coffee or tea better for breakfast?\")\nadd_assistant_message(messages, \"Coffee is better because\")\n\nchat(messages)\n# devolvía la continuación, por ejemplo \"it has more caffeine.\"\n# había que concatenar el prefill + la continuación para tener la respuesta completa"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "No era una función de Bedrock, era comportamiento del modelo",
+                  "content": "El prefill nunca fue una capacidad propia de la API directa ni del Converse API de Bedrock — dependía de cómo el modelo subyacente interpretaba un mensaje assistant al final de la conversación. Por eso la retirada en modelos actuales (Claude 4.6 en adelante) no tiene una excepción documentada por plataforma: aplica igual sin importar si invocás el modelo por api.anthropic.com o por Bedrock. Las alternativas modernas también trasladan directo: strict tool use vía `toolConfig`, y mover instrucciones de tono o personaje al `system` del Converse API."
+                }
+              ]
+            },
+            {
               "title": "Los tres casos de uso originales",
               "blocks": [
                 {
@@ -117,6 +137,35 @@
                   "style": "info",
                   "title": "¿Tool forzada o output_config.format?",
                   "content": "Ambas dan una garantía real de estructura. output_config.format es más directo cuando el único objetivo es JSON (sin el ruido conceptual de una \"tool\" que no hace nada) y es la opción más nueva. Forzar una tool con tool_choice sigue siendo preferible si el schema necesita `strict: true` con lógica de validación que ya tenías montada para tools reales, o en SDKs/integraciones donde tools ya es el mecanismo establecido para todo output estructurado."
+                }
+              ]
+            },
+            {
+              "title": "Extensión del Caso 2: prefill + stop_sequences para delimitar cualquier formato",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Más allá de JSON, el mismo truco de prefillear un delimitador de apertura se combinaba con un stop sequence en el delimitador de cierre para capturar código Python, CSV, listas o archivos de configuración sin el texto explicativo que Claude agrega alrededor por defecto."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "messages = []\nadd_user_message(messages, \"Generate a very short EventBridge rule as JSON\")\nadd_assistant_message(messages, \"```json\")\n\ntext = chat(messages, stop_sequences=[\"```\"])\n# Claude \"cree\" que ya abrió el bloque de código y sigue directo con el JSON;\n# apenas intenta cerrar con ``` de nuevo, el stop_sequence corta ahí.\n# text queda con solo el contenido, sin el ``` de apertura ni de cierre."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "La mitad prefill de este combo está deprecada — stop_sequences no",
+                  "content": "add_assistant_message(messages, \"```json\") es prefill: hereda la misma retirada en Claude 4.6+ que el resto de esta página (ver más arriba, y su equivalente vía Bedrock). stop_sequences sigue funcionando exactamente igual — lo que dejó de funcionar es la mitad que abría el delimitador."
+                },
+                {
+                  "type": "text",
+                  "content": "El reemplazo depende del formato. Para JSON, output_config.format (arriba) sigue siendo la opción más sólida. Para formatos sin schema formal — código, CSV, listas — la alternativa moderna es pedirle a Claude directamente que envuelva el contenido en una etiqueta XML propia y extraer con un split de string; Claude respeta el límite de un tag mucho más consistentemente que una instrucción vaga tipo \"no agregues texto extra\" (ver API de Claude → Prompt Engineering → Etiquetas XML)."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "add_user_message(messages, \"Generate a very short EventBridge rule as JSON. \"\n                            \"Wrap it in <output> tags with nothing else inside them.\")\nresponse = chat(messages)\n\ntext = response.split(\"<output>\")[1].split(\"</output>\")[0].strip()"
                 }
               ]
             },

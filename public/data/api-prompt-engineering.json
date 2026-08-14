@@ -47,6 +47,12 @@
                   "style": "info",
                   "title": "El test del colega",
                   "content": "Mostrale el prompt a alguien sin contexto adicional. Si necesita preguntar algo para saber cómo proceder, Claude va a tener la misma duda y la va a resolver adivinando. Explicar también el por qué de la instrucción (la motivación, no solo el pedido) mejora el cumplimiento en casos límite."
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "Instrucciones, no preguntas",
+                  "content": "Más allá de la especificidad del contenido, importa la forma gramatical de la primera línea: arrancar con una instrucción imperativa (\"Generá...\", \"Identificá...\", \"Escribí...\") deja menos margen de interpretación que una pregunta o un pensamiento en voz alta (\"¿Qué debería...?\", \"Estuve pensando en...\"). \"Generá un plan de comidas de un día para un atleta que respete sus restricciones alimentarias\" fija en una sola línea la acción, el objeto y las restricciones clave — no hay que inferir qué se espera."
                 }
               ]
             },
@@ -114,6 +120,18 @@
                   "type": "code",
                   "language": "python",
                   "code": "prompt = \"\"\"\nConvertí cada ticket en una línea de log con formato: [categoria] resumen_corto\n\n<ejemplos>\n<ejemplo>\nEntrada: \"no me llegó el pedido #4521, ya pasaron 10 días\"\nSalida: [envio] pedido #4521 sin entregar hace 10 días\n</ejemplo>\n<ejemplo>\nEntrada: \"quiero que me devuelvan la plata del producto roto\"\nSalida: [reembolso] solicita devolución por producto dañado\n</ejemplo>\n<ejemplo>\nEntrada: \"tengo un problema, no sé bien con qué\"\nSalida: [ambiguo] reclamo sin detalle suficiente para clasificar\n</ejemplo>\n</ejemplos>\n\nEntrada: \"el cargador que compré no enciende la notebook\"\nSalida:\n\"\"\""
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "Explicar por qué un ejemplo es bueno",
+                  "content": "Cuando no es obvio qué hace ideal a un ejemplo, agregar una frase justo después de la salida ayuda a que el modelo generalice el criterio en lugar de imitar solo la forma superficial: \"</ejemplo>\\nEste ejemplo es bueno porque distingue sarcasmo de sentimiento positivo literal, no solo palabras clave positivas/negativas.\" Sin esa explicación, un ejemplo de un caso límite puede leerse como ruido en vez de como la señal que marca justamente ese límite."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "De dónde salen los mejores ejemplos: del propio eval",
+                  "content": "En vez de inventar ejemplos a mano, conviene buscarlos en las corridas de evaluación (ver Evaluación de Prompts): los casos que sacaron el puntaje más alto en el reporte son candidatos naturales para usar como ejemplo multishot — ya están validados por el grader, no son una suposición de qué se ve bien."
                 }
               ]
             },
@@ -134,6 +152,26 @@
                   "style": "warning",
                   "title": "Costo de pensar en voz alta",
                   "content": "Cada token de razonamiento se paga y agrega latencia. Para tareas simples (clasificación directa, extracción) el chain-of-thought casi nunca aporta. Reservarlo para problemas con múltiples pasos de razonamiento."
+                }
+              ]
+            },
+            {
+              "title": "Pasos prescritos vs. razonamiento libre",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El chain-of-thought de arriba deja que el modelo elija su propio camino dentro de las tags de razonamiento. Hay una variante más controlada: en vez de pedir \"pensá paso a paso\", el prompt enumera los pasos concretos que Claude tiene que seguir, en el orden dado. Es útil cuando el orden de trabajo importa y no conviene confiar en que el modelo lo infiera solo — por ejemplo, forzar que primero explore varias opciones antes de comprometerse con una."
+                },
+                {
+                  "type": "code",
+                  "language": "text",
+                  "code": "Escribí un reporte de una página para diagnosticar por qué las ventas\ndel equipo cayeron 30% el último trimestre.\n\nSeguí estos pasos:\n1. Comparar métricas de mercado actuales contra el trimestre anterior\n2. Identificar cambios relevantes en la industria\n3. Analizar el desempeño individual de cada miembro del equipo\n4. Considerar cambios organizacionales recientes\n5. Revisar feedback de clientes"
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "Cuándo forzar pasos en vez de dejar razonamiento libre",
+                  "content": "Conviene prescribir los pasos —no solo pedir que \"piense paso a paso\"— en troubleshooting de problemas complejos, toma de decisiones con múltiples factores, pensamiento crítico, o cualquier caso donde el riesgo es que el modelo salte a la primera explicación obvia. En el ejemplo de arriba, sin pasos explícitos Claude podría enfocarse solo en el desempeño del equipo e ignorar cambios de mercado u organizacionales — los pasos fuerzan una revisión más amplia antes de concluir."
                 }
               ]
             },

@@ -133,6 +133,21 @@
                   "type": "code",
                   "language": "python",
                   "code": "import re\nfrom jsonschema import validate, ValidationError\n\n# 1. coincidencia exacta — clasificación, categorías cerradas\ndef grader_exact_match(obtenido, esperado):\n    return obtenido.strip().lower() == esperado.strip().lower()\n\n# 2. expresión regular — formato libre pero con un patrón obligatorio\ndef grader_regex(texto, patron=r\"^\\[(envio|reembolso|producto_defectuoso)\\]\"):\n    return bool(re.match(patron, texto))\n\n# 3. validación de schema — salidas estructuradas (JSON / tool use)\ndef grader_schema(datos_json, schema):\n    try:\n        validate(instance=datos_json, schema=schema)\n        return True\n    except ValidationError:\n        return False\n\naciertos = sum(1 for r in resultados if grader_exact_match(r[\"obtenido\"], r[\"esperado\"]))\naccuracy = aciertos / len(resultados)\nprint(f\"Accuracy: {accuracy:.1%}\")"
+                },
+                {
+                  "type": "text",
+                  "content": "Hay un cuarto caso de uso, distinto de los anteriores: cuando lo que se evalúa no es si la respuesta coincide con un valor esperado, sino si **el código que Claude generó es sintácticamente válido** — por ejemplo, cuando el prompt pide una función Python, un objeto JSON o un patrón regex como única salida. El propio parser del lenguaje sirve como grader: si parsea, el código está bien formado; si tira una excepción, no lo está."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import ast\nimport json\nimport re\n\n# 4. validación de sintaxis — el output ES código, no datos que describen algo\ndef validate_json(texto):\n    try:\n        json.loads(texto.strip())\n        return 10\n    except json.JSONDecodeError:\n        return 0\n\ndef validate_python(texto):\n    try:\n        ast.parse(texto.strip())\n        return 10\n    except SyntaxError:\n        return 0\n\ndef validate_regex(texto):\n    try:\n        re.compile(texto.strip())\n        return 10\n    except re.error:\n        return 0\n\ndef grade_syntax(output, test_case):\n    validador = {\"json\": validate_json, \"python\": validate_python, \"regex\": validate_regex}\n    return validador[test_case[\"format\"]](output)"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Todo o nada, y eso está bien",
+                  "content": "A diferencia de un LLM-as-judge, este grader no mide calidad — solo validez estructural: 10 si parsea, 0 si no. Es intencionalmente binario. La forma habitual de usarlo es combinado con un grader de modelo (que sí evalúa si el código resuelve la tarea): promediar ambos puntajes da una nota que castiga tanto el código roto como el código que compila pero no responde lo pedido."
                 }
               ]
             },
@@ -141,7 +156,7 @@
               "blocks": [
                 {
                   "type": "text",
-                  "content": "Cuando la corrección es subjetiva (tono, calidad de una explicación, fidelidad de un resumen) se puede usar a Claude como evaluador con una rúbrica explícita. Tres prácticas mejoran la fiabilidad del juez:"
+                  "content": "Cuando la corrección es subjetiva (tono, calidad de una explicación, fidelidad de un resumen) se puede usar a Claude como evaluador con una rúbrica explícita. Cuatro prácticas mejoran la fiabilidad del juez:"
                 },
                 {
                   "type": "cards",
@@ -160,6 +175,11 @@
                       "icon": "🧠",
                       "title": "Modelo capaz",
                       "description": "El juez se beneficia de más capacidad de razonamiento que el modelo que generó la respuesta, aunque ese modelo barato sea el que corre en producción."
+                    },
+                    {
+                      "icon": "💭",
+                      "title": "Exigir justificación, no solo el número",
+                      "description": "Un juez al que solo se le pide un puntaje tiende a converger en valores intermedios (~6 sobre 10) para no comprometerse. Pedirle que primero liste fortalezas y debilidades y recién después dé el puntaje — como hace el campo justificacion del schema de abajo — lo obliga a fundamentar la nota en vez de tirar un número seguro."
                     }
                   ]
                 },

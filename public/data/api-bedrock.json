@@ -334,13 +334,166 @@
                 },
                 {
                   "type": "text",
-                  "content": "Con el system prompt del asistente AWS activo, una pregunta fuera de tema como \"dame una receta de pan\" no se responde — Claude declina y se mantiene en su rol, sin necesidad de una regla explícita para ese caso puntual. Esa es la ventaja frente al enfoque de lista de reglas: cubre casos que nunca se anticiparon."
+                  "content": "El efecto se nota incluso en preguntas que sí son on-topic pero genéricas. Sin system prompt, \"¿Cómo hosteo una base de datos Postgres?\" recibe una respuesta amplia que compara varios proveedores de cloud y opciones self-hosted. Con el system prompt de especialista en AWS activo, la misma pregunta produce una respuesta acotada solo a soluciones de AWS — RDS, Aurora, despliegues sobre EC2 — sin mencionar competidores, y con pasos de configuración específicos de AWS."
+                },
+                {
+                  "type": "text",
+                  "content": "Con el mismo system prompt, una pregunta fuera de tema como \"dame una receta de pan\" no se responde — Claude declina y se mantiene en su rol, sin necesidad de una regla explícita para ese caso puntual. Esa es la ventaja frente al enfoque de lista de reglas: cubre tanto el acotamiento de temas relacionados como el rechazo de temas no relacionados, sin tener que anticipar cada caso."
                 },
                 {
                   "type": "callout",
                   "style": "tip",
                   "title": "El system prompt se fija por conversación, no por turno",
                   "content": "Se puede cambiar el system prompt entre una conversación y otra, pero no a mitad de una conversación en curso — se aplica una vez, antes de que el modelo vea cualquier mensaje de usuario, y se mantiene fijo durante todo ese hilo de mensajes."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Parámetros de inferencia: temperature y compañía",
+          "subsections": [
+            {
+              "title": "inferenceConfig en vez de un parámetro plano",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Mismo concepto, distinta ubicación en el request",
+                  "content": "temperature controla qué tan determinística o variada es la salida del modelo — el mismo parámetro que ya se documenta en API de Claude → Referencia de la API. Lo que cambia en el Converse API de Bedrock es dónde va: no es un campo plano del request como en el SDK de Anthropic, sino que se anida dentro de `inferenceConfig`."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def chat(messages, system=None, temperature=1.0):\n    params = {\n        \"modelId\": model_id,\n        \"messages\": messages,\n        \"inferenceConfig\": {\"temperature\": temperature}\n    }\n\n    if system:\n        params[\"system\"] = [{\"text\": system}]\n\n    response = client.converse(**params)\n    return response[\"output\"][\"message\"][\"content\"][0][\"text\"]"
+                },
+                {
+                  "type": "text",
+                  "content": "`inferenceConfig` es el mismo objeto donde van el resto de los parámetros de muestreo del Converse API — no solo `temperature`, también `maxTokens`, `topP` y `stopSequences`."
+                }
+              ]
+            },
+            {
+              "title": "El default depende del modelo, no de Bedrock",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Si omitís `temperature`, el Converse API no aplica un valor fijo propio de Bedrock — usa el default del modelo que estés invocando. Para los modelos Claude actuales, ese default es 1.0, igual que en la API directa de Anthropic."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "En Bedrock, la mutua exclusión con top_p aplica desde Sonnet 4.5 y Haiku 4.5 — no desde Opus 4.7",
+                  "content": "La API directa de Anthropic bloquea con error 400 el envío de un valor no-default de temperature, top_p o top_k a partir de Opus 4.7 (ver API de Claude → Referencia de la API). En Bedrock la restricción es distinta: Claude Sonnet 4.5 y Claude Haiku 4.5 solo admiten especificar temperature o top_p, no ambos a la vez, y esto no aplica a modelos anteriores. Es el mismo principio — ajustar un solo parámetro de muestreo por vez — pero con distinto disparador según la plataforma."
+                }
+              ]
+            },
+            {
+              "title": "top_k no vive en inferenceConfig",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A diferencia de `temperature`, `maxTokens`, `topP` y `stopSequences`, `top_k` no es un parámetro base del Converse API — `inferenceConfig` no tiene un campo `topK`. Para modelos que sí lo soportan, como Claude, hay que pasarlo aparte en `additionalModelRequestFields`."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.converse(\n    modelId=model_id,\n    messages=messages,\n    inferenceConfig={\"temperature\": 0.5},\n    additionalModelRequestFields={\"top_k\": 200}\n)"
+                }
+              ]
+            },
+            {
+              "title": "stopSequences: cortar la generación en un marcador",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def chat(messages, system=None, temperature=1.0, stop_sequences=None):\n    params = {\n        \"modelId\": model_id,\n        \"messages\": messages,\n        \"inferenceConfig\": {\"temperature\": temperature}\n    }\n\n    if stop_sequences:\n        params[\"inferenceConfig\"][\"stopSequences\"] = stop_sequences\n\n    if system:\n        params[\"system\"] = [{\"text\": system}]\n\n    response = client.converse(**params)\n    return response[\"output\"][\"message\"][\"content\"][0][\"text\"]"
+                },
+                {
+                  "type": "text",
+                  "content": "Apenas Claude genera cualquiera de las strings pasadas en `stopSequences`, corta la generación de inmediato y devuelve solo lo generado hasta ese punto — la secuencia que disparó el corte no queda incluida en el texto. Por ejemplo, pedir que cuente del 1 al 10 con `stop_sequences=[\"5\"]` devuelve \"1, 2, 3, 4, \" sin el \"5\". Con varias stop sequences a la vez, Claude corta en la que aparezca primero."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Para saber cuál stop sequence disparó el corte, hay que pedirlo explícitamente",
+                  "content": "`response[\"stopReason\"]` vale `\"stop_sequence\"` cuando el corte fue por esto, pero el valor concreto de qué secuencia matcheó no viaja en la respuesta por defecto. Hay que declararlo en `additionalModelResponseFieldPaths: [\"/stop_sequence\"]` al armar el request, y ahí aparece en `response[\"additionalModelResponseFields\"][\"stop_sequence\"]`. A diferencia de la API directa de Anthropic, donde `stop_sequence` es un campo de primer nivel en toda respuesta, en Bedrock es opt-in."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Streaming con converse_stream",
+          "subsections": [
+            {
+              "title": "converse_stream devuelve un generador",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El concepto de streaming ya está cubierto en API de Claude → Guías Prácticas",
+                  "content": "Por qué usar streaming (UX de respuesta incremental en vez de esperar 10-30 segundos) es el mismo motivo en cualquier plataforma. Lo que cambia en Bedrock es la forma concreta del método y de los eventos."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "messages = []\nadd_user_message(messages, \"Write a 1 sentence description of a fake database\")\nresponse = client.converse_stream(messages=messages, modelId=model_id)\n\nfor event in response[\"stream\"]:\n    print(event)"
+                },
+                {
+                  "type": "text",
+                  "content": "`converse_stream` (no `converse`) devuelve de inmediato un dict con una clave `stream`, que es un generador de eventos — cada uno un dict con una única clave que identifica el tipo de evento. Para extraer solo el texto, hay que filtrar por `contentBlockDelta` y navegar hasta `delta.text`:"
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "text = \"\"\nfor event in response[\"stream\"]:\n    if \"contentBlockDelta\" in event:\n        chunk = event[\"contentBlockDelta\"][\"delta\"][\"text\"]\n        print(chunk, end=\"\")\n        text += chunk"
+                }
+              ]
+            },
+            {
+              "title": "El set completo de eventos va más allá de contentBlockDelta",
+              "blocks": [
+                {
+                  "type": "table",
+                  "head": ["Evento", "Descripción"],
+                  "rows": [
+                    ["messageStart", "Arranca un nuevo mensaje."],
+                    ["contentBlockStart", "Arranca un nuevo bloque de contenido — texto, tool_use u otro tipo."],
+                    ["contentBlockDelta", "Fragmento incremental del bloque de contenido actual. El que más se usa para mostrar texto en vivo."],
+                    ["contentBlockStop", "El bloque de contenido actual terminó."],
+                    ["messageStop", "El mensaje terminó. Trae el `stopReason` final."],
+                    ["metadata", "Cierra el stream con `usage` (tokens) y métricas de latencia."]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "No hay un evento equivalente a message_delta",
+                  "content": "En la API directa de Anthropic (ver API de Claude → Referencia de la API), `message_delta` trae el `stop_reason` y el conteo de `usage` juntos, antes de `message_stop`. En Bedrock esa información está repartida distinto: el `stopReason` viaja dentro de `messageStop`, y `usage` junto con la latencia llegan recién en el evento `metadata` al final del stream — no hay un evento separado que combine ambos."
+                }
+              ]
+            },
+            {
+              "title": "Los errores también llegan como eventos del stream",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "ConverseStream puede terminar en una excepción dentro del stream, no solo con un error HTTP previo",
+                  "content": "Si algo falla durante la generación — throttling, un error interno del modelo, una validación — el evento puede llegar como una clave de excepción dentro del mismo stream (`throttlingException`, `validationException`, `modelStreamErrorException`, `internalServerException`, `serviceUnavailableException`), no como un status HTTP de error antes de empezar a recibir eventos. El código que consume el stream tiene que chequear estas claves además de `contentBlockDelta`, o el error pasa desapercibido."
+                }
+              ]
+            },
+            {
+              "title": "Streaming no cambia el costo",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "Se factura por tokens generados, no por cómo se entregan",
+                  "content": "Usar `converse_stream` en vez de `converse` no cambia el precio: el modelo genera los mismos tokens, streaming solo cambia el transporte (llegan en pedazos vía eventos en vez de todos juntos al final). El conteo de `usage` que llega en el evento `metadata` refleja el mismo cálculo que tendrías sin streaming. Si tu aplicación corta la conexión apenas tiene lo que necesita, incluso puede salir más barato — solo se factura por los tokens ya generados hasta ese punto, no por una respuesta completa que nunca se terminó de generar."
                 }
               ]
             }
