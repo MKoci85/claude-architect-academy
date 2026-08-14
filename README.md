@@ -1,6 +1,6 @@
 # Claude Architect Academy
 
-> Preparación completa, en español, para la certificación **Claude Certified Architect – Foundations (CCAR-F)**: documentación curada de Claude Code y la API de Claude, ejercicios de arquitectura resueltos paso a paso, y un examen de práctica fiel al formato real de Anthropic.
+> Preparación completa, en español, para la certificación **Claude Certified Architect – Foundations (CCAR-F)**: documentación curada de Claude Code y la API de Claude, ejercicios de arquitectura resueltos paso a paso, y un examen de práctica fiel al formato de preguntas y la distribución por dominios publicados por Anthropic.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
@@ -26,7 +26,7 @@
 
 ## ¿Qué es esto?
 
-Un hub editorial estático — sin backend, sin base de datos — que centraliza en español la documentación técnica de Claude, la complementa con ejercicios de arquitectura resueltos paso a paso como los abordaría un arquitecto de soluciones senior, y la combina con un simulador de examen fiel al formato real de la certificación **Claude Certified Architect — Foundations**.
+Un hub editorial estático — sin backend, sin base de datos — que centraliza en español la documentación técnica de Claude, la complementa con ejercicios de arquitectura resueltos paso a paso como los abordaría un arquitecto de soluciones senior, y la combina con un simulador de examen basado en el formato de preguntas y los pesos por dominio publicados por Anthropic para la certificación **Claude Certified Architect — Foundations**.
 
 No es una traducción automática de la documentación oficial: es contenido curado, verificado activamente contra la documentación viva de Anthropic (CLI, Agent SDK, API, MCP), pensado específicamente para cerrar la brecha entre "conozco la teoría" y "puedo tomar la decisión de arquitectura correcta bajo presión de examen".
 
@@ -88,11 +88,11 @@ Cada ejercicio cierra con una sección de **errores comunes y anti-patrones a ev
 
 ## Examen de práctica CCAR-F
 
-Disponible en `/practice`. Simula las condiciones reales del examen:
+Disponible en `/practice`. Replica la logística y distribución por dominios del examen real (60 preguntas, 120 minutos, pesos oficiales); no reproduce la selección de 4-de-6 escenarios narrativos del formato real, ya que el simulador arma cada intento por dominio ponderado en vez de por escenario:
 
 - **60 preguntas** aleatorias extraídas de un pool de 265, categorizado por dominio
 - **Distribución ponderada** que respeta los pesos oficiales de cada área
-- **Opción múltiple y multi-respuesta**, con un piso garantizado de ~22% de preguntas multi-respuesta por dominio en cada intento
+- **Opción múltiple y multi-respuesta** — el simulador garantiza, como decisión pedagógica propia (no una característica documentada del examen real), un piso de ~22% de preguntas multi-respuesta por dominio en cada intento, para asegurar exposición suficiente a ese formato
 - **Temporizador** de 120 minutos (2 min/pregunta)
 - **Informe de rendimiento** por dominio al finalizar
 - **Mapa de navegación** para saltar entre preguntas

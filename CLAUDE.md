@@ -96,7 +96,9 @@ Official credential: **Claude Certified Architect – Foundations**, exam code *
 
 ### Official Exam Guide (authoritative when available)
 
-Anthropic publishes an official PDF Exam Guide ("Claude Certified Architect – Foundations Exam Guide") with the full domain blueprint, per-domain Task Statements (each with "Knowledge of" / "Skills in" lists), ~12 sample questions with explanations, and — critically — **4 Preparation Exercises (its Section 8)** that `public/data/ejercicios.json`'s four exercises are meant to mirror step-for-step. If the user shares this PDF (or a newer version) in a session, treat it as authoritative over the condensed summary below — cross-check `ejercicios.json` and `examen_cca_f_en.json` against its exact Task Statements and Section 8 steps rather than reconstructing from memory, and update this file's summary if something here is stale. Domain numbering in the guide (Domain 1–5) maps 1:1 to the weights table below. The guide isn't checked into this repo (it's shared ad hoc as an attachment), so don't assume it's on disk — ask the user to paste it again if a session needs it and doesn't have it.
+Anthropic publishes an official PDF Exam Guide ("Claude Certified Architect – Foundations Exam Guide") with the full domain blueprint, per-domain Task Statements (each with "Knowledge of" / "Skills in" lists), ~12 sample questions with explanations, and — critically — **4 Preparation Exercises (its Section 8)** that `public/data/ejercicios.json`'s four exercises are meant to mirror step-for-step. If the user shares this PDF (or a newer version) in a session, treat it as authoritative over the condensed summary below — cross-check `ejercicios.json` and `examen_cca_f_en.json` against its exact Task Statements and Section 8 steps rather than reconstructing from memory, and update this file's summary if something here is stale. The guide isn't checked into this repo (shared ad hoc as an attachment when needed), so don't assume it's on disk — ask the user to paste it again if a session needs it and doesn't have it.
+
+**Domain numbering gotcha (confirmed against Exam Guide v1.0, July 2026):** the guide's own Domain numbers do **not** match this repo's internal domain order. The guide numbers them Domain 1=Agentic Architecture & Orchestration, **Domain 2=Tool Design & MCP Integration**, **Domain 3=Claude Code Configuration & Workflows**, Domain 4=Prompt Engineering & Structured Output, Domain 5=Context Management & Reliability. This repo's internal domain `id` in `examen_cca_f_en.json` and the `DOMAINS` array in `public/practice/index.html` instead order them Agentic(1), **Claude Code Config(2)**, **Tool Design & MCP(3)**, Prompt Engineering(4), Context Mgmt(5) — domains 2 and 3 are swapped relative to the guide. The weights and question counts are identical either way (Tool Design & MCP is always 18%/11 questions, Claude Code Config is always 20%/12), only the *number* differs. This matters when tagging or referencing a `taskStatement` (e.g. "2.3") — always use the guide's numbering for that field, not this repo's internal domain `id`.
 
 When adding or fixing a preparation exercise against the guide's Section 8, verify any Claude Agent SDK / MCP / Claude Code CLI mechanism the guide names (e.g. `PreToolUse`/`PostToolUse` hooks, `createSdkMcpServer`, the MCP `isError` flag, the `-p`/`--output-format json` CLI flags) against real docs before writing code — see "Adding content" above. The guide's Domain 2 Task 2.2 defines error categories as **four**, not three: `transient` / `validation` / `business` / `permission` — a policy-threshold violation (e.g. "refund exceeds $500") is `business`, not `permission`.
 
@@ -123,13 +125,15 @@ The exam uses **6 production scenarios**; each candidate gets **4 chosen at rand
 Since 4 of 6 scenarios are random, any scenario skipped carries a real risk of costing 25% of the exam.
 
 ### Domain weights
-| Domain | Weight | ~Questions |
-|---|---|---|
-| Agentic Architecture & Orchestration | 27% | 16 |
-| Claude Code Configuration & Workflows | 20% | 12 |
-| Prompt Engineering & Structured Output | 20% | 12 |
-| Tool Design & MCP Integration | 18% | 11 |
-| Context Management & Reliability | 15% | 9 |
+Listed here in this repo's internal order (matches `examen_cca_f_en.json` domain `id` and the `DOMAINS` array in `practice/index.html`). The "Guide #" column is the official Exam Guide's own Domain number — see the numbering gotcha above before using it to tag `taskStatement`.
+
+| Domain | Guide # | Weight | ~Questions |
+|---|---|---|---|
+| Agentic Architecture & Orchestration | 1 | 27% | 16 |
+| Claude Code Configuration & Workflows | 3 | 20% | 12 |
+| Prompt Engineering & Structured Output | 4 | 20% | 12 |
+| Tool Design & MCP Integration | 2 | 18% | 11 |
+| Context Management & Reliability | 5 | 15% | 9 |
 
 ### What the exam tests
 - **Is NOT:** memorization, definitions, drag-and-drop, labs
@@ -137,7 +141,11 @@ Since 4 of 6 scenarios are random, any scenario skipped carries a real risk of c
 - **Difficulty:** harder than expected from theory alone; candidates without hands-on Claude system experience consistently underperform
 
 ### Practice question authoring guidelines
-`examen_cca_f_en.json` holds 265 domain-grouped questions (good conceptual bank), including multiple-response items (`correctAnswers` array + `selectCount`) alongside single-answer ones (`correctAnswer`). Each exam attempt guarantees a minimum ~22% multiple-response floor per domain (see `MIN_MULTI_RATIO` in `public/practice/index.html`). When writing new questions:
+`examen_cca_f_en.json` holds 265 domain-grouped questions (good conceptual bank), including multiple-response items (`correctAnswers` array + `selectCount`) alongside single-answer ones (`correctAnswer`). Each exam attempt guarantees a minimum ~22% multiple-response floor per domain (this is a pedagogical choice made for this simulator, not a documented feature of the real exam's item mix — see `MIN_MULTI_RATIO` in `public/practice/index.html`). The simulator samples by domain weight, not by the real exam's 4-of-6 scenario draw — see "Real exam format" above.
+
+**Question-level metadata (internal audit fields, not read by the frontend):** every question also carries `id` (`D{domain}-Q{seq}`, e.g. `D2-Q07`), `taskStatement` (guide numbering, e.g. `"2.3"` — see the domain-numbering gotcha above), `concept` (a short kebab-case tag for the specific principle being tested, reused across questions that test the identical concept, e.g. `hook-vs-prompt-enforcement`), `difficulty` (`easy`/`medium`/`hard` — an author-assigned starting heuristic, not empirically validated against real pass rates), and `scenario` (one of the 6 official scenario slugs — `customer-support`, `code-generation`, `multi-agent-research`, `developer-productivity`, `ci-cd`, `structured-extraction`, matching the scenarios table above — every question is anchored to one). `public/practice/index.html`'s `buildPoolsFromJson` only reads `text`/`options`/`correctAnswer(s)`/`explanation`, so these fields are safe to extend but won't affect the simulator unless you wire them in. Use them for bank audits (Task Statement coverage, concept over/under-representation, difficulty balance) rather than deleting them as unused cruft.
+
+When writing new questions:
 
 1. **Frame as a production scenario** — describe a real system, team, or constraint, then ask for a decision or diagnosis.
 2. **One unambiguously best answer** — the correct option must be best *for that context*, not just technically true in isolation.
