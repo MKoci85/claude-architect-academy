@@ -296,7 +296,7 @@
               "Execute the lookup_order call after the get_customer call, since a real dependency now exists between them."
             ],
             "correctAnswer": 3,
-            "explanation": "Parallelization is only correct when calls are truly independent. Once a real data dependency exists (hotel search needs the airport from flight results), the sequence must respect that dependency."
+            "explanation": "Parallelization is only correct when calls are truly independent. Once a real data dependency exists (the order lookup needs the customer's region from the get_customer result), the sequence must respect that dependency."
           },
           {
             "id": "D1-Q19",
@@ -1408,7 +1408,7 @@
               "permissions: read-only"
             ],
             "correctAnswer": 0,
-            "explanation": "The allowed-tools frontmatter provides a deterministic security boundary, restricting which tools the skill can use. If a tool is not in the list, the skill cannot access it regardless of broader user permissions."
+            "explanation": "allowed-tools is the frontmatter key that scopes which tools are pre-approved for a skill, letting Claude use them without triggering an approval prompt while the skill is active. It's the right lever for narrowing a skill's default footprint — but it's a pre-approval grant, not a hard deny-list: tools left off the list simply aren't pre-approved, and any attempt to use them still goes through the normal permission flow (ask/allow/deny) rather than being blocked by allowed-tools itself. The other three options are not real Claude Code frontmatter keys."
           },
           {
             "id": "D2-Q13",
@@ -1416,15 +1416,15 @@
             "scenario": "code-generation",
             "concept": "skill-allowed-tools-restriction",
             "difficulty": "medium",
-            "text": "A compliance reviewer asks: can a skill with allowed-tools: [Read, Grep] access the Bash tool to execute arbitrary commands?",
+            "text": "A compliance reviewer asks: can a skill with allowed-tools: [Read, Grep] execute Bash commands without any prompt or additional configuration?",
             "options": [
-              "No. allowed-tools is an explicit allowlist; Bash is not listed, so execution is denied.",
-              "Yes, allowed-tools only filters the user's permissions; the skill still has access to all tools.",
-              "Yes, if Bash is defined in the user-level CLAUDE.md, the skill inherits it.",
-              "No, but only if the project-level CLAUDE.md also explicitly restricts Bash."
+              "No — allowed-tools only pre-approves the listed tools; Bash isn't pre-approved, so any attempt still goes through the normal permission flow (prompt, or an existing allow/deny rule) instead of running silently.",
+              "Yes — allowed-tools only filters the user's permissions; the skill retains unrestricted access to every tool regardless of the list.",
+              "No — allowed-tools functions as a hard deny-list, so Bash is blocked outright and cannot be enabled by any other configuration.",
+              "Yes, but only if Bash is separately defined in the user-level CLAUDE.md, in which case allowed-tools is bypassed entirely."
             ],
             "correctAnswer": 0,
-            "explanation": "allowed-tools acts as a strict allowlist. Tools not explicitly listed cannot be used by the skill, regardless of user-level or project-level configuration. This provides a deterministic security boundary."
+            "explanation": "allowed-tools grants pre-approval for the listed tools so the skill can use them without an approval prompt. Bash isn't on the list here, so it isn't pre-approved — but that omission alone doesn't guarantee it's blocked (C): whatever happens next is decided by the normal permission flow, the same ask/allow/deny rules that would apply outside the skill. If the goal is a hard guarantee that Bash can never run, that requires an explicit deny rule, not just leaving it off allowed-tools. Option B is wrong in the other direction — allowed-tools does narrow the skill's default, pre-approved footprint. Option D describes a CLAUDE.md inheritance mechanism that doesn't exist for tool permissions."
           },
           {
             "id": "D2-Q14",
@@ -1504,7 +1504,7 @@
               "A required MCP server was not installed in the CI environment, causing Claude Code to pause at tool initialization."
             ],
             "correctAnswer": 0,
-            "explanation": "The most common CI integration failure is forgetting the -p flag. Without it, Claude Code runs in interactive mode, waiting for stdin input indefinitely. In the exam, when you see 'CI job hangs', the answer is usually 'missing -p flag'."
+            "explanation": "The most common CI integration failure is forgetting the -p flag. Without it, Claude Code runs in interactive mode and waits for stdin input that a CI runner never provides, so the process blocks until the job times out. A missing network connection (B) or missing MCP server (D) would typically fail fast with a connection or initialization error rather than hang silently, and an unset --max-turns limit (C) would still make progress turn by turn rather than produce a hang with zero activity."
           },
           {
             "id": "D2-Q19",
@@ -1578,13 +1578,13 @@
             "difficulty": "medium",
             "text": "The team integrates Claude Code in CI to automatically add review comments on PRs. They want the review to reference the project's coding standards. How should the CI invocation be configured?",
             "options": [
-              "Mount the project's CLAUDE.md so Claude Code has access to the same conventions used in interactive sessions.",
+              "Run Claude Code from the checked-out project workspace, so the project-level CLAUDE.md is available to the invocation just as it is in interactive sessions.",
               "Hardcode the coding standards as inline instructions in the CI script's -p prompt argument.",
               "Store the guidelines as a CI environment variable and reference it with $ANTHROPIC_GUIDELINES.",
               "Rely on the model's default behavior; Claude Code infers conventions from the codebase automatically."
             ],
             "correctAnswer": 0,
-            "explanation": "The project-level CLAUDE.md should be available to headless CI invocations so the review follows the same team conventions used in interactive development. This ensures consistency between local and automated reviews."
+            "explanation": "CLAUDE.md is just a file in the repository, so as long as Claude Code runs from the checked-out project workspace, the project-level CLAUDE.md is already available to it — the same way it is in an interactive session. Hardcoding standards into the -p prompt (B) duplicates content that drifts out of sync with the real file. A nonexistent environment variable (C) invents a mechanism Claude Code doesn't have. Relying on inference from the codebase alone (D) skips the explicit conventions the team already wrote down."
           },
           {
             "id": "D2-Q24",
@@ -1882,13 +1882,13 @@
             "difficulty": "medium",
             "text": "After running Claude Code in CI for several months, the team notices the review quality has degraded: suggestions became generic and less context-aware. What is the most likely cause?",
             "options": [
-              "The CI pipeline may not be loading the project's CLAUDE.md, or the CLAUDE.md has drifted out of sync with the actual codebase conventions.",
+              "The CI job may not be running from the checked-out project workspace where CLAUDE.md lives, or the CLAUDE.md has drifted out of sync with the actual codebase conventions.",
               "The model available to the CI API key has been silently downgraded by Anthropic to a lighter version.",
               "The --output-format json flag causes the model to produce shorter, less detailed responses to fit structured output constraints.",
               "The CI environment's context window is smaller than the interactive one, so the model sees less of the diff."
             ],
             "correctAnswer": 0,
-            "explanation": "CI pipelines must explicitly provide project context. If CLAUDE.md is not mounted or has become outdated, the model loses awareness of current conventions. Regular review and synchronization of CLAUDE.md with the codebase is essential."
+            "explanation": "CLAUDE.md only helps if the CI invocation actually runs from the checked-out workspace containing it, and if its content still matches how the team actually works. If either breaks — the job runs somewhere CLAUDE.md isn't present, or the file was never updated as conventions evolved — the model loses awareness of current conventions and reviews degrade to generic advice. Regular review and synchronization of CLAUDE.md with the codebase is essential."
           },
           {
             "id": "D2-Q43",
@@ -3136,7 +3136,7 @@
               "Answer it only if the user mentions billing explicitly in their query."
             ],
             "correctAnswer": 1,
-            "explanation": "System prompt constraints should be interpreted with judgment, not as rigid keyword filters. A restaurant near an airport is practically travel-relevant. Blocking (A) applies the constraint too literally. Confirmation requests (C) add friction for a benign query. The airport mention condition (D) is an arbitrary heuristic that would block equally reasonable phrasings like 'somewhere to eat before my flight.'"
+            "explanation": "System prompt scope constraints should be interpreted by intent, not as rigid keyword filters. Whether the product integrates with Slack is product-adjacent and genuinely useful to a customer, even though it isn't strictly a billing or account issue. Blocking it (A) applies 'customer support' too literally and erodes user trust for no real safety benefit. Asking for confirmation before answering (C) adds friction to a benign, low-risk query. Requiring the user to mention billing (D) is an arbitrary condition that would block equally reasonable ways of asking the same question."
           },
           {
             "id": "D4-Q19",
@@ -3152,7 +3152,7 @@
               "Escalate to a human agent since the request is ambiguous."
             ],
             "correctAnswer": 1,
-            "explanation": "The operator's intent is a flight booking assistant, not a general career advisor. The aviation connection is superficial — the core task is writing a cover letter, which is outside scope. Answering (A/C) expands the assistant beyond its intended role. Escalation (D) is disproportionate for a clear out-of-scope request that just needs a polite redirect."
+            "explanation": "The operator's intent is a customer support assistant for [Product], not a general-purpose writing assistant. The payment-tracking connection is superficial — the actual task being requested, drafting a complaint letter to a landlord, has nothing to do with supporting the product itself. Answering it outright (A) or answering and then upselling (C) both expand the assistant beyond its intended role just because the request brushes against a product feature. Escalating to a human (D) is disproportionate for a request that only needs a polite redirect, not human review."
           },
           {
             "id": "D4-Q20",
@@ -3163,12 +3163,12 @@
             "text": "A company uses a customer support agent system prompt that reads: 'You are a support assistant. Be friendly and professional.' A user sends several messages in an increasingly casual tone and eventually writes: 'Bro just talk to me normally, no need to be so formal.' Should the assistant adjust its tone?",
             "options": [
               "No — the system prompt says 'professional' and that overrides any user preference.",
-              "Yes — adjusting tone within the travel domain in response to user preference is a reasonable adaptation that doesn't conflict with the operator's intent.",
+              "Yes — adjusting tone in response to user preference is a reasonable adaptation that doesn't conflict with the operator's intent, as long as professionalism and substance are preserved.",
               "Only if the user explicitly writes 'I prefer informal communication' in formal language.",
               "Yes, but only for the remainder of that single message, then revert to professional tone."
             ],
             "correctAnswer": 1,
-            "explanation": "Tone adjustment within the same role is not the same as a role override. 'Friendly and professional' sets a baseline, not a rigid communication style — adapting to a user's preference for informal language is within the spirit of 'friendly' without abandoning the travel scope or professional substance. Option A applies the constraint too rigidly. C and D add arbitrary conditions."
+            "explanation": "Tone adjustment within the same role is not the same as a role override. 'Friendly and professional' sets a baseline, not a rigid communication style — adapting to a user's preference for informal language stays within the spirit of 'friendly' without abandoning the assistant's support role or professional substance. Option A treats the constraint too rigidly, as if any deviation from formality violates the system prompt. C and D add arbitrary conditions (a specific required phrasing, a one-message time limit) that the system prompt never specified."
           },
           {
             "id": "D4-Q21",
