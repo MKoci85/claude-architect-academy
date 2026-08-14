@@ -730,12 +730,12 @@
             "selectCount": 2,
             "options": [
               "Stop checking for text content as a completion signal — a valid tool_use turn can legitimately include explanatory text alongside the tool call.",
-              "Remove the fixed iteration cap and terminate the loop exactly when stop_reason is \"end_turn\".",
+              "Make stop_reason === \"end_turn\" the primary termination signal, while keeping a generous iteration cap in place as a safety-net fallback against runaway loops.",
               "Replace the iteration cap with a token budget cap, since tokens are a more precise unit than turns.",
               "Keep the text-content check but raise the iteration cap to 20 to reduce premature termination."
             ],
             "correctAnswers": [0, 1],
-            "explanation": "Both root causes need to be fixed independently: checking for text content is unreliable because assistant turns can legitimately mix commentary with a tool_use block, and a fixed iteration cap is an anti-pattern as the primary stopping mechanism — control flow should key off stop_reason instead. Swapping to a token budget (C) still uses an arbitrary cap as the primary mechanism rather than stop_reason. Raising the cap (D) keeps the flawed signal and only masks the symptom."
+            "explanation": "Both root causes need to be fixed independently: checking for text content is unreliable because assistant turns can legitimately mix commentary with a tool_use block, and a low fixed cap used as the primary stopping mechanism causes premature termination. Anthropic's own tool-use guidance recommends stop_reason as the primary signal combined with a loop counter as a safety net — not one instead of the other, and never removing the cap outright, since a stuck or hallucinating loop might never return end_turn. Swapping to a token budget (C) still uses an arbitrary cap as the primary mechanism rather than stop_reason. Raising the flawed cap while keeping the text-content check (D) keeps the unreliable signal and only masks the symptom."
           },
           {
             "text": "You are designing a coordinator agent for a multi-agent research system with hub-and-spoke orchestration. Which two responsibilities should remain with the coordinator rather than being delegated to subagents?",

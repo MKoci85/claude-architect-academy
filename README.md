@@ -121,7 +121,7 @@ El banco de preguntas está en inglés (formato del examen real) y evalúa crite
 **Multi-respuesta** — *Context Management and Reliability*
 > A team is debugging an agentic loop that sometimes terminates prematurely and sometimes spins through dozens of unproductive tool calls. The current implementation stops as soon as the assistant's response contains any plain text content, and separately hard-caps execution at 5 iterations regardless of `stop_reason`. Which two changes correctly align this loop with the intended pattern? *(select 2)*
 > - **Stop checking for text content as a completion signal — a valid `tool_use` turn can legitimately include explanatory text alongside the tool call.** ✓
-> - **Remove the fixed iteration cap and terminate the loop exactly when `stop_reason` is "end_turn".** ✓
+> - **Make `stop_reason === "end_turn"` the primary termination signal, while keeping a generous iteration cap in place as a safety-net fallback against runaway loops.** ✓
 > - Replace the iteration cap with a token budget cap, since tokens are a more precise unit than turns.
 > - Keep the text-content check but raise the iteration cap to 20 to reduce premature termination.
 
