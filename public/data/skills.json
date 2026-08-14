@@ -76,13 +76,13 @@
               "rows": [
                 [
                   "`name`",
-                  "✅ Sí",
-                  "Identificador único. Se usa para invocarla explícitamente con `/nombre`."
+                  "Opcional",
+                  "Identificador único. Se usa para invocarla explícitamente con `/nombre`. La documentación oficial no lo marca como obligatorio, pero en la práctica conviene declararlo siempre."
                 ],
                 [
                   "`description`",
-                  "✅ Sí",
-                  "Lo que Claude lee para decidir si activarla. Máx. ~100 palabras. **El campo más importante**."
+                  "Recomendado",
+                  "Lo que Claude lee para decidir si activarla. Máx. ~100 palabras. **El campo más importante** — sin él, Claude no tiene forma de saber cuándo usar la skill automáticamente."
                 ],
                 [
                   "`argument-hint`",
@@ -348,7 +348,7 @@
             },
             {
               "type": "text",
-              "content": "**Optimización automática de la `description`:** disponible en Claude Code, permite mejorar el triggering usando un eval set de ~20 queries."
+              "content": "**Optimización automática de la `description`:** existe tooling de evaluación de skills (por ejemplo `skill-creator`) para mejorar el triggering usando un eval set de queries representativas. Los parámetros exactos del proceso que se describen abajo (tamaño del eval set, split train/test, cantidad de runs e iteraciones) no están confirmados en la documentación oficial pública — tratalos como un flujo de trabajo razonable a seguir manualmente, no como specs garantizadas de una feature automática."
             },
             {
               "type": "steps",
@@ -713,9 +713,9 @@
                 ],
                 [
                   "Límite de contexto por skill",
-                  "~5000 tokens",
-                  "~3000 tokens",
-                  "~5000 tokens"
+                  "No hay una cifra fija publicada",
+                  "No hay una cifra fija publicada",
+                  "No hay una cifra fija publicada"
                 ],
                 [
                   "Atención en sesiones largas",

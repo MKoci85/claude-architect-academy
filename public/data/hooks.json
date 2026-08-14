@@ -267,6 +267,7 @@
                     ["Notification", "Cuando Claude Code envía una notificación: permission_prompt, idle_prompt, auth_success, elicitation_dialog.", "No"],
                     ["MessageDisplay", "Mientras el texto del asistente se muestra. Puede reemplazar el texto visual (displayContent) — no afecta el transcript.", "No — solo visual"],
                     ["FileChanged", "Cuando un archivo vigilado cambia en disco. El matcher especifica qué archivos vigilar.", "No"],
+                    ["DirectoryAdded", "Cuando se agrega un nuevo directorio al workspace (por ejemplo, al abrir una carpeta adicional).", "No"],
                     ["CwdChanged", "Cuando el directorio de trabajo cambia. Acceso a CLAUDE_ENV_FILE.", "No"],
                     ["InstructionsLoaded", "Cuando se carga un CLAUDE.md o .claude/rules/*.md. Solo observabilidad.", "No"],
                     ["ConfigChange", "Cuando un archivo de configuración cambia durante una sesión.", "⛔ Sí (excepto policy_settings)"],
@@ -340,7 +341,7 @@
                   "rows": [
                     ["continue: false", "Top-level", "Detiene Claude completamente. stopReason se muestra al usuario (no a Claude)."],
                     ["systemMessage", "Top-level", "Aviso mostrado al usuario en la UI. No lo ve Claude."],
-                    ["suppressOutput: true", "Top-level", "Oculta el stdout del transcript pero lo deja en el debug log."],
+                    ["suppressOutput: true", "Top-level", "Documentado, pero Claude Code actualmente lo acepta y lo ignora — no tiene efecto real. No dependas de este campo para ocultar output."],
                     ["terminalSequence", "Top-level", "Secuencias de escape OSC/BEL para notificaciones. Claude Code valida que solo sean OSC 0/1/2/9/99/777 y BEL."],
                     ["decision: 'block'", "Top-level", "Bloquea la acción (con reason). Para PostToolUse, Stop, PreCompact, etc."],
                     ["updatedToolOutput", "Top-level", "En PostToolUse: reemplaza el output del tool que Claude recibe."],
@@ -401,7 +402,7 @@
                     {
                       "icon": "🅰️",
                       "title": "Match exacto",
-                      "body": "Solo letras, dígitos, _ y |. Activa para ese tool específico o lista. Ej: Bash · Edit|Write · Read"
+                      "body": "Letras, dígitos, _, -, espacio, coma y |. Activa para ese tool específico o lista. Ej: Bash · Edit|Write · code-reviewer,Read"
                     },
                     {
                       "icon": "🔁",

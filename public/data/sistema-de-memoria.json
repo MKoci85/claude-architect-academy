@@ -1,7 +1,7 @@
 {
   "id": "sistema-de-memoria",
   "title": "Sistema de Memoria",
-  "summary": "Cómo Claude aprende entre sesiones con CLAUDE.md, Auto Memory, Session Memory y Auto Dream",
+  "summary": "Cómo Claude aprende entre sesiones con CLAUDE.md, Auto Memory, Auto Dream y compactación de contexto",
   "sections": [
     {
       "title": "Sistema de Memoria de Claude Code",
@@ -13,11 +13,11 @@
           "source": null,
           "subsections": [
             {
-              "title": "Las cuatro capas",
+              "title": "Los mecanismos de memoria",
               "blocks": [
                 {
                   "type": "text",
-                  "content": "Claude Code usa cuatro mecanismos complementarios para mantener contexto entre sesiones. Cada capa tiene un ritmo de escritura diferente y un alcance distinto. La configuración más robusta usa las cuatro simultáneamente."
+                  "content": "Claude Code usa varios mecanismos complementarios para mantener contexto entre sesiones. Cada uno tiene un ritmo de escritura diferente y un alcance distinto. La configuración más robusta los combina."
                 },
                 {
                   "type": "cards",
@@ -31,14 +31,19 @@
                       "body": "Lo escribe Claude. Acumula conocimiento entre sesiones sin que vos escribas nada — comandos, patrones, preferencias que descubre mientras trabaja."
                     },
                     {
-                      "title": "🔄 Session Memory",
-                      "body": "Dentro de la sesión. Mantiene coherencia durante conversaciones largas o con compactación de contexto."
+                      "title": "🔄 Compactación de contexto",
+                      "body": "Dentro de la sesión. El comando /compact (o el trigger automático al acercarse al límite de la ventana) resume el historial de la conversación para poder seguir trabajando sin perder la sesión."
                     },
                     {
                       "title": "🌙 Auto Dream",
-                      "body": "Consolida todo. Proceso en background que limpia, deduplica y organiza las otras capas cuando acumulan suficiente material."
+                      "body": "Lo ejecuta Claude automáticamente cuando Auto Memory está activo. Revisa y reorganiza esos archivos: convierte fechas relativas a absolutas, elimina contradicciones y notas obsoletas, fusiona duplicados."
                     }
                   ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "Nota sobre esta sección: \"Session Memory\" es un término que circula en algunos blogs y proyectos de la comunidad como si fuera un mecanismo oficial de Claude Code, pero no está documentado por Anthropic — por eso esta guía usa en su lugar \"compactación de contexto\", que sí es el término real. Auto Dream es distinto: es una feature real (confirmada por Anthropic), pero nunca tuvo documentación pública oficial — no aparece en docs.claude.com ni en el changelog. Funciona como un feature flag del lado del servidor, en rollout gradual desde marzo de 2026, cuya disponibilidad depende de la cuenta/organización y no de la versión de Claude Code instalada. Hay un issue abierto en el repo de GitHub de Anthropic (anthropics/claude-code #50694) señalando exactamente esta falta de documentación oficial."
                 }
               ]
             }
@@ -146,7 +151,48 @@
                 {
                   "type": "callout",
                   "icon": "⚠️",
-                  "content": "Alcance por worktree: todos los worktrees y subdirectorios dentro del mismo repositorio git comparten un directorio de auto memory. Si trabajás con múltiples worktrees en paralelo, la memoria es compartida — lo que puede generar contradicciones que Auto Dream luego resuelve."
+                  "content": "Alcance por worktree: todos los worktrees y subdirectorios dentro del mismo repositorio git comparten un directorio de auto memory. Si trabajás con múltiples worktrees en paralelo, la memoria es compartida — lo que puede generar contradicciones entre archivos de tema. No hay un proceso automático que las resuelva por vos: si notás una contradicción, podés editar los archivos markdown directamente o pedirle a Claude que las revise."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "compactacion-de-contexto",
+          "title": "Compactación de contexto",
+          "summary": "Cuando una sesión larga se acerca al límite de la ventana de contexto, Claude Code resume el historial para poder seguir trabajando. El comando /compact lo dispara manualmente; los hooks PreCompact y PostCompact permiten intervenir en el proceso.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Qué es y cuándo ocurre",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La compactación de contexto resume el historial de la conversación actual para liberar espacio en la ventana de contexto, sin perder la sesión. Ocurre de dos formas: automáticamente, cuando la conversación se acerca al límite de tokens disponibles, o manualmente, cuando el usuario ejecuta `/compact` (opcionalmente con instrucciones sobre qué priorizar al resumir)."
+                },
+                {
+                  "type": "callout",
+                  "icon": "💡",
+                  "content": "`/compact` acepta texto libre después del comando para guiar el resumen — por ejemplo, indicando qué decisiones o archivos modificados son importantes de preservar y qué detalle se puede descartar. Sin instrucciones, Claude decide qué priorizar."
+                }
+              ]
+            },
+            {
+              "title": "Los hooks PreCompact y PostCompact",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude Code expone dos eventos de hook alrededor de este proceso: `PreCompact` (antes de que ocurra la compactación, con matcher `manual` o `auto` según el trigger; puede bloquear la compactación) y `PostCompact` (después, solo observacional). Un uso típico de `PostCompact` es reinyectar contexto que sería costoso reconstruir del historial ya resumido — por ejemplo, una versión reducida del estado del proyecto que un hook de `SessionStart` ya había cargado al principio."
+                }
+              ]
+            },
+            {
+              "title": "Cómo se relaciona con Auto Memory",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "La compactación resume el historial de UNA sesión — es un mecanismo de corto plazo, acotado a la conversación en curso. Auto Memory es un mecanismo distinto: persiste conocimiento entre sesiones distintas, en archivos separados del transcript. No están conectados automáticamente entre sí — si algo se pierde en la compactación y nunca se guardó en un archivo de memoria, no hay forma de recuperarlo dentro de esa sesión."
                 }
               ]
             }
@@ -154,87 +200,98 @@
         },
         {
           "id": "auto-dream",
-          "title": "Auto Dream — Consolidación automática",
-          "summary": "Auto Dream es el proceso de consolidación en background que mantiene la memoria limpia, coherente y organizada. La analogía con el sueño REM es intencional: convierte notas de corto plazo en conocimiento durable.",
+          "title": "Auto Dream — Consolidación de memoria",
+          "summary": "Auto Dream revisa y reorganiza los archivos de Auto Memory antes de que la acumulación de sesiones los convierta en ruido: fechas relativas sin contexto, contradicciones, referencias obsoletas y duplicados.",
           "source": null,
           "subsections": [
             {
-              "title": "Cuándo se activa",
+              "title": "El problema: acumulación sin organización",
               "blocks": [
                 {
                   "type": "text",
-                  "content": "Auto Dream tiene un trigger doble: ambas condiciones deben cumplirse simultáneamente. Esto previene corridas redundantes y asegura que haya material suficiente para consolidar."
-                },
-                {
-                  "type": "table",
-                  "headers": ["Condición", "Valor", "Propósito"],
-                  "rows": [
-                    ["Tiempo desde última consolidación", "≥ 24 horas", "Previene corridas redundantes en días tranquilos"],
-                    ["Sesiones de nueva actividad", "≥ 5 sesiones", "Asegura que haya material suficiente para consolidar"],
-                    ["Ejemplo: 10 sesiones en 2 horas", "No activa", "El tiempo no se cumple"],
-                    ["Ejemplo: 1 sesión larga de 2 días", "No activa", "Las sesiones no se cumplen"]
-                  ]
+                  "content": "Después de muchas sesiones usando Auto Memory en el mismo proyecto, los archivos que Claude va acumulando (MEMORY.md y los archivos de tema) tienden a juntar varios problemas típicos: **fechas relativas sin contexto** (\"ayer decidimos usar Redis\" pierde sentido dos semanas después), **contradicciones** (una nota dice que se usa Express, otra más reciente dice que se migró a Fastify, y ambas quedan escritas), **referencias obsoletas** (notas de debugging que apuntan a archivos que ya no existen) y **duplicados** (la misma peculiaridad anotada varias veces en sesiones distintas)."
                 },
                 {
                   "type": "callout",
-                  "icon": "🎛️",
-                  "content": "Trigger manual: podés ejecutar /dream desde cualquier sesión para disparar la consolidación inmediatamente, sin esperar el trigger automático. También funciona decir «dream» o «consolidate my memory files»."
+                  "icon": "⚠️",
+                  "content": "Lo que empieza siendo un cuaderno útil que Claude carga en cada sesión termina siendo ruido que confunde a Claude y además ocupa más contexto y más tokens de los necesarios."
                 }
               ]
             },
             {
-              "title": "Las 4 fases de consolidación",
+              "title": "La metáfora: Auto Memory de día, Auto Dream de noche",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Auto Dream consolida la memoria de forma similar a cómo el cerebro humano consolida recuerdos durante el sueño REM — de ahí el nombre. Auto Memory es como el cerebro durante el día: absorbe información cruda y toma notas rápidas. Auto Dream es como el ciclo REM: revisa lo acumulado, refuerza lo relevante, descarta lo obsoleto y organiza el resto."
+                }
+              ]
+            },
+            {
+              "title": "Las cuatro fases",
               "blocks": [
                 {
                   "type": "steps",
                   "items": [
                     {
-                      "title": "Orient — Mapear lo existente",
-                      "body": "Lee el directorio de memoria completo para entender qué existe antes de hacer cualquier cambio. Construye un mapa del conocimiento actual: índice, archivos de tema y su contenido.",
+                      "title": "Orientación — Mapear lo existente",
+                      "body": "Escanea todos los archivos de memoria existentes y construye un mapa del conocimiento actual antes de tocar nada.",
                       "tag": "Read-only"
                     },
                     {
-                      "title": "Gather Signal — Escanear transcripts",
-                      "body": "Busca en los archivos JSONL de sesiones recientes patrones de alto valor: correcciones del usuario, cambios de preferencia, decisiones importantes y temas recurrentes. Usa búsqueda dirigida, no lectura completa de los archivos.",
-                      "tag": "Eficiente"
+                      "title": "Recoger señal — Escanear transcripts",
+                      "body": "Busca en las transcripciones de sesiones anteriores (guardadas en el directorio .claude) de forma selectiva, no las lee completas: correcciones del usuario (\"no, esto está mal\"), cambios de diseño o arquitectura, y patrones que se repiten.",
+                      "tag": "Búsqueda selectiva"
                     },
                     {
-                      "title": "Consolidate — Mergear y resolver",
-                      "body": "Integra los nuevos hallazgos en los archivos de tema existentes. Convierte fechas relativas a absolutas. Resuelve contradicciones entre archivos. Elimina duplicados. Es quirúrgico: los archivos sin cambios no se tocan.",
-                      "tag": "Escribe solo en /memory"
+                      "title": "Consolidación — Mergear y resolver",
+                      "body": "Convierte fechas relativas a absolutas, elimina hechos contradictorios (se queda con la versión más reciente), elimina memorias obsoletas y fusiona entradas duplicadas.",
+                      "tag": "Escribe en /memory"
                     },
                     {
-                      "title": "Prune & Index — Reconstruir el índice",
-                      "body": "Reconstruye MEMORY.md como índice liviano de menos de 200 líneas. Elimina punteros a archivos que ya no existen. Mueve entradas verbosas a archivos de tema. Resuelve contradicciones entre el índice y el contenido de los archivos.",
-                      "tag": "Bajo el límite de 200 líneas"
+                      "title": "Podar e indexar — Reconstruir el índice",
+                      "body": "Optimiza MEMORY.md para que sea conciso y refleje el estado real del proyecto, sin acumular entradas verbosas.",
+                      "tag": "Mantiene el índice liviano"
                     }
                   ]
+                }
+              ]
+            },
+            {
+              "title": "Cómo se activa: un feature flag, no una opción del usuario",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Auto Dream no es una feature pública estable con un flag documentado que el usuario controle: es un feature flag del lado del servidor, activado por Anthropic gradualmente por cuenta u organización, no por la versión de Claude Code instalada. Eso explica por qué no aparece en la documentación oficial ni en el changelog — nunca se lanzó formalmente como feature del producto."
                 },
                 {
-                  "type": "stats",
-                  "items": [
-                    {
-                      "value": "913",
-                      "label": "sesiones consolidadas en un caso observado"
-                    },
-                    {
-                      "value": "~9 min",
-                      "label": "tiempo de consolidación para ese caso"
-                    },
-                    {
-                      "value": "🔒 Lock",
-                      "label": "lock file previene ejecuciones concurrentes"
-                    }
-                  ]
+                  "type": "callout",
+                  "icon": "🆕",
+                  "content": "El comportamiento visible cambió incluso en el corto tiempo que lleva en rollout: en versiones tempranas aparecía como un toggle separado en el panel `/memory` que había que activar manualmente. Al momento de escribir esto, ese toggle ya no aparece — Auto Dream se activa automáticamente en cuanto Auto Memory está habilitado, sin que el usuario pueda controlarlo por separado. **Verificá el estado real corriendo `/memory` en tu propia instalación**: esta sección describe un feature flag no documentado, así que puede quedar desactualizada más rápido que el resto del sitio."
+                },
+                {
+                  "type": "callout",
+                  "icon": "💤",
+                  "content": "Cuando corre, el indicador de estado de la terminal muestra \"Dreaming\". Si tenés el comando `/dream` disponible, lo dispara manualmente; si no, pedíselo en lenguaje natural (\"consolidá los archivos de memoria con Auto Dream\") y Claude lo ejecuta igual. Volviendo a ejecutar `/memory` después podés ver cuándo se ejecutó por última vez."
+                }
+              ]
+            },
+            {
+              "title": "Costo y recomendación",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "Auto Dream consume tokens — es trabajo real que Claude hace con sus propios algoritmos, no una limpieza gratuita en background. Aun así, conviene mantenerlo activo si usás Auto Memory de forma intensiva en un proyecto grande: sin Auto Dream, Auto Memory pierde efectividad con el tiempo a medida que se acumulan notas contradictorias u obsoletas."
                 }
               ]
             }
           ]
         },
         {
-          "id": "como-trabajan-juntas-las-cuatro-capas",
-          "title": "Cómo trabajan juntas las cuatro capas",
-          "summary": "Cada capa tiene un ritmo de escritura diferente y un alcance diferente. La configuración más robusta usa las cuatro simultáneamente.",
+          "id": "como-trabajan-juntos-los-mecanismos",
+          "title": "Cómo trabajan juntos los mecanismos de memoria",
+          "summary": "Cada mecanismo tiene un ritmo de escritura diferente y un alcance diferente. La configuración más robusta los combina.",
           "source": null,
           "subsections": [
             {
@@ -246,8 +303,8 @@
                   "rows": [
                     ["CLAUDE.md", "Vos", "Al inicio de cada sesión", "Proyecto / usuario / org", "Reglas autoritativas, instrucciones explícitas que querés reforzar siempre"],
                     ["Auto Memory", "Claude", "Índice al inicio, temas bajo demanda", "Por repositorio git", "Lo que Claude descubre trabajando: patrones, comandos, preferencias observadas"],
-                    ["Session Memory", "Claude", "Dentro de la sesión", "Una sola sesión", "Mantener coherencia durante una conversación larga o con compactación de contexto"],
-                    ["Auto Dream", "Claude", "En background (trigger automático)", "Cross-session", "El único mecanismo que reescribe el historial: limpia, deduplica y organiza las otras capas"]
+                    ["Compactación de contexto", "Claude (automático o vía /compact)", "Cuando la conversación se acerca al límite de tokens, o a pedido", "Una sola sesión", "Resumir el historial para poder seguir trabajando sin perder la sesión"],
+                    ["Auto Dream", "Claude, bajo demanda (/dream, no activo por defecto)", "Cuando se dispara manualmente", "Por repositorio git — reorganiza los archivos de Auto Memory", "Consolidar Auto Memory: fechas absolutas, sin contradicciones, sin duplicados"]
                   ]
                 }
               ]
@@ -279,7 +336,7 @@
                 {
                   "type": "callout",
                   "icon": "🎯",
-                  "content": "Auto Memory sin Auto Dream es un tomador de notas que nunca organiza su libreta. Auto Dream sin Auto Memory no tiene nada que consolidar. Las dos están diseñadas para funcionar juntas — con el trigger de 24h + 5 sesiones como configuración predeterminada para proyectos activos."
+                  "content": "CLAUDE.md y Auto Memory se complementan: CLAUDE.md son las reglas que vos decidís reforzar siempre; Auto Memory es lo que Claude va descubriendo solo. Ninguno de los dos se organiza automáticamente entre sí — para eso está Auto Dream: si un archivo de tema de Auto Memory crece con ruido, contradicciones o duplicados, activar Auto Dream (o pedirle a Claude que consolide la memoria) es la forma de limpiarlo sin hacerlo a mano archivo por archivo."
                 }
               ]
             }
@@ -388,11 +445,11 @@
                     },
                     {
                       "title": "🔍 Cómo revisarlo",
-                      "body": "Ejecutá /memory en cualquier sesión para ver el estado actual, la fecha de última consolidación y los archivos existentes. Podés editar los archivos markdown directamente."
+                      "body": "Ejecutá /memory en cualquier sesión para ver el estado actual, los archivos existentes y (si Auto Dream corrió) cuándo fue la última consolidación. Podés editar los archivos markdown directamente."
                     },
                     {
                       "title": "⚡ Limitaciones técnicas",
-                      "body": "No sincroniza entre máquinas. Necesita revisión periódica para evitar acumulación de ruido. Requiere Auto Dream activo para mantenerse coherente en proyectos de largo plazo."
+                      "body": "No sincroniza entre máquinas. Necesita revisión periódica para evitar acumulación de ruido — sin Auto Dream activo, no hay nada que limpie o reorganice los archivos de tema por vos."
                     }
                   ]
                 }

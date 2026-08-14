@@ -278,8 +278,8 @@
             {
               "type": "callout",
               "variant": "info",
-              "title": "@import en CLAUDE.md: la misma sintaxis, otro contexto",
-              "content": "El mismo mecanismo `@path/al/archivo.md` se usa dentro de un CLAUDE.md para importar archivos externos y mantenerlo modular — por ejemplo, importar solo el archivo de estándares relevante para cada paquete de un monorepo, en vez de un único CLAUDE.md monolítico con todas las convenciones de todos los paquetes. La documentación oficial y el examen suelen llamar a este uso específico \"@import\", pero es la misma sintaxis `@path` que en los comandos personalizados."
+              "title": "Imports en CLAUDE.md: la misma sintaxis, otro contexto",
+              "content": "El mismo mecanismo `@path/al/archivo.md` se usa dentro de un CLAUDE.md para importar archivos externos y mantenerlo modular — por ejemplo, importar solo el archivo de estándares relevante para cada paquete de un monorepo, en vez de un único CLAUDE.md monolítico con todas las convenciones de todos los paquetes. La documentación oficial titula esta sección \"Import additional files\", pero la sintaxis en sí nunca incluye la palabra \"import\" — es el mismo `@path` que en los comandos personalizados, no un token especial `@import`."
             }
           ]
         },

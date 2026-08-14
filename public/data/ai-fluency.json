@@ -856,12 +856,16 @@
                 {
                   "type": "compare",
                   "left": {
-                    "title": "Sin contexto de fondo",
-                    "content": "\"Explicame qué es un índice en una base de datos.\""
+                    "label": "Sin contexto de fondo",
+                    "items": [
+                      "\"Explicame qué es un índice en una base de datos.\""
+                    ]
                   },
                   "right": {
-                    "title": "Con contexto de fondo",
-                    "content": "\"Estoy por revisar un PR de un compañero junior que agregó un índice a una tabla de 50 millones de filas y quiero poder explicarle en la revisión por qué eso puede ser riesgoso en producción. Sé programar pero nunca administré bases de datos grandes — explicame qué hace un índice y qué costo tiene agregarlo mal.\""
+                    "label": "Con contexto de fondo",
+                    "items": [
+                      "\"Estoy por revisar un PR de un compañero junior que agregó un índice a una tabla de 50 millones de filas y quiero poder explicarle en la revisión por qué eso puede ser riesgoso en producción. Sé programar pero nunca administré bases de datos grandes — explicame qué hace un índice y qué costo tiene agregarlo mal.\""
+                    ]
                   }
                 }
               ]
@@ -906,12 +910,16 @@
                 {
                   "type": "compare",
                   "left": {
-                    "title": "Sin descomponer",
-                    "content": "\"Revisá este esquema de base de datos y decime si está bien diseñado.\""
+                    "label": "Sin descomponer",
+                    "items": [
+                      "\"Revisá este esquema de base de datos y decime si está bien diseñado.\""
+                    ]
                   },
                   "right": {
-                    "title": "Descompuesto en pasos",
-                    "content": "\"Revisá este esquema en este orden: primero identificá si hay normalización deficiente, después chequeá si los tipos de dato son apropiados para cada columna, luego evaluá si los índices existentes cubren las queries más frecuentes, y por último sugerí cambios priorizados por impacto.\""
+                    "label": "Descompuesto en pasos",
+                    "items": [
+                      "\"Revisá este esquema en este orden: primero identificá si hay normalización deficiente, después chequeá si los tipos de dato son apropiados para cada columna, luego evaluá si los índices existentes cubren las queries más frecuentes, y por último sugerí cambios priorizados por impacto.\""
+                    ]
                   }
                 },
                 {

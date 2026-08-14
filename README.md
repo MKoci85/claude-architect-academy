@@ -1,12 +1,34 @@
-# Claude Web — Hub de Conocimiento CCAR-F
+# Claude Architect Academy
 
-> Documentación en español sobre **Claude Code** y la **API de Claude**, con búsqueda full-text, ejercicios prácticos resueltos y examen de práctica para la certificación **CCAR-F** (Claude Certified Architect – Foundations).
+> Preparación completa, en español, para la certificación **Claude Certified Architect – Foundations (CCAR-F)**: documentación curada de Claude Code y la API de Claude, ejercicios de arquitectura resueltos paso a paso, y un examen de práctica fiel al formato real de Anthropic.
+
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
+[![Idioma](https://img.shields.io/badge/idioma-espa%C3%B1ol-red)](#)
+
+---
+
+## Índice
+
+- [¿Qué es esto?](#qué-es-esto)
+- [Características principales](#características-principales)
+- [Contenido cubierto](#contenido-cubierto)
+- [Inicio rápido](#inicio-rápido)
+- [Ejercicios prácticos](#ejercicios-prácticos)
+- [Examen de práctica CCAR-F](#examen-de-práctica-ccar-f)
+- [Estructura del proyecto](#estructura-del-proyecto)
+- [Stack](#stack)
+- [Agregar contenido](#agregar-contenido)
+- [Licencia](#licencia)
 
 ---
 
 ## ¿Qué es esto?
 
-Un hub editorial estático — sin backend, sin base de datos — que centraliza la documentación técnica de Claude en español, la complementa con ejercicios de arquitectura resueltos paso a paso, y la combina con un simulador de examen fiel al formato real de la certificación **Claude Certified Architect — Foundations**.
+Un hub editorial estático — sin backend, sin base de datos — que centraliza en español la documentación técnica de Claude, la complementa con ejercicios de arquitectura resueltos paso a paso como los abordaría un arquitecto de soluciones senior, y la combina con un simulador de examen fiel al formato real de la certificación **Claude Certified Architect — Foundations**.
+
+No es una traducción automática de la documentación oficial: es contenido curado, verificado activamente contra la documentación viva de Anthropic (CLI, Agent SDK, API, MCP), pensado específicamente para cerrar la brecha entre "conozco la teoría" y "puedo tomar la decisión de arquitectura correcta bajo presión de examen".
 
 ---
 
@@ -26,15 +48,15 @@ Un hub editorial estático — sin backend, sin base de datos — que centraliza
 
 ### Claude Code
 
-Introducción, Reglas, Permisos, sistema de Hooks (más sus fundamentos de stdio), Skills, Sistema de Memoria, Subagentes, MCP y Patrones Glob.
+Introducción, Reglas, Permisos, sistema de Hooks (más sus fundamentos de stdio), Skills, Sistema de Memoria (Auto Memory, Auto Dream, compactación de contexto), Subagentes, MCP y Patrones Glob.
 
 ### API de Claude
 
-14 subsecciones: primeros pasos, modelos y versiones, tool use, RAG y búsqueda agéntica, MCP en profundidad, prefill y alternativas, referencia completa de la API, conceptos clave, guías prácticas, prompt engineering, evaluación de prompts, agentes y workflows, capacidades avanzadas (Extended Thinking, Files API, Managed Agents) y Claude en Vertex AI.
+14 subsecciones: primeros pasos, modelos y versiones, tool use, RAG y búsqueda agéntica, MCP en profundidad, prefill y alternativas, referencia completa de la API, conceptos clave, guías prácticas, prompt engineering, evaluación de prompts, agentes y workflows, capacidades avanzadas (Extended Thinking, Files API, Managed Agents), Claude en Vertex AI y Claude en AWS Bedrock.
 
 ### AI Fluency
 
-El framework 4D (*Delegation, Description, Discernment, Diligence*) del curso gratuito de Anthropic Academy, recomendado como preparación para el examen.
+El framework 4D (*Delegation, Description, Discernment, Diligence*) del curso gratuito de Anthropic Academy, recomendado como preparación para el examen — con ejercicios prácticos y proyecto guía incluidos.
 
 ---
 
@@ -46,6 +68,8 @@ npm run dev       # → http://localhost:5173
 npm run build     # build de producción en dist/
 npm run preview   # previsualiza el build local
 ```
+
+Sin variables de entorno, sin configuración adicional: todo el contenido se sirve como JSON estático en runtime.
 
 ---
 
@@ -126,17 +150,21 @@ src/
 ## Stack
 
 - **React 18** — UI
-- **Vite 8** — Build tool y servidor de desarrollo
+- **Vite 7** — Build tool y servidor de desarrollo
 - **Tailwind CSS** — Estilos utilitarios
 - **highlight.js** — Resaltado de sintaxis en bloques de código
+
+No hay backend, base de datos ni build step para el contenido: todo se resuelve fetcheando JSON estático en runtime, lo que hace que agregar o corregir contenido sea tan simple como editar un archivo y refrescar la página.
 
 ---
 
 ## Agregar contenido
 
-1. Crear o editar un archivo JSON en `public/data/` siguiendo el esquema de colecciones.
+1. Crear o editar un archivo JSON en `public/data/` siguiendo el esquema de colecciones (ver [CLAUDE.md](CLAUDE.md) para el schema completo y las convenciones por archivo).
 2. Registrarlo en `public/data/content.json`.
 3. No se requiere rebuild — los archivos se cargan en runtime.
+
+Antes de escribir contenido nuevo sobre CLI de Claude Code, Agent SDK o protocolo MCP, verificá la sintaxis exacta contra documentación viva en vez de recordarla de memoria — ver las convenciones de precisión técnica en `CLAUDE.md`.
 
 ---
 

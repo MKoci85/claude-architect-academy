@@ -89,8 +89,8 @@
                   "description": "Previene completamente la ejecución de herramientas. Claude analiza y crea planes detallados, pero no hace ningún cambio. `AskUserQuestion` sigue disponible."
                 },
                 {
-                  "title": "auto (TS only)",
-                  "description": "Un clasificador de modelo evalúa cada tool call y decide si aprobarlo. Solo disponible en TypeScript. Reduce fricción sin abrir todo con `bypassPermissions`."
+                  "title": "auto",
+                  "description": "Un clasificador de modelo evalúa cada tool call y decide si aprobarlo. Disponible en el Agent SDK tanto en TypeScript como en Python. Reduce fricción sin abrir todo con `bypassPermissions`."
                 }
               ]
             },
@@ -363,7 +363,7 @@
               "type": "callout",
               "variant": "info",
               "title": "Comandos Bash pre-aprobados (read-only built-in)",
-              "content": "Claude Code tiene una lista built-in de comandos que se ejecutan sin prompt en cualquier modo: `ls`, `cat`, `echo`, `pwd`, `head`, `tail`, `grep`, `find`, `wc`, `which`, `diff`, `stat`, `du`, `cd`, `git log`, `git status`, `git diff`. No necesitás listarlos en `allowedTools`. Si querés bloquear alguno, agregá explícitamente `deny: [\"Bash(cat *)\"]`."
+              "content": "Claude Code tiene una lista built-in de comandos que se ejecutan sin prompt en cualquier modo: `ls`, `cat`, `echo`, `pwd`, `head`, `tail`, `grep`, `find`, `wc`, `which`, `diff`, `stat`, `du`, `cd`, más las formas read-only de `git` (la documentación oficial no enumera cada una — `git log`, `git status` y `git diff` son ejemplos, pero hay más como `git show`). No necesitás listarlos en `allowedTools`. Si querés bloquear alguno, agregá explícitamente `deny: [\"Bash(cat *)\"]`."
             }
           ]
         },

@@ -2,7 +2,7 @@
   "exam": {
     "title": "Claude Certified Architect – Foundations (CCAR-F) - Practice Exam",
     "language": "en",
-    "totalQuestions": 225,
+    "totalQuestions": 265,
     "domains": [
       {
         "id": 1,
@@ -679,7 +679,7 @@
               "The subagents are defined correctly, but the coordinator needs an explicit 'delegate_to' tool_choice forcing to trigger the first invocation."
             ],
             "correctAnswer": 1,
-            "explanation": "Spawning subagents requires the Task tool to be present in the parent's allowed tools; without it, the model has no mechanism to invoke a subagent regardless of how well the subagent AgentDefinitions are configured — it can only narrate what it would do. A missing 'model' field (A) would not prevent spawning since model is optional and inherits from the parent. Task and WebSearch coexist without conflict (C). There is no 'delegate_to' tool_choice mechanism (D) — the fix is adding \"Task\" to allowedTools."
+            "explanation": "Spawning subagents requires the Task tool to be present in the parent's allowed tools; without it, the model has no mechanism to invoke a subagent regardless of how well the subagent AgentDefinitions are configured — it can only narrate what it would do. A missing 'model' field (A) would not prevent spawning since model is optional and inherits from the parent. Task and WebSearch coexist without conflict (C). There is no 'delegate_to' tool_choice mechanism (D) — the fix is adding \"Task\" to allowedTools. (Note: Claude Code's CLI renamed this tool from \"Task\" to \"Agent\" internally in v2.1.63, but the CCAR-F exam guide still documents it as \"Task\" — that is the terminology tested on the real exam and used throughout this question bank.)"
           },
           {
             "text": "A document-analysis subagent is investigating a two-source data conflict identified earlier by a coordinator. The team wants to try two different reconciliation strategies (weighting by source recency vs. weighting by sample size) starting from the exact same partial analysis, without either exploration affecting the other or requiring the initial analysis to be redone. Which mechanism fits this requirement?",
@@ -715,7 +715,7 @@
             "explanation": "A hard business rule with financial consequences requires deterministic enforcement, which only a tool-call interception hook can guarantee — it blocks the call programmatically regardless of what the model decided. Strengthening the prompt (A) only reduces the failure rate, it does not eliminate it — prompt-based compliance is inherently probabilistic. More reasoning budget (C) does not provide a guarantee either. Documenting the constraint in the schema description (D) is informational only; nothing prevents the model from ignoring it under adversarial pressure."
           },
           {
-            "text": "A developer has been debugging a data pipeline migration issue in a named session for two days: `claude --session-name pipeline-migration \"...\"`. On day three, the underlying source files were significantly refactored by another teammate (function names changed, two modules were merged). The developer wants to continue the investigation. What is the most reliable next step?",
+            "text": "A developer has been debugging a data pipeline migration issue in a named session for two days: `claude --name pipeline-migration \"...\"`. On day three, the underlying source files were significantly refactored by another teammate (function names changed, two modules were merged). The developer wants to continue the investigation. What is the most reliable next step?",
             "options": [
               "Run `claude --resume pipeline-migration` with no additional context, trusting that Claude will detect the file changes automatically before continuing.",
               "Run `claude --resume pipeline-migration` and explicitly describe which files changed and how, so Claude re-analyzes only the affected areas instead of relying on stale tool results.",
@@ -889,7 +889,7 @@
             "options": [
               "Place the rules in .claude/rules/typescript.md with glob patterns for \"*.ts\" and \"*.tsx\".",
               "Add the rules to the root CLAUDE.md so everyone sees them at all times.",
-              "Create a PostTool hook that validates var usage after every file write.",
+              "Create a PostToolUse hook that validates var usage after every file write.",
               "Add the rules to each subdirectory CLAUDE.md in the areas where TypeScript is used."
             ],
             "correctAnswer": 0,
@@ -975,16 +975,16 @@
           {
             "text": "Hooks are configured at the user level but team members report inconsistent behavior. What is the most likely problem?",
             "options": [
-              "User-level hooks are private; each team member must configure them individually. Project-level hooks in .claude/hooks/ ensure consistency across the team via version control.",
-              "PostTool hooks are disabled by default at the user level and must be enabled via CLI flags.",
+              "User-level hooks are private; each team member must configure them individually in ~/.claude/settings.json. Project-level hooks defined in .claude/settings.json ensure consistency across the team via version control.",
+              "PostToolUse hooks are disabled by default at the user level and must be enabled via CLI flags.",
               "User-level hooks cannot access files in the project directory, causing intermittent failures.",
               "Hook scripts must be re-registered after every git pull for them to take effect."
             ],
             "correctAnswer": 0,
-            "explanation": "Hooks respect the same scoping as other Claude Code configuration. User-level hooks (~/.claude/hooks/) are private per machine and per developer. Project-level hooks (.claude/hooks/) are shared via version control."
+            "explanation": "Hooks respect the same scoping as other Claude Code configuration. User-level hooks (~/.claude/settings.json) are private per machine and per developer. Project-level hooks (.claude/settings.json) are shared via version control. There is no dedicated .claude/hooks/ directory that Claude Code reads hook definitions from — hooks are always declared inside the \"hooks\" field of a settings.json file (or in skill/subagent frontmatter)."
           },
           {
-            "text": "You need a PreTool hook that validates no file outside the project directory is edited. The hook receives an event payload. What exit code should it return to allow the tool execution?",
+            "text": "You need a PreToolUse hook that validates no file outside the project directory is edited. The hook receives an event payload. What exit code should it return to allow the tool execution?",
             "options": [
               "Exit code 0 (success) — allows the tool execution to proceed.",
               "Exit code 1 (non-zero) — the tool is blocked.",
@@ -992,29 +992,29 @@
               "The exit code is irrelevant; the hook communicates intent via a JSON response written to stdout."
             ],
             "correctAnswer": 0,
-            "explanation": "Hooks use exit codes to communicate with Claude Code. Exit code 0 means allow/proceed. Any non-zero exit code blocks the associated operation. This convention applies to all hook types."
+            "explanation": "Hooks use exit codes to communicate with Claude Code. Exit code 0 means allow/proceed. Exit code 2 is the one that blocks the operation, with the reason passed via stderr or a permissionDecision field. Exit code 1 (option B) is a common misconception — it looks like the conventional Unix failure code, but Claude Code treats it as a non-blocking error and lets the tool call proceed anyway."
           },
           {
-            "text": "You configure a PostTool hook that auto-formats code with Prettier after every file write. Which hook type and event combination is correct?",
+            "text": "You configure a PostToolUse hook that auto-formats code with Prettier after every file write. Which hook type and event combination is correct?",
             "options": [
-              "PostTool hook on the file write event, triggering format after the file has been written.",
-              "PreTool hook on the edit tool, formatting the file before editing begins.",
+              "PostToolUse hook on the file write event, triggering format after the file has been written.",
+              "PreToolUse hook on the edit tool, formatting the file before editing begins.",
               "Stop hook on the session end event, formatting all modified files before Claude Code exits.",
               "UserPromptSubmit hook triggered on every user message that mentions a file path."
             ],
             "correctAnswer": 0,
-            "explanation": "PostTool hooks fire after the tool execution completes. For auto-formatting, triggering after the file is written (PostTool on write) is correct. PreTool would fire before the edit, formatting a file that hasn't changed yet."
+            "explanation": "PostToolUse hooks fire after the tool execution completes. For auto-formatting, triggering after the file is written (PostToolUse on write) is correct. PreToolUse would fire before the edit, formatting a file that hasn't changed yet."
           },
           {
-            "text": "A PreTool hook that validates file permissions accidentally returns a non-zero exit code for all operations. What is the immediate effect?",
+            "text": "A PreToolUse hook that validates file permissions has a bug and returns exit code 2 for every operation, regardless of whether the file is actually valid. What is the immediate effect?",
             "options": [
               "Claude Code is prevented from executing the targeted tool, blocking all operations the hook guards.",
-              "Nothing happens; PreTool hook exit codes are advisory and logged but not enforced.",
+              "Nothing happens; PreToolUse hook exit codes are advisory and logged but not enforced.",
               "Claude Code crashes with an unrecoverable error.",
               "Claude Code logs a warning but proceeds with the operation anyway to avoid blocking the developer."
             ],
             "correctAnswer": 0,
-            "explanation": "PreTool hooks are gates: a non-zero exit code blocks the operation. A buggy hook returning non-zero for everything would grind development to a halt. This is why error handling in hooks is critical."
+            "explanation": "PreToolUse hooks are gates: exit code 2 always blocks the operation, regardless of what the underlying tool call was. A buggy hook returning exit code 2 for everything would grind development to a halt, since every guarded tool call gets rejected. This is why error handling in hooks is critical — note the asymmetry: had the bug instead caused it to return exit code 1, Claude Code would treat that as a non-blocking error and let every operation through unchecked, the opposite (and arguably more dangerous) failure mode."
           },
           {
             "text": "You integrate Claude Code into the production CI pipeline for automated PR reviews. The job hangs indefinitely and eventually times out. What is the single most likely cause?",
@@ -1041,19 +1041,19 @@
           {
             "text": "After weeks of running PR reviews in CI, a review gets stuck looping through the same analysis for over 100 turns. What safety measure should have been in place?",
             "options": [
-              "--max-turns N to set a hard iteration limit that stops the loop and produces a partial result.",
+              "--max-turns N to set a hard iteration limit in print mode (-p), so the run exits with an error instead of looping indefinitely.",
               "Remove the -p flag to allow interactivity and manual intervention.",
               "Set a longer CI job timeout to give the review more time to complete before failing.",
               "Add a Stop hook that kills the process after a fixed wall-clock duration."
             ],
             "correctAnswer": 0,
-            "explanation": "--max-turns N acts as a circuit breaker for agentic loops. Combined with -p and --output-format json, it forms the standard safeguard trio for safe CI integration."
+            "explanation": "--max-turns N acts as a circuit breaker for agentic loops in print mode (-p) — when the limit is reached, the run exits with an error rather than looping indefinitely. Combined with -p and --output-format json, it forms the standard safeguard trio for safe CI integration."
           },
           {
             "text": "You need the CI permission policy: Bash grep should run without confirmation, but git commit and git push require explicit approval. Which configuration pattern is correct?",
             "options": [
               "Define permissions with allow/ask per pattern: grep is 'allow', git commit and git push are 'ask'.",
-              "Allow all bash commands by default, then add a PreTool hook that intercepts git operations and prompts the user.",
+              "Allow all bash commands by default, then add a PreToolUse hook that intercepts git operations and prompts the user.",
               "Deny all Bash commands by default and whitelist only grep, git commit, and git push.",
               "Use a single blanket 'ask' for all Bash commands to maintain a consistent approval model."
             ],
@@ -1120,7 +1120,7 @@
             "options": [
               "Create a custom /commit command that wraps the commit process and always applies the format rules.",
               "Rewrite the CLAUDE.md in ALL CAPS to draw more attention to the rules.",
-              "Add a PostTool hook that validates the commit message format and blocks non-conforming commits.",
+              "Add a PostToolUse hook that validates the commit message format and blocks non-conforming commits.",
               "Move the commit conventions into a .claude/rules/ file scoped to the git directory."
             ],
             "correctAnswer": 0,
@@ -1196,7 +1196,7 @@
             "text": "You configure a MCP server that exposes internal APIs for the data team. The team wants this server available to everyone working on the data pipelines repo. What scope and location is correct?",
             "options": [
               "Project scope in .mcp.json at the repo root, version-controlled so all team members get it via Git.",
-              "User scope in ~/.claude/mcp.json so each developer configures it once and it applies to all their projects.",
+              "User scope in ~/.claude.json so each developer configures it once and it applies to all their projects.",
               "Include the server configuration inline in the project CLAUDE.md under a [mcp] section.",
               "Register the server in the Claude Code global settings file so it applies to every project on the machine."
             ],
@@ -1215,7 +1215,7 @@
             "explanation": "Directory-level CLAUDE.md files can override project-level settings for their scope. More specific (directory-level) rules take precedence over more general ones for files within that directory."
           },
           {
-            "text": "A developer configures a tool-use hook in .claude/hooks/pre-tool that checks the size of files before editing. The hook is intended to block edits on files larger than 1MB. What does the hook receive in its input to determine the file being edited?",
+            "text": "A developer configures a PreToolUse hook in .claude/settings.json, with its command pointing to a validation script, that checks the size of files before editing. The hook is intended to block edits on files larger than 1MB. What does the hook receive in its input to determine the file being edited?",
             "options": [
               "A JSON event payload on stdin containing the tool name, arguments, and the file path being targeted.",
               "The file path as the first positional argument passed on the command line when the hook is invoked.",
@@ -1226,7 +1226,7 @@
             "explanation": "Hooks receive a JSON event payload on stdin with details about the triggering event, including the tool name, its arguments, and the target file path. The hook script reads stdin and processes this payload."
           },
           {
-            "text": "The pre-tool hook for large file edits returns exit code 1 when the file exceeds 1MB. Later, a developer needs to edit a 1.2MB configuration file and is blocked. What is the most appropriate response?",
+            "text": "The PreToolUse hook for large file edits returns exit code 2 when the file exceeds 1MB. Later, a developer needs to edit a 1.2MB configuration file and is blocked. What is the most appropriate response?",
             "options": [
               "Adjust the hook threshold to accommodate the legitimate use case, keeping the safeguard for truly large files.",
               "Remove the hook entirely since it is causing friction for legitimate workflows.",
@@ -1239,20 +1239,20 @@
           {
             "text": "You want Claude Code to automatically run tests after every file change that touches the src/ directory, but only for JS/TS files. Which hook configuration achieves this?",
             "options": [
-              "A PostTool hook on file write events, with logic to check if the path matches src/ and extension matches .js or .ts.",
-              "A PreTool hook on edit events that runs tests before allowing the edit to confirm nothing is broken.",
+              "A PostToolUse hook on file write events, with logic to check if the path matches src/ and extension matches .js or .ts.",
+              "A PreToolUse hook on edit events that runs tests before allowing the edit to confirm nothing is broken.",
               "A Stop hook that runs the full test suite before ending each Claude Code session.",
               "A UserPromptSubmit hook that detects file paths mentioned in the user's message and runs the related tests."
             ],
             "correctAnswer": 0,
-            "explanation": "PostTool hooks fire after the tool execution. The hook script checks the file path and extension from the event payload and conditionally runs tests only when the criteria are met."
+            "explanation": "PostToolUse hooks fire after the tool execution. The hook script checks the file path and extension from the event payload and conditionally runs tests only when the criteria are met."
           },
           {
             "text": "The team creates a /deploy command that pushes code to staging. The CTO is concerned about safety. What is the primary mechanism to control who can run this command?",
             "options": [
               "Permission policies in Claude Code can restrict specific commands or patterns with allow/deny/ask rules.",
               "Move the command file to ~/.claude/commands/ so only the developer who owns that home directory can run it.",
-              "Protect the command by wrapping it in a PreTool hook that checks the current git branch before allowing execution.",
+              "Protect the command by wrapping it in a PreToolUse hook that checks the current git branch before allowing execution.",
               "Store the command in .claude/rules/ with a glob pattern that matches only the CI environment."
             ],
             "correctAnswer": 0,
@@ -1317,13 +1317,13 @@
             "text": "Your monorepo has a root CLAUDE.md and separate payments/CLAUDE.md and billing/CLAUDE.md files. A shared file, ../shared/security-standards.md, should load only for the payments and billing packages, not for every package in the repo. Which two configuration choices correctly achieve this selective loading?",
             "selectCount": 2,
             "options": [
-              "Add \"@import ../shared/security-standards.md\" inside payments/CLAUDE.md and billing/CLAUDE.md so only those packages pull it in.",
+              "Add \"@../shared/security-standards.md\" inside payments/CLAUDE.md and billing/CLAUDE.md so only those packages pull it in.",
               "Create a .claude/rules/security.md file with YAML frontmatter paths: [\"payments/**\", \"billing/**\"] containing the same standards, so it loads only when editing matching files.",
               "Paste the full contents of security-standards.md directly into the root CLAUDE.md so every package inherits it uniformly.",
               "Rely on Claude Code auto-detecting \"security-sensitive\" directory names and loading relevant standards files by convention."
             ],
             "correctAnswers": [0, 1],
-            "explanation": "@import lets a specific package selectively pull in a shared file (A), and a path-scoped rule with a glob-matched paths field achieves the same selective loading (B). Pasting into the root CLAUDE.md (C) loads it for every package, including ones that don't need it, defeating the selective intent. Claude Code has no directory-name auto-detection convention for \"sensitive\" paths (D)."
+            "explanation": "The @path import syntax lets a specific package selectively pull in a shared file (A), and a path-scoped rule with a glob-matched paths field achieves the same selective loading (B). Pasting into the root CLAUDE.md (C) loads it for every package, including ones that don't need it, defeating the selective intent. Claude Code has no directory-name auto-detection convention for \"sensitive\" paths (D)."
           },
           {
             "text": "Your team wants a codebase-analysis skill that (1) is shared with the whole team via version control and (2) runs its verbose exploration output in isolation so it doesn't pollute the main conversation. Which two configuration choices correctly satisfy both requirements?",

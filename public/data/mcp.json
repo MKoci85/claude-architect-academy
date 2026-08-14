@@ -29,7 +29,7 @@
                     },
                     {
                       "title": "⚡ Tool Search: sin overhead",
-                      "body": "Claude Code carga las definiciones de herramientas bajo demanda, no todas de golpe. 10+ servidores conectados sin saturar el contexto."
+                      "body": "Claude Code carga las definiciones de herramientas bajo demanda, no todas de golpe. Impacto mínimo en la ventana de contexto aunque se conecten varios servidores."
                     }
                   ]
                 }
@@ -42,16 +42,16 @@
                   "type": "stats",
                   "items": [
                     {
-                      "number": "~95%",
-                      "label": "reducción de consumo de contexto vs clientes MCP tradicionales"
+                      "value": "Bajo demanda",
+                      "label": "Tool Search carga el schema de una tool recién cuando se va a invocar, no todas al inicio"
                     },
                     {
-                      "number": "3",
+                      "value": "3",
                       "label": "scopes para controlar visibilidad de cada servidor"
                     },
                     {
-                      "number": "10+",
-                      "label": "servidores simultáneos sin impacto en la ventana de contexto"
+                      "value": "Mínimo",
+                      "label": "impacto en la ventana de contexto al sumar más servidores conectados (según docs oficiales — sin cifra exacta publicada)"
                     }
                   ]
                 }
@@ -377,10 +377,10 @@
                   "right": {
                     "label": "⚡ Claude Code con Tool Search",
                     "items": [
-                      "~5% del consumo de contexto tradicional",
                       "Solo se carga el schema de las tools que se van a invocar",
-                      "10+ servidores conectados sin saturar la ventana",
-                      "El costo en tokens no escala con la cantidad de servidores"
+                      "Impacto mínimo en la ventana de contexto (según docs oficiales, sin cifra exacta publicada)",
+                      "Se pueden conectar varios servidores sin saturar la ventana",
+                      "El costo en tokens escala mucho menos con la cantidad de servidores"
                     ]
                   }
                 }
@@ -464,7 +464,7 @@
                 {
                   "type": "callout",
                   "kind": "warning",
-                  "content": "Si una variable no existe al iniciar la sesión → warning, pero intenta conectar igual."
+                  "content": "Si una variable referenciada no existe al iniciar la sesión, Claude Code reporta un warning de variable faltante (visible en `claude mcp list`) y usa el texto `${VAR}` sin expandir tal cual — no lo omite ni lo reemplaza por vacío. En la práctica, eso casi siempre hace que la conexión falle (por ejemplo, una URL con `${VAR}` literal no es válida)."
                 }
               ]
             },

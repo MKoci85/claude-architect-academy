@@ -109,8 +109,8 @@
                 ["prompt", "string", "Sí", "El system prompt del subagente. Define su rol, expertise, restricciones y comportamiento. Completamente independiente del system prompt del agente padre."],
                 ["tools", "string[]", "No", "Array de nombres de herramientas permitidas. Si se omite, el subagente hereda todas las del padre. Si se especifica, solo puede usar esas. Nunca incluyas Agent — los subagentes no pueden lanzar otros subagentes."],
                 ["model", "string", "No", "Modelo a usar: sonnet, opus, haiku o inherit. Si se omite, hereda el modelo del agente padre. Usar Haiku para tareas de búsqueda/exploración ahorra costos significativos."],
-                ["memory", "string", "No", "Fuente de memoria para el subagente: user (memoria de usuario), project (CLAUDE.md del proyecto), local. Solo disponible en Python SDK."],
-                ["skills", "string[]", "No", "Lista de Skills disponibles para este subagente. Por defecto los subagentes no heredan los Skills del padre a menos que se listen aquí explícitamente."],
+                ["memory", "string", "No", "Fuente de memoria para el subagente: user (memoria de usuario), project (CLAUDE.md del proyecto), local. Disponible en ambos SDKs (TypeScript y Python)."],
+                ["skills", "string[]", "No", "Lista de Skills a precargar en el contexto del subagente al arrancar. Las Skills no listadas acá no se precargan, pero siguen siendo invocables a través de la tool Skill si el subagente las necesita."],
                 ["mcpServers", "array", "No", "Servidores MCP disponibles para este subagente, por nombre o configuración inline. Permite dar acceso a herramientas externas específicas (Slack, Gmail, bases de datos, etc.)."]
               ]
             },
@@ -168,7 +168,7 @@
                 "items": [
                   "El historial de conversación del padre ni sus resultados de herramientas",
                   "El system prompt del agente padre",
-                  "Los Skills del padre (a menos que se listen explícitamente en AgentDefinition.skills)",
+                  "Las Skills del padre precargadas en contexto (las que no estén en AgentDefinition.skills no se precargan, aunque siguen siendo invocables a demanda vía la tool Skill)",
                   "Los servidores MCP del padre (a menos que se configuren en mcpServers)"
                 ]
               }
@@ -200,7 +200,7 @@
               "type": "callout",
               "variant": "tip",
               "title": "Reanudación de subagentes",
-              "content": "Los subagentes pueden reanudarse. Cuando un subagente completa, Claude recibe su ID en el resultado de la herramienta. Podés reanudar un subagente para continuar donde quedó, con todo su historial de conversación — todas las tool calls, resultados y razonamiento previo. Los transcripts persisten independientemente de la conversación principal y se limpian automáticamente según `cleanupPeriodDays` (30 días por defecto)."
+              "content": "Los subagentes pueden reanudarse. Cuando un subagente completa, Claude recibe su `session_id` y su `agentId` en el resultado de la herramienta — hacen falta ambos valores para reanudarlo correctamente. Podés reanudar un subagente para continuar donde quedó, con todo su historial de conversación — todas las tool calls, resultados y razonamiento previo. Los transcripts persisten independientemente de la conversación principal y se limpian automáticamente según `cleanupPeriodDays` (30 días por defecto)."
             }
           ]
         },
@@ -432,12 +432,12 @@
               "type": "code",
               "lang": "bash",
               "label": "--resume <session-name>: continuar una investigación previa",
-              "content": "# Primera sesión, nombrada explícitamente\nclaude --session-name migracion-auth \"Investigá cómo migrar el sistema de auth de JWT a sesiones\"\n\n# Días después, retomar exactamente esa sesión con todo su contexto\nclaude --resume migracion-auth \"Ya apliqué el cambio en el middleware, seguí con los endpoints\""
+              "content": "# Primera sesión, nombrada explícitamente\nclaude --name migracion-auth \"Investigá cómo migrar el sistema de auth de JWT a sesiones\"\n\n# Días después, retomar exactamente esa sesión con todo su contexto\nclaude --resume migracion-auth \"Ya apliqué el cambio en el middleware, seguí con los endpoints\""
             },
             {
               "type": "callout",
               "icon": "🔀",
-              "content": "**fork_session** crea una rama independiente a partir de un punto de análisis ya hecho, sin modificar la sesión original. Es el mecanismo correcto cuando hay que comparar dos enfoques divergentes (dos estrategias de refactor, dos librerías candidatas) que comparten el mismo análisis inicial del codebase pero después toman caminos distintos — bifurcar evita repetir la exploración inicial en cada rama."
+              "content": "**fork_session** crea una rama independiente a partir de un punto de análisis ya hecho, sin modificar la sesión original — el concepto es real y útil, aunque no aparece documentado con ese nombre exacto en la documentación pública actual del Agent SDK (que sí confirma `--resume <sessionId>` como mecanismo de continuar una sesión). Tratá el nombre `fork_session` como orientativo del concepto, no como un parámetro verificado; confirmá el nombre exacto en la referencia del SDK antes de usarlo en código real. Conceptualmente, es el mecanismo correcto cuando hay que comparar dos enfoques divergentes (dos estrategias de refactor, dos librerías candidatas) que comparten el mismo análisis inicial del codebase pero después toman caminos distintos — bifurcar evita repetir la exploración inicial en cada rama."
             },
             {
               "type": "compare",
@@ -549,7 +549,7 @@
                 ["¿Toma decisiones?", "✓ Autónomamente", "◐ Guía las decisiones", "✗ Lógica fija"],
                 ["¿Se ejecuta solo?", "✓ Disparado por el orquestador", "✗ Claude lo invoca al leerlo", "✓ Automáticamente por evento"],
                 ["¿Paralelismo?", "✓ Múltiples en simultáneo", "✗ Secuencial", "✗ Por evento"],
-                ["¿Puede bloquear?", "◐ Si devuelve error", "✗ No", "✓ Pre-hooks bloquean (exit 1)"],
+                ["¿Puede bloquear?", "◐ Si devuelve error", "✗ No", "✓ Pre-hooks bloquean (exit 2)"],
                 ["Costo", "Alto (contexto LLM propio)", "Bajo (tokens del prompt)", "Mínimo (sin LLM)"],
                 ["¿Reutilizable?", "◐ Como template", "✓ Entre proyectos", "✓ En cualquier proyecto"],
                 ["¿Necesita código?", "Mínimo (llamar a Agent)", "✗ Solo Markdown", "✓ Script bash/python"],
