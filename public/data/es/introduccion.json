@@ -413,6 +413,29 @@
                   "content": "Un worktree aísla archivos en disco. Un subagente (ver Subagentes) aísla contexto de conversación. Son complementarios, no alternativos: se puede tener un subagente que además corre en su propio worktree cuando su trabajo implica editar archivos en paralelo al resto de la sesión."
                 }
               ]
+            },
+            {
+              "title": "Mergear el trabajo de vuelta",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "`claude --worktree` resuelve la creación y el cleanup del worktree, pero no el paso final: llevar el trabajo terminado de la branch `worktree-<nombre>` de vuelta a la branch principal sigue siendo un merge de git normal, hecho desde el checkout raíz una vez que el trabajo en el worktree está commiteado."
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "# desde el checkout raíz, con el trabajo del worktree ya commiteado\ngit merge worktree-feature-auth"
+                },
+                {
+                  "type": "callout",
+                  "icon": "🤖",
+                  "content": "Si varias sesiones en paralelo tocaron áreas relacionadas del código, el merge puede generar conflictos. En vez de resolverlos a mano, se le puede pedir a Claude Code que los resuelva — tiene acceso de lectura a ambas branches y puede razonar sobre qué cambio de cada lado corresponde conservar, en vez de aplicar una resolución mecánica basada solo en los marcadores de conflicto."
+                },
+                {
+                  "type": "text",
+                  "content": "Este paso se presta al mismo patrón de Comandos personalizados (ver Reglas) que la creación del worktree: un comando `.claude/commands/merge-worktree.md` parametrizado con `$ARGUMENTS` puede encadenar \"revisar el último commit del worktree → volver a la raíz → mergear la branch → resolver conflictos si aparecen\" en una sola invocación, en vez de repetir la secuencia a mano cada vez que una sesión en paralelo termina."
+                }
+              ]
             }
           ]
         },
@@ -475,6 +498,16 @@
                   "content": "Todo lo anterior asume una sesión interactiva: un humano trae el error. Pero el mismo loop reproducir → diagnosticar → corregir → verificar se puede correr sin que nadie lo dispare a mano, si Claude Code tiene acceso al lugar donde vive el error. Conectando un servidor MCP de observabilidad (por ejemplo, uno que exponga CloudWatch, Sentry o Datadog) como tool, Claude puede preguntar directamente \"¿qué errores hubo en las últimas 24 horas?\", identificar cuáles ameritan un fix, aplicar la corrección con el mismo loop de siempre, y abrir un pull request — sin que el error haya sido reportado por un humano primero."
                 },
                 {
+                  "type": "text",
+                  "content": "MCP no es la única forma de darle ese acceso. La variante más simple, sin servidor intermedio, es que el propio job de CI traiga los logs con el CLI del proveedor (`aws logs tail`, `gcloud logging read`, etc.) y se los pase como texto a una invocación headless de Claude Code (ver CI headless en Reglas para el trío `-p` / `--output-format json` / `--max-turns`). Un cron diario de GitHub Actions con ese patrón — checkout → instalar dependencias → traer logs de las últimas 24h → pedirle a Claude que los analice, deduplique y arregle lo que encuentre → abrir el PR — es más fácil de armar que un servidor MCP dedicado cuando el único consumidor de esos logs es este workflow."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Lo que hay que acotar para que este cron no se vuelva un problema",
+                  "content": "Permisos de AWS de solo lectura sobre CloudWatch, nunca de escritura sobre infraestructura. Un tope al número de errores procesados por corrida para no exceder la ventana de contexto. Deduplicación antes de pasarle los logs a Claude, para no reabrir cada día el mismo error ya reportado. Permisos de escritura del repositorio acotados a crear el PR, no a mergear. Y correr en horario de baja carga si el fetch de logs compite por cuota con tráfico real."
+                },
+                {
                   "type": "table",
                   "columns": ["Mecanismo", "Dónde corre", "Cuándo usarlo"],
                   "rows": [
@@ -489,6 +522,110 @@
                   "style": "warning",
                   "title": "El humano no desaparece, se mueve al gate del PR",
                   "content": "Este patrón no elimina la revisión humana: la mueve de \"antes de que Claude investigue\" a \"antes de mergear\". Claude sigue proponiendo (el PR), una persona sigue decidiendo (el merge) — la regla de oro del proyecto (Claude propone, vos decidís) no cambia, solo cambia en qué punto del proceso entra el humano."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "flujos-planning-first-tdd",
+          "title": "Flujos estructurados: Planning-First y Test-Driven",
+          "summary": "Dos secuencias de varios pasos que convierten una tarea ambigua en pasos verificables antes de escribir código de producción: primero planificar sin implementar, o primero definir los tests sin implementar.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Por qué un solo mensaje no alcanza para tareas complejas",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Pedirle a Claude Code \"implementá la feature X\" en un único mensaje funciona para cambios chicos y bien delimitados. Para features de varios archivos, o para dominios con decisiones de diseño no obvias, ese mismo mensaje produce resultados inconsistentes entre intentos — no porque Claude \"no entendió\", sino porque la tarea admite más de una interpretación válida y Claude elige una sin que el desarrollador haya tenido oportunidad de corregir el rumbo antes de que se escriba código. Dos secuencias de pasos resuelven esto de formas distintas: dar el visto bueno al plan antes de tocar código, o dar el visto bueno a los tests antes de tocar código."
+                }
+              ]
+            },
+            {
+              "title": "Planning-First: contexto → plan → implementación",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Dar contexto",
+                      "body": "Pedirle a Claude que lea los archivos relevantes a la feature — ejemplos de código similar ya existente, helpers reutilizables, el módulo que va a extenderse."
+                    },
+                    {
+                      "title": "Planificar sin implementar",
+                      "body": "Describir qué se quiere construir pero pedir explícitamente que no escriba código todavía, solo el plan de pasos. Activar Plan Mode (ver Plan Mode y CI headless) es la forma de forzar esto mecánicamente en vez de depender de que Claude respete la instrucción en prosa."
+                    },
+                    {
+                      "title": "Implementar",
+                      "body": "Una vez que el plan es sólido y fue revisado, pedir la implementación. Claude ya tiene el contexto y la planificación hechos — el código sale alineado con lo acordado, no con la primera interpretación posible del pedido original."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "El punto de apalancamiento de este flujo es el paso 2: revisar y corregir el plan es mucho más barato que revisar y corregir una implementación completa que tomó el enfoque equivocado."
+                }
+              ]
+            },
+            {
+              "title": "Test-Driven: contexto → tests → selección → implementación",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Dar contexto",
+                      "body": "Igual que en Planning-First: compartir los archivos relevantes para que los tests propuestos reflejen el comportamiento real del sistema, no una versión genérica."
+                    },
+                    {
+                      "title": "Pedir casos de test, sin código todavía",
+                      "body": "Pedirle a Claude que piense casos de test — incluyendo edge cases — antes de escribir ninguna implementación. Esto separa \"qué debe cumplir la solución\" de \"cómo se construye\", y saca a la superficie casos límite que el desarrollador no había anticipado."
+                    },
+                    {
+                      "title": "Implementar solo los tests relevantes",
+                      "body": "De la lista propuesta, seleccionar los casos que realmente aplican a esta feature — no todos los que Claude sugiere son necesariamente relevantes — y pedir que los implemente como tests que van a fallar (todavía no existe código que los pase)."
+                    },
+                    {
+                      "title": "Implementar código que pase los tests",
+                      "body": "Recién en este paso Claude escribe la implementación, iterando hasta que los tests seleccionados pasen. El criterio de \"terminado\" queda definido de antemano por los tests, no por una lectura visual del código."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "💡",
+                  "content": "Este flujo requiere más esfuerzo inicial que pedir la feature directamente, pero el resultado es más robusto porque los edge cases quedan capturados como tests verificables antes de que exista una sola línea de implementación que los pase por casualidad."
+                }
+              ]
+            },
+            {
+              "title": "Cuándo usar cada uno",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Planning-First",
+                    "rows": [
+                      { "key": "Mejor para", "value": "Cambios estructurales: qué archivos tocar, en qué orden, qué se puede romper" },
+                      { "key": "Lo que fuerza a decidir antes", "value": "El enfoque arquitectónico" },
+                      { "key": "Mecanismo que lo impone", "value": "Plan Mode — bloquea la ejecución hasta aprobar el plan" }
+                    ]
+                  },
+                  "right": {
+                    "head": "Test-Driven",
+                    "rows": [
+                      { "key": "Mejor para", "value": "Lógica de negocio con reglas y edge cases precisos: cálculos, validaciones, parsers" },
+                      { "key": "Lo que fuerza a decidir antes", "value": "El comportamiento esperado, caso por caso" },
+                      { "key": "Mecanismo que lo impone", "value": "Los tests en sí — no hay forma de marcar \"terminado\" sin que pasen" }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔁",
+                  "content": "No son excluyentes: para una feature grande con lógica de negocio compleja, es común planificar primero la estructura general (Planning-First) y después aplicar Test-Driven dentro de esa estructura para el módulo con las reglas más delicadas. El loop de Depuración efectiva con Claude Code usa una variante de este mismo principio — escribir primero un test que falle por la causa raíz identificada — pero aplicado a bugs existentes en vez de a features nuevas."
                 }
               ]
             }

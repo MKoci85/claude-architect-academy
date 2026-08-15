@@ -384,6 +384,42 @@
               ]
             },
             {
+              "title": "Use case: visual QA of an interface",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A concrete use of computer use is interface QA: Claude is given a list of test cases against an app running in the browser, and it runs them end to end, relying on the same screenshot-after-each-action mechanism to visually judge whether the result matches expectations. The difference from a classic end-to-end test (Playwright, Cypress) is that there the assertions are programmed in advance; here Claude interprets the screen, which makes it useful specifically for layout or positioning bugs — a dropdown appearing in the wrong place, an element covered by another — that are easy to describe in natural language but tedious to capture as an exact assertion."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Define verifiable test cases",
+                      "description": "Each case as an action and an expected visual result: \"typing @ should show an autocomplete list\", \"pressing Enter on an option should insert it into the text\"."
+                    },
+                    {
+                      "title": "Run each case with a screenshot before and after",
+                      "description": "Claude navigates to the app, executes the case's action, and compares the resulting screenshot against the expected result."
+                    },
+                    {
+                      "title": "Refresh the page between cases",
+                      "description": "Without this step, state left over from one case (text already typed, a menu already open) contaminates the next one and the result stops being reliable."
+                    },
+                    {
+                      "title": "Report pass/fail with detail",
+                      "description": "A summary per case, and for failures, the specific detail of what was expected versus what actually showed up in the screenshot."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "A complement to the test suite, not a replacement",
+                  "content": "Every screenshot is extra tokens and latency, so this flow runs slower and more expensively per case than a programmatic test suite. It makes more sense as a tool aimed at visual-behavior bugs that are hard to capture in an assertion, run occasionally or as a separate job, than as a replacement for the CI test suite — and its findings are worth reviewing before trusting them blindly, like any other Claude output."
+                }
+              ]
+            },
+            {
               "title": "Security in tool use",
               "blocks": [
                 {

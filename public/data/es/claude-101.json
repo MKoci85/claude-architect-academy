@@ -1,0 +1,1189 @@
+{
+  "id": "claude-101",
+  "title": "Claude 101: Fundamentos",
+  "summary": "Qué es Claude, en qué se diferencia de un chatbot tradicional, sus capacidades principales y las distintas interfaces desde donde se puede usar.",
+  "sections": [
+    {
+      "id": "c101-que-es-claude",
+      "title": "Lección 1: ¿Qué es Claude?",
+      "articles": [
+        {
+          "id": "c101-001",
+          "title": "Claude como thinking partner, no solo un chatbot",
+          "summary": "La diferencia entre tratar a Claude como una caja de búsqueda y tratarlo como un colaborador con el que se piensa un problema en conjunto.",
+          "subsections": [
+            {
+              "title": "Guiado por principios, no solo por reglas de filtrado",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude está entrenado para ser útil, honesto e inofensivo. En la práctica esto significa que evita salidas tóxicas o discriminatorias y evita ayudar con actividades ilegales o poco éticas, pero sin depender solo de una lista fija de prohibiciones: el enfoque que usa Anthropic para lograr esto es Constitutional AI, donde el propio modelo se autocritica guiado por una constitución de principios escritos (ver Generative AI Fundamentals en AI Fluency para el mecanismo completo)."
+                }
+              ]
+            },
+            {
+              "title": "La distinción central: caja de búsqueda vs. thinking partner",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Un error común al empezar a usar Claude es tratarlo como una caja de búsqueda: escribir una pregunta corta y esperar un dato aislado. Claude puede responder ese tipo de pregunta, pero su valor diferencial aparece en el otro extremo — como thinking partner para resumir, investigar, escribir de forma colaborativa, responder preguntas complejas, programar, y trabajar a través de problemas difíciles, no solo contestarlos."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Alcanza con una búsqueda",
+                    "rows": [
+                      { "key": "Rasgo", "value": "Un dato puntual, verificable en una fuente única, que no depende de tu situación particular." },
+                      { "key": "Ejemplo", "value": "\"¿Cuántos días hábiles hay entre el 3 y el 24 de marzo?\"" }
+                    ]
+                  },
+                  "right": {
+                    "head": "Necesita un thinking partner",
+                    "rows": [
+                      { "key": "Rasgo", "value": "La respuesta depende de algo tuyo: un borrador propio, una decisión con matices, un documento que hay que interpretar." },
+                      { "key": "Ejemplo", "value": "\"Reescribí este update para que la demora se lea como una decisión, no como una disculpa\" (con el borrador de tres párrafos pegado abajo)." }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "icon": "🎯",
+                  "content": "La trampa más común no es confundir las dos categorías, sino escribir un pedido que en realidad es de thinking partner con la forma de una búsqueda. \"Mejor estructura para una presentación de resultados trimestrales\" suena a búsqueda y devuelve diez plantillas genéricas que no conocen tu trimestre. La misma necesidad, entregada como situación (\"acá está la review del trimestre pasado y las dos diapositivas donde el liderazgo hizo objeciones — reestructurá la historia para este trimestre\"), es donde Claude aporta valor real."
+                }
+              ]
+            },
+            {
+              "title": "Steerable, colaborativo y disponible donde trabajás",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude puede tomar dirección sobre personalidad, tono y comportamiento — es más fácil de conversar, más steerable, y permite llegar al resultado deseado con menos esfuerzo de iteración que un modelo que ignora esas señales. Las conversaciones, proyectos, memoria y preferencias se sincronizan entre dispositivos cuando iniciás sesión: la continuidad no depende de estar siempre en la misma app."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-002",
+          "title": "Capacidades principales de Claude",
+          "summary": "Un recorrido por las áreas donde Claude rinde especialmente bien, más allá de responder preguntas simples.",
+          "subsections": [
+            {
+              "title": "Qué puede hacer",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "✍️",
+                      "title": "Escritura y contenido",
+                      "body": "Publicaciones para redes, emails profesionales, reportes complejos. Al ser steerable, la iteración sobre estructura y claridad hasta que la voz propia se note es parte natural del proceso, no un ajuste posterior."
+                    },
+                    {
+                      "icon": "🔎",
+                      "title": "Investigación y análisis",
+                      "body": "Explorar ángulos de investigación, compilar hallazgos y analizar datos para sacar conclusiones. La context window grande (200K+ tokens, del orden de 500 páginas de texto o más) permite subir documentos extensos y que Claude los considere enteros en una sola conversación."
+                    },
+                    {
+                      "icon": "💻",
+                      "title": "Asistencia con código",
+                      "body": "Una de las mayores fortalezas de Claude: escribir, debuggear y explicar código en múltiples lenguajes, con buen desempeño en tareas de programación del mundo real (ver Claude Code para el uso agéntico completo)."
+                    },
+                    {
+                      "icon": "🧠",
+                      "title": "Resolución de problemas y razonamiento",
+                      "body": "Tareas cognitivas complejas, problemas matemáticos, pensamiento estratégico. Claude puede responder casi al instante o tomarse tiempo para razonar primero — Extended Thinking — trabajando el problema paso a paso antes de responder cuando el caso lo amerita."
+                    },
+                    {
+                      "icon": "🎓",
+                      "title": "Aprendizaje",
+                      "body": "Adaptarse al ritmo y estilo de quien pregunta al explorar un dominio nuevo. El modo de aprendizaje guía el proceso de razonamiento propio en vez de entregar la respuesta directa, para desarrollar pensamiento crítico en vez de solo transmitir información."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-003",
+          "title": "Formas de acceder a Claude",
+          "summary": "La misma inteligencia expuesta en distintas interfaces, cada una pensada para un tipo de tarea distinto.",
+          "subsections": [
+            {
+              "title": "Una inteligencia, varias superficies",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Interfaz", "Para qué sirve"],
+                  "rows": [
+                    ["Claude.ai (web, desktop, mobile)", "La forma principal de interactuar con Claude para la mayoría de la gente: conversaciones, ayuda de escritura, investigación, análisis y creación de archivos."],
+                    ["Claude Code", "Herramienta de codificación agéntica pensada para desarrolladores, pero utilizable para cualquier manipulación de archivos en el filesystem local: edita archivos, corre comandos y crea commits directamente (ver Introducción a Claude Code)."],
+                    ["@Claude en Slack", "Trae a Claude directo a un workspace de Slack: se puede conversar desde el header de cualquier canal o mencionarlo en un hilo. Con la conexión activa, Claude busca en canales, mensajes directos y archivos compartidos del workspace para traer contexto a sus respuestas."],
+                    ["Claude Design", "Espacio dedicado a convertir ideas en interfaces funcionales: a partir de una descripción, un boceto o una captura de pantalla, arma un prototipo interactivo que se puede refinar y entregar al equipo."],
+                    ["Claude para Microsoft 365", "Se integra como sidebar en Excel, PowerPoint, Word y Outlook, para analizar, redactar y editar dentro del documento ya abierto, llevando el contexto de una app a la siguiente."]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "🧭",
+                  "content": "Todas estas interfaces comparten el mismo modelo subyacente — lo que cambia es el punto de entrada y qué contexto de tu trabajo tiene disponible en cada una, no la inteligencia en sí."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c101-primera-conversacion",
+      "title": "Lección 2: Tu primera conversación",
+      "articles": [
+        {
+          "id": "c101-004",
+          "title": "De la pregunta simple al prompt estructurado",
+          "summary": "Un framework de tres partes para pasar de un pedido vago a uno que Claude puede resolver bien en el primer intento.",
+          "subsections": [
+            {
+              "title": "Escenario, tarea y reglas",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La interfaz de Claude.ai es un cuadro de texto simple, pero eso no significa que valga cualquier pedido: la calidad de la respuesta depende de lo que entra en ese cuadro. Hablarle a Claude como a un colega — de forma natural, concisa y conversacional — funciona mejor que tratarlo como un motor de búsqueda al que hay que darle palabras clave exactas."
+                },
+                {
+                  "type": "text",
+                  "content": "Antes de escribir un pedido, conviene cubrir tres cosas: el escenario (tu rol, tu objetivo, y qué contexto de tu trabajo necesita saber Claude), la tarea (qué acción concreta querés que haga: escribir, analizar, construir), y las reglas (el tono o estilo esperado, y si hay ejemplos que muestren lo que buscás)."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "icon": "🧩",
+                  "content": "Esta separación en tres partes es una versión práctica y de entrada rápida de la competencia Description del framework 4D (ver Description en profundidad en AI Fluency): escenario y tarea cubren lo que ahí se llama product y process; reglas cubre performance. No hace falta memorizar los nombres técnicos para aplicarla — alcanza con no saltear ninguna de las tres antes de mandar el prompt."
+                }
+              ]
+            },
+            {
+              "title": "Un prompt que junta las tres partes",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "\"Soy la líder de marketing de una startup indie de streaming, y estamos preparando el pitch deck para inversores de Serie A. ¿Podés investigar el estado actual del mercado de streaming de cine independiente e identificar tendencias clave, posicionamiento de competidores y oportunidades de crecimiento? Usá investigación web actualizada con citas, y estructuralo como un reporte profesional de hasta 5 páginas, con resumen ejecutivo, análisis de mercado, panorama competitivo y oportunidades de crecimiento.\""
+                },
+                {
+                  "type": "table",
+                  "headers": ["Parte del framework", "Dónde aparece en el ejemplo"],
+                  "rows": [
+                    ["Escenario", "\"Soy la líder de marketing de una startup indie de streaming... pitch deck para inversores de Serie A\" — el rol y el objetivo."],
+                    ["Tarea", "\"Investigar el estado del mercado... identificar tendencias, posicionamiento de competidores y oportunidades\" — la acción concreta pedida."],
+                    ["Reglas", "\"Investigación web actualizada con citas\", \"reporte profesional de hasta 5 páginas\" con secciones fijas — el formato y el estándar de calidad esperado."]
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-005",
+          "title": "Dar contexto con archivos y preferencias",
+          "summary": "Subir documentos, imágenes o código le da a Claude contexto que de otro modo tendrías que describir a mano — y las preferencias personales aplican ese contexto a cada conversación nueva.",
+          "subsections": [
+            {
+              "title": "Qué puede leer Claude en un archivo subido",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude puede analizar tanto el texto como los elementos visuales (imágenes, gráficos, diagramas) dentro de PDFs y otros documentos. Los tipos de archivo soportados incluyen PDF, DOCX, CSV, TXT, y formatos de imagen comunes como PNG y JPEG. Al subir un archivo, Claude intenta parsear su contenido automáticamente — aparece como adjunto en el chat, y a partir de ahí se puede preguntar sobre él directamente."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "📄",
+                      "title": "Documento largo",
+                      "body": "Subir un PDF o DOCX extenso y pedir un resumen de los puntos clave, en vez de copiar y pegar fragmentos a mano."
+                    },
+                    {
+                      "icon": "🖼️",
+                      "title": "Imagen o gráfico",
+                      "body": "Compartir una captura o un gráfico y pedir que describa o analice lo que muestra."
+                    },
+                    {
+                      "icon": "📊",
+                      "title": "Planilla de datos",
+                      "body": "Adjuntar un CSV y pedir que identifique tendencias en los datos."
+                    },
+                    {
+                      "icon": "💻",
+                      "title": "Código",
+                      "body": "Subir un archivo de código y pedir que explique cómo funciona o encuentre bugs — para trabajo agéntico sostenido sobre un repo entero, esto es lo que resuelve Claude Code (ver Introducción a Claude Code)."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Preferencias que se aplican solas",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "icon": "⚙️",
+                  "content": "Si hay preferencias que deberían aplicar a todas las respuestas y no solo a esta conversación, conviene escribirlas una sola vez en Configuración → General → \"¿Qué preferencias personales debería considerar Claude?\", en vez de repetirlas al arrancar cada chat nuevo."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-006",
+          "title": "Iterar y personalizar: de una conversación a una colaboración continua",
+          "summary": "Una primera respuesta imperfecta no es un callejón sin salida — y dos funciones (Memory y Styles) hacen que Claude no arranque de cero en cada chat nuevo.",
+          "subsections": [
+            {
+              "title": "Cuando la primera respuesta no es la que buscabas",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Una conversación con Claude está pensada para ser iterativa: encadenar pedidos cortos permite un diálogo natural donde vos guiás el rumbo según lo que va respondiendo, en vez de intentar describir todo lo que necesitás en un único prompt perfecto."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Preguntar para profundizar",
+                      "body": "Construir sobre la respuesta pidiendo más detalle, otro ángulo, o una aclaración: \"¿Podés desarrollar el segundo punto?\" o \"Esto sirve, pero ¿lo podés hacer más conciso?\""
+                    },
+                    {
+                      "title": "Dar feedback puntual",
+                      "body": "Decir qué gustó y qué no de la respuesta: \"Esto está bien, pero el tono es demasiado formal — hacelo más conversacional.\""
+                    },
+                    {
+                      "title": "Redirigir",
+                      "body": "Si Claude tomó un rumbo distinto al pedido, corregirlo ahí mismo: \"En realidad preguntaba por X, no por Y.\" En el peor caso, arrancar un chat nuevo refresca el contexto por completo."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "✏️",
+                  "content": "El ícono de lápiz sobre cualquier mensaje propio permite editarlo y reenviarlo — útil cuando lo que hace falta es reformular el pedido original en vez de agregar un mensaje nuevo arriba de una respuesta que ya no sirve."
+                }
+              ]
+            },
+            {
+              "title": "Memory y Styles: que Claude no arranque de cero",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Dos funciones de Claude.ai hacen que las preferencias y el contexto persistan más allá de una sola conversación."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Memory",
+                    "rows": [
+                      { "key": "Qué guarda", "value": "Contexto clave de las conversaciones — tu rol, preferencias, decisiones pasadas, forma de trabajar." },
+                      { "key": "Cuándo actúa", "value": "Automáticamente, sin que haya que pedirlo — evita repetir el mismo contexto en cada chat nuevo." },
+                      { "key": "Control", "value": "Se puede revisar, editar o borrar en Configuración en cualquier momento; sincroniza entre dispositivos." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Styles",
+                    "rows": [
+                      { "key": "Qué guarda", "value": "Cómo comunica Claude, no qué sabe de vos — presets (conciso, formal, explicativo) o un estilo propio descrito a mano." },
+                      { "key": "Cuándo actúa", "value": "Una vez elegido, se aplica en todas las conversaciones automáticamente." },
+                      { "key": "Control", "value": "Se puede cambiar de estilo en cualquier momento sin que eso afecte lo que Claude recuerda de vos." }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "icon": "🔀",
+                  "content": "No confundir con el sistema de memoria de Claude Code (CLAUDE.md, Auto Memory, Auto Dream — ver Sistema de Memoria): esa es memoria de proyecto para un agente de código, persistida como archivos en el repo. La Memory de Claude.ai es memoria de usuario a través de conversaciones de uso general, y vive del lado de la cuenta, no del filesystem."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c101-siguientes-pasos",
+      "title": "Lección 3: Resolver problemas y seguir aprendiendo",
+      "articles": [
+        {
+          "id": "c101-007",
+          "title": "Diagnosticar respuestas que no salieron como se esperaba",
+          "summary": "Los problemas más comunes al empezar con Claude casi siempre se resuelven ajustando el prompt, no cambiando de herramienta.",
+          "subsections": [
+            {
+              "title": "Tabla de diagnóstico rápido",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La mayoría de las respuestas decepcionantes tienen una causa identificable en el prompt, no en una limitación del modelo. Antes de descartar un enfoque, vale la pena revisar si el síntoma coincide con alguno de estos patrones."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Problema", "Qué está pasando", "Cómo resolverlo"],
+                  "rows": [
+                    ["La respuesta es demasiado genérica", "El prompt no incluyó suficiente contexto sobre la situación específica", "Agregar detalles de audiencia, rol o restricciones. En vez de \"Escribí un email sobre la demora del proyecto\", especificar destinatario, motivo, y que ya es la segunda demora."],
+                    ["La respuesta es muy larga (o muy corta)", "Claude está adivinando la extensión esperada", "Ser explícito: \"Dos párrafos\", \"Menos de 100 palabras\", o \"Necesito un análisis exhaustivo, la extensión no es un problema\"."],
+                    ["No siguió el formato pedido", "Entendió el contenido pero no cómo presentarlo", "Mostrar un ejemplo del formato o describir la estructura explícitamente: \"Usá bullets con encabezados en negrita para cada sección\"."],
+                    ["Sonó seguro pero el dato era incorrecto", "Alucinación — especialmente común con datos específicos o temas de nicho", "Para trabajo de alto impacto, verificar hechos clave por fuera. Pedir fuentes o nivel de confianza. Activar búsqueda web para anclar la respuesta a información actual."],
+                    ["El tono no es el correcto", "El tono por defecto es servicial y profesional, que no siempre encaja", "Describir el tono en lenguaje simple: \"Más conversacional\" o \"Que suene autoritativo y formal\". Dar un ejemplo del estilo buscado."]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Mentalidad de iteración",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El primer prompt rara vez produce el resultado perfecto, y eso es esperable: conviene tratarlo como el arranque de una conversación, no como un pedido de una sola vez. Tres hábitos marcan la diferencia — tratar los primeros resultados como punto de partida y no como entrega final; dar feedback específico (\"cortá los primeros dos párrafos y hacé la conclusión más orientada a la acción\" en vez de solo \"hacelo más corto\"); y reconocer cuándo conviene arrancar un chat nuevo con un prompt más claro en vez de seguir redirigiendo uno que ya se desvió."
+                }
+              ]
+            },
+            {
+              "title": "De técnica puntual a habilidad transferible",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El framework de 3 partes para prompts (Lección 2), la evaluación crítica de una respuesta, y el uso responsable del resultado no son trucos aislados — son práctica de las cuatro competencias del framework 4D (Delegación, Descripción, Discernimiento, Diligencia). Ver AI Fluency: Framework & Foundations para el desarrollo completo de esas cuatro competencias."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "content": "Para medir de forma sistemática si Claude rinde bien en tareas propias y recurrentes — más allá de la intuición caso a caso — ver Prompt Evaluation en Claude API: ahí se cubren los tipos de grader (código, LLM-as-judge, humano), cómo armar un dataset, y cómo evitar overfitting al eval set."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c101-modos-de-trabajo",
+      "title": "Lección 4: Trabajar con Claude en el escritorio",
+      "articles": [
+        {
+          "id": "c101-008",
+          "title": "Tres formas de trabajar con Claude, no tres herramientas distintas",
+          "summary": "Conversación turno a turno, delegar una tarea completa, o construir software directamente en un repo: reconocer cuál de las tres pide la tarea que tenés adelante es lo que decide qué pestaña de la app de escritorio abrir.",
+          "subsections": [
+            {
+              "title": "Las tres formas",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La app de escritorio de Claude organiza el trabajo en tres formas distintas, y la habilidad central no es aprender los botones de cada una sino reconocer cuál corresponde antes de empezar. Conversar turno a turno es ida y vuelta: preguntás, Claude responde, vos corregís el rumbo, itera — el pensamiento pasa en el intercambio mismo. Delegar una tarea es describir un resultado (un informe terminado, un archivo con formato específico, algo que corra todos los lunes) y dejar que Claude arme el plan, lo ejecute, y vuelva con el resultado — vos revisás el plan y la salida, no encadenás los pasos a mano. Construir software es Claude trabajando directamente en un repo: lee código, escribe y testea, corre comandos."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "💬",
+                      "title": "Conversar cuando la respuesta cambia la siguiente pregunta",
+                      "body": "Brainstorming donde cada respuesta abre la siguiente pregunta, o un pedido chico (una reescritura, un \"¿qué significa esto?\") donde armar una tarea completa sería más esfuerzo que la respuesta misma."
+                    },
+                    {
+                      "icon": "📤",
+                      "title": "Delegar cuando el resultado es un entregable real",
+                      "body": "La tarea tiene varios pasos que normalmente harías en secuencia, el resultado es un archivo que hay que guardar en un lugar específico, cruza varias fuentes propias, o debería correr solo, en horario, mientras hacés otra cosa."
+                    },
+                    {
+                      "icon": "🛠️",
+                      "title": "Construir software cuando el trabajo vive en un repo",
+                      "body": "Escribir, testear y shippear código con Claude operando directo sobre el filesystem del proyecto — la superficie pensada para developers (ver Introducción a Claude Code)."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "icon": "🧭",
+                  "content": "No se elige primero la pestaña y después se encaja la tarea adentro: se nota qué forma tiene el trabajo que hay enfrente, y la pestaña correcta se sigue de eso."
+                }
+              ]
+            },
+            {
+              "title": "Dónde vive cada forma hoy",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Vas a…", "La forma que toma", "Dónde vive hoy"],
+                  "rows": [
+                    ["Preguntar, tirar ideas, redactar o pensar algo en voz alta, turno a turno", "Conversación turno a turno", "Chat (entrada rápida, dictado, capturas de pantalla)"],
+                    ["Delegar una tarea de varios pasos que termina en un entregable, cruza herramientas propias, o corre en horario", "Delegación", "Cowork (acceso a carpetas, conectores, tareas programadas, subagentes)"],
+                    ["Escribir, testear, correr y shippear código en un repo", "Construcción de software", "Claude Code, dentro del Code tab (local o en la nube)"]
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-009",
+          "title": "Cowork: delegar el trabajo, no solo la pregunta",
+          "summary": "En vez de responder una consulta, Cowork junta el contexto, hace el trabajo y entrega el resultado terminado — sin perder el control sobre las acciones que importan.",
+          "subsections": [
+            {
+              "title": "Delegar sin soltar el control",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Trabajar de forma agéntica con Claude es delegar, no solo preguntar: en vez de una pregunta, se le entrega a Claude el trabajo entero — juntar el contexto, hacer el análisis, producir el entregable final — y vuelve terminado."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔐",
+                  "content": "Delegar no significa soltar el volante. Antes de arrancar, Claude puede preguntar para acotar alcance y formato, y muestra el plan antes de ejecutarlo. Mientras trabaja, se puede ver cómo va tomando forma la tarea — fuentes que está usando, archivos que va armando, avance sobre el plan — y redirigir en cualquier momento. Cuando está configurado para pedir aprobación antes de actuar, se detiene antes de las acciones que importan, como mandar un email o compartir un archivo."
+                }
+              ]
+            },
+            {
+              "title": "Qué distingue a Cowork en la práctica",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "📁",
+                      "title": "Acceso a carpetas locales",
+                      "body": "Apuntar a una carpeta del disco; Claude lee lo que hay ahí y guarda el trabajo terminado en el mismo lugar. Es la diferencia concreta con Chat, que puede leer un archivo subido pero devuelve el resultado como descarga, no lo guarda en la carpeta original."
+                    },
+                    {
+                      "icon": "⏰",
+                      "title": "Tareas programadas",
+                      "body": "Configurar una tarea una vez — un resumen diario, un roundup semanal — y que corra en el horario elegido. Si la máquina o la app estaban cerradas al horario programado, se pone al día apenas se reabre."
+                    },
+                    {
+                      "icon": "🧵",
+                      "title": "Subagentes",
+                      "body": "Para un trabajo grande, Claude reparte el trabajo entre workers en paralelo, cada uno con su propio contexto, y entrega un único resultado terminado."
+                    },
+                    {
+                      "icon": "🗂️",
+                      "title": "Projects",
+                      "body": "Agrupar tareas relacionadas en un espacio con sus propios archivos, instrucciones y memoria — el mismo concepto que projects en Chat, pero organizado alrededor de las tareas que corren."
+                    },
+                    {
+                      "icon": "🌐",
+                      "title": "Uso de navegador y de la computadora",
+                      "body": "Con Claude en Chrome, Claude navega sitios y trae lo que encuentra directo a la tarea. Cuando no hay un conector para lo que hace falta, Claude puede operar la computadora directamente — clickear, tipear, abrir apps — pidiendo permiso antes de tocar cada app, con una lista de bloqueo para lo que queda fuera de límites (en preview de investigación, en los planes Pro y Max)."
+                    },
+                    {
+                      "icon": "🧩",
+                      "title": "Plugins",
+                      "body": "Paquetes armados de skills, conectores y agentes para un tipo de trabajo específico — ventas, finanzas, legal — para que Claude trabaje como corresponde a ese rol."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "content": "Cowork está disponible en los planes Pro, Max, Team y Enterprise, con capacidades nuevas agregadas de forma regular."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-010",
+          "title": "El Code tab: Claude Code integrado en la app de escritorio",
+          "summary": "La misma app de escritorio da acceso a un entorno de desarrollo completo — local o en la nube — sin salir de la ventana donde ya está Chat y Cowork.",
+          "subsections": [
+            {
+              "title": "Local o en la nube, con control gradual",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Dentro del Code tab, Claude trabaja directo sobre un repo: lee lo que hay, escribe y modifica código, corre comandos. Diffs visuales muestran qué cambió, una terminal integrada muestra los comandos mientras corren, y git registra cada versión para poder volver atrás — el detalle completo de hooks, CLAUDE.md, permisos y flujo agéntico está en Introducción a Claude Code y Sistema de Memoria; acá solo importa dónde vive esta superficie dentro de la app de escritorio y qué elige el usuario antes de arrancar."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Dónde corre", "Qué implica"],
+                  "rows": [
+                    ["Local", "Se elige una carpeta de la máquina y Claude trabaja directo con esos archivos: lee el proyecto, usa herramientas locales, y puede levantar un servidor de desarrollo para previsualizar en el navegador."],
+                    ["En la nube", "Se conecta un repositorio de GitHub y Claude trabaja en un entorno en la nube. La sesión sigue corriendo aunque se cierre la app, así que se puede arrancar un refactor grande y volver más tarde a revisar. Conviene para repos grandes o cuando se prefiere mantener el trabajo fuera de la máquina propia."]
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "El nivel de autonomía también se elige: aprobar manualmente cada cambio propuesto, aceptar ediciones de archivo automáticamente, o pedirle a Claude que arme un plan antes de tocar nada — el mismo espectro de control que ya aparece al hablar de permisos en Claude Code."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🧭",
+                  "content": "El Code tab está disponible en los planes Pro, Max, Team y Enterprise, y admite correr varias sesiones en paralelo entre distintos proyectos, filtradas por entorno (Local o en la nube) y estado desde la barra lateral."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c101-projects",
+      "title": "Lección 5: Projects, para el trabajo que no es de una sola vez",
+      "articles": [
+        {
+          "id": "c101-011",
+          "title": "Qué son los projects y cuándo conviene uno",
+          "summary": "Un project es un espacio de trabajo autocontenido — con su propia memoria, historial de chats, base de conocimiento e instrucciones — pensado para un frente de trabajo continuo, no para una pregunta puntual.",
+          "subsections": [
+            {
+              "title": "Un espacio dedicado por frente de trabajo",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Un project agrupa todo lo que pertenece a un mismo frente de trabajo — documentos de referencia, instrucciones de comportamiento, e historial de conversaciones — en un espacio separado del resto de los chats. Cada conversación dentro del project hereda automáticamente su base de conocimiento y sus instrucciones, sin que haya que repetir contexto al abrir un chat nuevo."
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "icon": "🔀",
+                  "content": "No es lo mismo que Memory (Lección 2): Memory guarda contexto tuyo — rol, preferencias, decisiones — y se aplica de forma transversal a todas las conversaciones de la cuenta. Un project, en cambio, acota conocimiento e instrucciones a un frente de trabajo específico: dos projects distintos no comparten esa base ni esas instrucciones entre sí, aunque Memory siga operando por debajo de ambos."
+                },
+                {
+                  "type": "text",
+                  "content": "Conviene crear un project cuando el trabajo es continuo, no una pregunta de una sola vez — en particular cuando aparece alguna de estas tres señales: hay material de referencia que se va a usar una y otra vez (notas de reunión, resultados de encuestas, reportes, datos históricos); hay requisitos consistentes sobre cómo debería responder Claude (siempre en tono formal, siempre citando fuentes, siempre siguiendo la misma plantilla); o hay varias personas del equipo que necesitan trabajar desde la misma base compartida."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-012",
+          "title": "Instrucciones y base de conocimiento del project",
+          "summary": "Las instrucciones programan el comportamiento de Claude para todo el project; la base de conocimiento le da los documentos que necesita sin volver a subirlos en cada chat.",
+          "subsections": [
+            {
+              "title": "Instrucciones: programar el comportamiento, no solo pedirlo una vez",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Las instrucciones del project se aplican a cada conversación dentro de él, funcionando junto con las preferencias personales y el Style que ya tenga activado el usuario (Lección 2) — no en lugar de ellos. Suelen combinar contexto sobre el frente de trabajo (\"este project es para contenido de marketing de nuestro producto B2B\"), instrucciones de proceso (\"primero pensá una estructura que atraiga a esta audiencia, después escribí el borrador\"), preferencias de tono y estilo, y requisitos específicos (\"siempre incluir un call-to-action al final\")."
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚙️",
+                  "content": "Las instrucciones también sirven para automatizar un flujo de trabajo recurrente dentro del project — por ejemplo, \"cuando suba una transcripción de reunión, armá un resumen estructurado con esta plantilla\". Es más útil pensarlas como programar el comportamiento de Claude para ese frente de trabajo específico que como una aclaración que se repite una vez."
+                }
+              ]
+            },
+            {
+              "title": "Base de conocimiento: subir una vez, referenciar en todos los chats",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La base de conocimiento del project es donde se suben los documentos que Claude debe tener presentes — guías de marca, informes de investigación, notas de reunión, ejemplos del tipo de trabajo esperado, especificaciones técnicas. Una vez ahí, cualquier chat dentro del project puede referenciarlos sin necesidad de volver a subirlos."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🏷️",
+                  "content": "Claude usa el nombre del archivo para entender y recuperar la información correcta, así que un nombre descriptivo (\"Q4-2024-Guia-de-Marca.pdf\") ayuda más que uno genérico (\"documento1.pdf\") — y agrupar archivos relacionados por nombre o carpeta también ayuda a Claude a entender la relación entre ellos."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-013",
+          "title": "Cómo escalan los projects: búsqueda automática sobre la base de conocimiento",
+          "summary": "Cuando la base de conocimiento se acerca al límite de la context window, el project deja de cargarla entera y empieza a buscar solo lo relevante para cada pregunta — sin que el usuario tenga que intervenir.",
+          "subsections": [
+            {
+              "title": "De cargar todo a buscar lo relevante",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Mientras la base de conocimiento de un project entra dentro de la context window, Claude la carga entera en cada conversación. Cuando el volumen de documentos se acerca a ese límite, el project cambia de modo automáticamente: en vez de cargar todo, busca dentro de los archivos subidos y trae solo las partes relevantes para la pregunta puntual — el mismo principio detrás de Retrieval Augmented Generation (RAG) que se cubre en profundidad, del lado de construir un sistema propio, en RAG y búsqueda agéntica dentro de Claude API. Acá el mecanismo es automático y no requiere configuración: solo expande la capacidad efectiva del project hasta 10 veces, manteniendo la calidad de las respuestas."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔍",
+                  "content": "Hay un indicador visual que marca cuándo un project pasó a este modo de búsqueda, pero la experiencia de uso no cambia: se sigue subiendo documentos y conversando igual que antes — lo único que cambia es cómo Claude arma internamente el contexto de cada respuesta."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-014",
+          "title": "Colaboración en projects (planes Team y Enterprise)",
+          "summary": "En Claude for Work, un project compartido pone a todo el equipo a trabajar desde la misma base de conocimiento e instrucciones, con tres niveles de permiso según qué tan editable debería ser.",
+          "subsections": [
+            {
+              "title": "Tres niveles de permiso",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Nivel", "Qué permite"],
+                  "rows": [
+                    ["Can view", "Ver el contenido del project, acceder a la base de conocimiento y conversar con Claude dentro de él — de solo lectura sobre el project en sí, aunque se puede seguir chateando."],
+                    ["Can edit", "Colaboración plena: modificar instrucciones, actualizar la base de conocimiento, gestionar otros miembros y contribuir activamente al project."],
+                    ["Owner", "Control total, incluyendo quién puede ver el project — compartirlo con personas puntuales o hacerlo visible para toda la organización."]
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "Un project compartido le da a todo el equipo la misma base de conocimiento, las mismas instrucciones y el mismo conocimiento acumulado, en vez de que cada persona arranque su propio contexto desde cero. Los miembros reciben notificación por email cuando se comparte un project con ellos, y lo encuentran después en su pestaña de projects compartidos."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c101-artifacts",
+      "title": "Lección 6: Artifacts",
+      "articles": [
+        {
+          "id": "c101-015",
+          "title": "Qué es un artifact y cuándo aparece uno",
+          "summary": "Un artifact separa contenido sustancial y reutilizable del flujo de la conversación, mostrándolo en una ventana aparte en vez de enterrarlo en un bloque de chat.",
+          "subsections": [
+            {
+              "title": "Una ventana aparte para el contenido, no para la conversación",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Un artifact es un resultado independiente e interactivo que Claude genera en una ventana dedicada al lado de la conversación, en vez de dejarlo mezclado en el chat. La diferencia no es solo visual: un artifact es contenido pensado para editarse, iterar sobre él o reutilizarse después, mientras que una respuesta normal en el chat es parte del hilo de la conversación y no está pensada para sobrevivir fuera de ese contexto."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🧩",
+                  "content": "Claude decide automáticamente cuándo crear un artifact según cuatro señales: que el contenido sea significativo y autocontenido (en general más de 15 líneas), que sea algo que probablemente se quiera editar o reutilizar, que sea contenido complejo que se sostiene por sí solo sin depender del resto de la conversación, y que sea algo a lo que se vaya a volver más adelante. Si Claude no crea un artifact cuando se esperaba uno, alcanza con pedirlo de forma explícita."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-016",
+          "title": "Tipos de artifacts",
+          "summary": "Documentos, código, páginas HTML, SVG, diagramas Mermaid y componentes React interactivos — cada tipo se ajusta a un tipo de resultado distinto.",
+          "subsections": [
+            {
+              "title": "Qué se puede generar como artifact",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    { "title": "Documentos (markdown y texto plano)", "description": "Contenido con mucho texto pensado para exportar o seguir editando: notas de reunión, informes, planes de proyecto, posteos de blog." },
+                    { "title": "Código", "description": "Código funcional en cualquier lenguaje. Se puede ver, copiar o descargar para usar en un proyecto propio." },
+                    { "title": "Páginas HTML", "description": "Una página web completa (HTML, CSS y JavaScript) en un solo archivo — landing pages, formularios, demos interactivas, prototipos rápidos." },
+                    { "title": "Imágenes SVG", "description": "Gráficos vectoriales escalables para logos, íconos e ilustraciones, renderizados directamente en la ventana del artifact." },
+                    { "title": "Diagramas Mermaid", "description": "Flowcharts, diagramas de secuencia, Gantt, organigramas — se describe la relación que se quiere visualizar y Claude arma el diagrama." },
+                    { "title": "Componentes React", "description": "Elementos de UI interactivos con lógica real (no mockups): calculadoras, dashboards, juegos, visualizaciones de datos que responden a la entrada del usuario." }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "📄",
+                  "content": "Documentos de Word, planillas de Excel, presentaciones de PowerPoint y PDFs no son artifacts — se generan a través de una capacidad de creación de archivos separada y se devuelven como archivos descargables, no como una ventana interactiva."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-017",
+          "title": "Compartir y publicar un artifact",
+          "summary": "Un artifact se puede copiar o descargar para uso personal, compartir dentro de la organización en planes Team/Enterprise, o publicar con un link público accesible sin cuenta de Claude.",
+          "subsections": [
+            {
+              "title": "Tres alcances distintos de compartir",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Alcance", "Qué implica"],
+                  "rows": [
+                    ["Copiar o descargar", "Para uso personal o para compartir por otro canal — se obtiene el contenido crudo del artifact, sin nada publicado."],
+                    ["Compartir en la organización (Claude for Work)", "Disponible en planes Team y Enterprise. El artifact queda dentro de la organización y requiere autenticación de equipo para acceder."],
+                    ["Publicar públicamente", "Disponible en planes Free, Pro y Max. Solo la versión seleccionada se vuelve pública — el resto de la conversación sigue siendo privada — y cualquiera con el link puede verlo e interactuar sin necesidad de cuenta de Claude."]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔓",
+                  "content": "Publicar un artifact lo hace accesible públicamente por su link a cualquiera, con o sin cuenta de Claude — es una decisión que conviene tomar con la misma cautela que publicar cualquier otro contenido a un tercero. Los artifacts publicados no quedan indexados por buscadores, así que no van a aparecer en resultados de Google, pero eso no equivale a privado: quien tenga el link puede acceder igual. Se puede despublicar en cualquier momento volviendo al artifact y quitando el acceso público."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c101-skills",
+      "title": "Lección 7: Skills",
+      "articles": [
+        {
+          "id": "c101-018",
+          "title": "Qué son las Skills y qué tipos hay",
+          "summary": "Una Skill es un paquete de instrucciones, scripts y recursos que Claude carga dinámicamente para mejorar su desempeño en una tarea especializada — Anthropic Skills vienen listas de fábrica, Custom Skills las escribe el usuario o la organización.",
+          "subsections": [
+            {
+              "title": "Paquetes de expertise, no prompts guardados",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Una Skill es una carpeta de instrucciones, scripts y recursos que Claude carga dinámicamente para mejorar su desempeño en tareas especializadas — funciona como un paquete de expertise que le enseña a Claude a completar una tarea concreta de forma repetible. Cualquiera que haya pedido a Claude generar una planilla de Excel, una presentación de PowerPoint, un documento de Word o un PDF ya vio Skills en acción: esas capacidades de creación de archivos están potenciadas por Skills funcionando por detrás. Pero el mecanismo va más allá de la creación de documentos — una Skill puede codificar un flujo de trabajo repetible completo, como una metodología de análisis de variación trimestral, un proceso de revisión de tono de marca, o un checklist de cumplimiento, para que Claude siga los mismos pasos rigurosos cada vez."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Anthropic Skills",
+                    "rows": [
+                      { "key": "Quién las crea", "value": "Anthropic." },
+                      { "key": "Ejemplos", "value": "Creación avanzada de Excel, Word, PowerPoint y PDF." },
+                      { "key": "Activación", "value": "Automática, sin ninguna acción adicional del usuario — disponibles para todos los usuarios de plan pago." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Custom Skills",
+                    "rows": [
+                      { "key": "Quién las crea", "value": "El usuario o su organización." },
+                      { "key": "Ejemplos", "value": "Aplicar las guías de marca de la empresa a presentaciones, estructurar notas de reunión en un formato específico, ejecutar el flujo de análisis de datos propio de un equipo." },
+                      { "key": "Activación", "value": "Automática también, una vez creada — Claude la invoca cuando la tarea coincide con su propósito." }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "Disponibilidad",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "icon": "🧪",
+                  "content": "Skills está disponible como feature preview para usuarios de los planes Pro, Max, Team y Enterprise. Requiere tener habilitada la ejecución de código y creación de archivos, porque Skills necesita el entorno de cómputo sandboxeado de Claude para funcionar. En planes Enterprise, un Owner de la organización tiene que habilitar tanto la ejecución de código como Skills a nivel de administración antes de que los miembros individuales puedan acceder; en planes Team esto viene habilitado por defecto a nivel organización."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-019",
+          "title": "Cómo funcionan en la práctica: invocación automática, archivos propios y seguridad",
+          "summary": "Claude elige qué Skill usar sin que el usuario tenga que pensarlo, puede trabajar sobre archivos que el usuario sube (generando una versión nueva, no editando el original), y su naturaleza ejecutable exige elegir con cuidado de dónde vienen las Custom Skills que se instalan.",
+          "subsections": [
+            {
+              "title": "Selección automática, sin pensarlo",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La ventaja de Skills es que, en general, no hace falta pensar en ellas explícitamente: Claude elige qué Skill usar según el pedido. Pedidos como \"armá una planilla de Excel con los gastos mensuales y fórmulas para los totales\" o \"convertí estas notas de reunión en una presentación de PowerPoint\" invocan una Skill sin que el usuario tenga que nombrarla. Cuando Claude usa una Skill, aparece mencionada en su cadena de razonamiento mientras trabaja, y el resultado es un archivo descargable."
+                }
+              ]
+            },
+            {
+              "title": "Trabajar sobre archivos propios",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La misma capacidad permite que Claude trabaje con archivos reales del usuario (dentro de un entorno contenido) para crear versiones actualizadas: se puede subir una diapositiva, una planilla, un contrato o cualquier `.xlsx`, `.pptx`, `.docx` o `.pdf`, y Claude genera diapositivas, hace análisis o agrega ediciones sugeridas."
+                },
+                {
+                  "type": "callout",
+                  "icon": "📎",
+                  "content": "En Chat, Claude crea una versión nueva del documento en vez de editar el original in situ. Para usar estas capacidades hace falta darle a Claude acceso a fuentes de datos externas cuando lo pida — se habilita con la opción de acceso de red limitado."
+                }
+              ]
+            },
+            {
+              "title": "Consideraciones de seguridad",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "icon": "🔐",
+                  "content": "Porque una Skill puede incluir código ejecutable, conviene tratarlas con la misma cautela que cualquier software de terceros: instalar Custom Skills solo de fuentes confiables, y revisar el contenido de una Skill externa antes de usarla para entender qué hace. Las Skills de Anthropic están testeadas y mantenidas por Anthropic; las Custom Skills que el usuario sube son privadas a su cuenta individual."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-020",
+          "title": "Crear una Skill propia, y cuándo conviene una Skill en vez de un project",
+          "summary": "Una Custom Skill se crea conversando con Claude, sin escribir código a mano — y la elección entre Skill y project depende de si lo que se necesita es guardar conocimiento (project) o ejecutar un proceso (skill).",
+          "subsections": [
+            {
+              "title": "Crear por conversación, no escribiendo el archivo a mano",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La forma más simple de crear una Custom Skill es conversando con Claude: se describe qué se quiere crear (\"quiero una skill para escribir quarterly business reviews\", \"necesito una skill que aplique nuestras guías de marca a presentaciones\"), Claude hace preguntas sobre el flujo de trabajo — qué debería hacer la skill, qué hace bueno a un output de este tipo, ejemplos de cuándo se usaría — y se pueden subir materiales de referencia (templates, guías de estilo, ejemplos de trabajo del que el usuario está orgulloso) para que Claude entienda mejor lo que busca. Al terminar, Claude genera el archivo con la skill correctamente estructurada, sin que el usuario tenga que escribir código ni armar la estructura técnica a mano."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🛠️",
+                  "content": "Para quien sí quiera controlar la estructura técnica de una Skill directamente — frontmatter, `references/`, `scripts/`, progressive disclosure — esa mecánica está cubierta en profundidad en Skills dentro de Claude Code, con la salvedad de que varias features de esa colección (`context: fork`, scripts ejecutables, `allowed-tools`) son específicas de Claude Code y no están disponibles en Claude.ai: ahí la skill se reduce a instrucciones de texto."
+                },
+                {
+                  "type": "text",
+                  "content": "Una vez guardada, la Skill propia aparece en la lista de Skills disponibles junto a las de Anthropic, y Claude la invoca automáticamente en tareas relevantes sin necesidad de activarla a mano cada vez. Se puede iterar pidiéndole a Claude que edite la skill, y actualiza los archivos correspondientes."
+                }
+              ]
+            },
+            {
+              "title": "Skills vs. Projects: qué guarda conocimiento, qué ejecuta un proceso",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Projects (Lección 5) y Skills resuelven necesidades distintas aunque ambos le den más contexto a Claude: un project es un hub de conocimiento — guarda los materiales de referencia que Claude necesita para entender un frente de trabajo (specs, notas de reunión, investigación) y los aplica en cada conversación dentro de él. Una Skill es una máquina de proceso — codifica cómo ejecutar una tarea: los pasos concretos, el orden de operaciones, la metodología que se quiere que Claude siga siempre. Las dos capacidades se complementan: una Skill puede referenciar conocimiento guardado en un project (una skill de \"preparación de llamada con cliente\" puede tomar datos de perfiles de cliente subidos a la base de conocimiento de un project) — el project provee el qué (información), la skill provee el cómo (proceso)."
+                },
+                {
+                  "type": "table",
+                  "headers": ["", "Projects", "Skills"],
+                  "rows": [
+                    ["Propósito", "Guardar conocimiento que Claude referencia", "Definir procesos que Claude ejecuta"],
+                    ["Mejor para", "Contexto de largo plazo, materiales de referencia, colaboración en equipo", "Flujos de trabajo repetibles, tareas multi-paso, metodología consistente"],
+                    ["Persistencia", "El conocimiento está disponible en todos los chats del project", "Las instrucciones se aplican cuando la skill se invoca"]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c101-connectors",
+      "title": "Lección 8: Connectors",
+      "articles": [
+        {
+          "id": "c101-021",
+          "title": "Qué son los connectors y qué protocolo los potencia",
+          "summary": "Un connector le da a Claude acceso a las mismas herramientas y datos que ya usás a diario — leer, buscar y en algunos casos actuar — en vez de arrancar cada conversación desde cero. MCP es el estándar abierto que lo hace posible.",
+          "subsections": [
+            {
+              "title": "De asistente aislado a colaborador con contexto real",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Un connector conecta a Claude con una aplicación externa para que pueda leer información y, según los permisos otorgados, realizar acciones en nombre del usuario: buscar en archivos propios, traer documentos, analizar datos, crear contenido nuevo, actualizar registros o ejecutar tareas dentro de la app conectada — todo desde dentro de la conversación, sin copiar y pegar contexto a mano."
+                },
+                {
+                  "type": "text",
+                  "content": "El Model Context Protocol (MCP) es el estándar abierto que potencia los connectors: un protocolo único y consistente que permite a Claude conectarse a muchas aplicaciones distintas, en vez de que cada integración necesite su propio mecanismo ad hoc. Como es abierto, cualquier desarrollador puede construir un connector para su propia herramienta, y ese connector funciona con Claude sin coordinación previa con Anthropic."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔌",
+                  "content": "Esta lección cubre connectors desde el lado de quien los usa en Claude.ai o Claude Desktop — activarlos desde el directorio, entender qué acceso otorgan, usarlos en la práctica. Para el protocolo MCP en sí (cómo se define un servidor, comandos de gestión en Claude Code, arquitectura cliente-servidor) ver MCP."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-022",
+          "title": "Web connectors y desktop extensions",
+          "summary": "Los web connectors enlazan Claude con servicios en la nube; las desktop extensions corren localmente a través de Claude Desktop y dan acceso a archivos y aplicaciones nativas de la máquina.",
+          "subsections": [
+            {
+              "title": "Dos formas de conectar, según dónde vive el dato",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Web connectors",
+                    "rows": [
+                      { "key": "Dónde corren", "value": "En la nube — el servicio ya está alojado externamente (Google Drive, Notion, Slack, Asana, Gmail, Stripe, etc.)." },
+                      { "key": "Requiere", "value": "Claude.ai o Claude Desktop; se activa desde el directorio o el botón + del chat." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Desktop extensions",
+                    "rows": [
+                      { "key": "Dónde corren", "value": "Localmente, en la propia máquina, a través de la app Claude Desktop." },
+                      { "key": "Requiere", "value": "Claude Desktop instalado — no están disponibles desde la versión web. Dan acceso a archivos locales, control de navegador y aplicaciones nativas (por ejemplo, Figma)." }
+                    ]
+                  }
+                },
+                {
+                  "type": "text",
+                  "content": "Anthropic mantiene un directorio de connectors recomendados en claude.ai/directory, organizado en dos pestañas — Web y Desktop extensions — o accesible desde cualquier chat con el botón + de la parte inferior de la ventana, seleccionando Connectors."
+                }
+              ]
+            },
+            {
+              "title": "Conectar un web connector",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Conectar un servicio en la nube sigue siempre el mismo patrón: encontrar el connector en el directorio, autenticarse con las credenciales existentes del servicio, revisar los permisos específicos que Claude está pidiendo y autorizarlos, y probar la conexión con un pedido simple. Una vez conectado, Claude puede buscar, leer y en algunos casos actuar dentro de ese servicio — según el alcance de los permisos otorgados."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-023",
+          "title": "Usar connectors en el trabajo diario",
+          "summary": "Una vez conectadas las herramientas propias, Claude las tiene en cuenta al responder — desde gestión de proyectos hasta comunicación, documentación y herramientas de negocio.",
+          "subsections": [
+            {
+              "title": "Ejemplos por categoría",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    { "icon": "📋", "title": "Gestión de proyectos", "body": "Asana, Linear, Jira — \"¿Cuáles son mis tareas de mayor prioridad esta semana?\", \"Creá una tarea para revisar la propuesta de presupuesto de Q4\"." },
+                    { "icon": "💬", "title": "Comunicación", "body": "Slack, Gmail — \"Encontrá el hilo donde discutimos el contrato con el proveedor\", \"Redactá una respuesta al último mensaje en #marketing\"." },
+                    { "icon": "📚", "title": "Documentación", "body": "Notion, Google Drive, Confluence — \"Buscá en la documentación nuestras guías de brand voice\", \"Resumí las notas de la reunión de la semana pasada\"." },
+                    { "icon": "💳", "title": "Herramientas de negocio", "body": "Stripe, PayPal, Salesforce — \"Mostrame la tendencia de revenue del último trimestre\", \"Listá transacciones recientes de más de $1.000\"." }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-024",
+          "title": "Seguridad y permisos",
+          "summary": "Conectar un servicio otorga acceso de lectura — y a veces de escritura — sobre esos datos. El alcance es acotado, limitado a lo que el usuario ya puede ver, y revocable en cualquier momento.",
+          "subsections": [
+            {
+              "title": "Qué controla el usuario",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Garantía", "Qué significa"],
+                  "rows": [
+                    ["Acceso acotado", "Los permisos son específicos a lo que el connector necesita, y se pueden activar o desactivar individualmente desde el menú de cada aplicación."],
+                    ["Claude ve lo que vos ves", "Claude solo puede acceder a datos a los que el propio usuario ya tiene acceso — conectar el email de trabajo no le da acceso a la casilla del CEO, solo a la propia."],
+                    ["Revocable en cualquier momento", "Se puede desconectar un servicio desde la configuración de Claude o desde la configuración de seguridad del servicio de terceros."]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔐",
+                  "content": "Igual que con Skills, también se pueden encontrar o construir connectors propios (custom). Aplica la misma cautela: instalar solo connectors de fuentes confiables, dado que un connector mal construido o malicioso tiene el mismo tipo de acceso que uno oficial."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c101-enterprise-search",
+      "title": "Lección 9: Enterprise Search",
+      "articles": [
+        {
+          "id": "c101-025",
+          "title": "Qué es Enterprise Search",
+          "summary": "Un project pre-armado para toda la organización, con la base de conocimiento de la empresa ya cargada y una opción \"Ask {Nombre de tu Org}\" dedicada en la barra lateral.",
+          "subsections": [
+            {
+              "title": "Un project de organización entera, no uno más para armar a mano",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Enterprise Search agrega una opción dedicada \"Ask {Nombre de tu Org}\" a la barra lateral, pensada específicamente para encontrar y sintetizar conocimiento disperso entre las herramientas y fuentes de datos de una empresa. La forma más simple de pensarlo es como un project (Lección 5) pre-armado para toda la organización: la base de conocimiento de la empresa ya está cargada, así que se puede empezar a preguntar directamente en vez de armar el project desde cero."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔀",
+                  "content": "A diferencia de un chat común con connectors (Lección 8) activados manualmente, Enterprise Search está diseñado específicamente para recopilación de información, y corre con instrucciones personalizadas configuradas por el equipo de Anthropic — no las escribe cada usuario a mano como en un project propio."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-026",
+          "title": "Qué tipo de preguntas resuelve",
+          "summary": "Es especialmente valioso para preguntas que cruzan varias fuentes o requieren sintetizar información dispersa por la organización — Claude siempre cita sus fuentes.",
+          "subsections": [
+            {
+              "title": "Casos de uso frecuentes",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    { "icon": "📰", "title": "Ponerse al día", "body": "\"¿Qué pasó ayer mientras estaba afuera?\", \"Resumí las novedades clave del negocio de la última semana\", \"¿Cuáles son los bloqueos actuales del proyecto Platform?\"" },
+                    { "icon": "📜", "title": "Políticas y procesos", "body": "\"¿Cuál es la política de trabajo remoto de la empresa?\", \"¿Cómo presento un reporte de gastos?\", \"¿Cuál es el proceso para pedir días libres?\"" },
+                    { "icon": "🔎", "title": "Investigación y análisis", "body": "\"¿Cuáles son las principales razones por las que los clientes eligen a la competencia?\", \"Resumí las discusiones sobre el roadmap de producto de Q4\"" },
+                    { "icon": "🧭", "title": "Onboarding de nuevos miembros", "body": "\"¿Cómo funciona nuestro sistema de autenticación?\", \"¿Con quién hablo para aprender el sistema de facturación?\", \"¿Qué herramientas usa el equipo de ingeniería para deployment?\"" },
+                    { "icon": "📈", "title": "Seguimiento de proyectos", "body": "\"Encontrá discusiones y documentos relacionados con la campaña de marketing\", \"¿Cuáles fueron las decisiones clave de la reunión de liderazgo de la semana pasada?\"" }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "Ante una pregunta, Claude busca en todas las herramientas conectadas — documentos de SharePoint, conversaciones de Slack, hilos de Gmail, archivos de Google Drive — y sintetiza la información en una única respuesta, citando siempre las fuentes usadas para dar contexto completo."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-027",
+          "title": "Configuración: dos pasos, admin y usuario",
+          "summary": "Un Owner habilita Enterprise Search a nivel organización conectando las herramientas fuente; después cada miembro se autentica individualmente con sus propias credenciales.",
+          "subsections": [
+            {
+              "title": "Primero la organización, después cada usuario",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Paso", "Quién", "Qué implica"],
+                  "rows": [
+                    ["Configuración inicial", "Un Owner de la organización", "El project de Enterprise Search viene habilitado por defecto en organizaciones Team y Enterprise, pero un Owner tiene que completarlo antes de que el resto pueda usarlo: elegir un connector para Documentos (Google Drive o SharePoint) y uno para Chat (Slack o Microsoft Teams) como mínimo — Email es recomendado pero opcional — y puede sumar herramientas adicionales. También define el nombre del project, que aparece como \"Ask [Nombre]\" en la barra lateral de todos."],
+                    ["Autenticación individual", "Cada miembro del equipo", "Una vez lista la configuración de la organización, el project \"Ask {Org}\" aparece destacado en la barra lateral de cada usuario. Cada persona sigue un flujo de onboarding guiado y se autentica por separado con cada servicio que quiera que Claude pueda buscar (Slack, Google, Microsoft 365, etc.)."]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔌",
+                  "content": "Cuantos más connectors tenga habilitados cada usuario, más completos son los resultados de búsqueda para esa persona. Se pueden sumar más connectors en cualquier momento desde la sección de Instrucciones del project."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-028",
+          "title": "Seguridad: acceso, no un índice paralelo",
+          "summary": "Enterprise Search solo muestra lo que cada usuario ya tenía permiso de ver en la herramienta original — no crea un índice separado ni comparte conversaciones entre usuarios.",
+          "subsections": [
+            {
+              "title": "Respeta los permisos existentes, no los reemplaza",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "icon": "🔐",
+                  "content": "Enterprise Search solo muestra lo que el usuario ya tiene permiso de acceder en la herramienta conectada original — no le da a nadie visibilidad sobre datos a los que no tendría acceso de otra forma, el mismo principio de \"Claude ve lo que vos ves\" que aplica a los connectors individuales (Lección 8). Las conversaciones permanecen privadas, y los datos conectados no quedan indexados ni almacenados por separado — Claude consulta las fuentes en el momento, no arma una copia propia del contenido."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "c101-research",
+      "title": "Lección 10: Research",
+      "articles": [
+        {
+          "id": "c101-029",
+          "title": "Qué es Research y cuándo conviene usarlo",
+          "summary": "Research convierte a Claude en un investigador sistemático que explora una pregunta desde varios ángulos en vez de resolverla con una sola búsqueda — a costa de tardar minutos en vez de segundos.",
+          "subsections": [
+            {
+              "title": "De una búsqueda a una investigación",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Research es un modo agéntico de investigación: en vez de disparar una única búsqueda, Claude decide de forma autónoma qué investigar a continuación según lo que ya encontró, persigue pistas prometedoras y completa vacíos sin que el usuario tenga que dirigir cada paso. El resultado es un reporte extenso con citas verificables, sintetizado a partir de la web y — si están conectadas — de herramientas propias como Google Drive, Gmail o Calendar."
+                },
+                {
+                  "type": "callout",
+                  "icon": "⏱️",
+                  "content": "Research tarda minutos, no segundos — puede disparar decenas o cientos de búsquedas para una sola pregunta. Esa demora no es un costo a evitar sino la contrapartida directa de la cobertura: conviene invertir tiempo en escribir bien el prompt inicial, porque cada corrida es cara en tiempo."
+                }
+              ]
+            },
+            {
+              "title": "Cuándo conviene Research y cuándo conviene otra cosa",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Necesidad", "Herramienta"],
+                  "rows": [
+                    ["Un dato puntual, verificable en una o dos fuentes (\"¿cuál es el precio de la acción hoy?\")", "Búsqueda web simple — Research es sobrecarga innecesaria."],
+                    ["Razonamiento profundo sobre un problema que no depende de información externa (matemática, debugging, lógica)", "Extended Thinking (Lección 1) — la respuesta sale de razonar, no de buscar."],
+                    ["Preguntas sobre el conocimiento interno de la propia organización (políticas, decisiones pasadas, documentos internos)", "Enterprise Search (Lección 9) — corre con instrucciones ya configuradas para ese propósito específico."],
+                    ["Reporte que sintetiza múltiples fuentes públicas y/o propias, con comparación de opciones y citas verificables", "Research."]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "icon": "🎯",
+                  "content": "Research vale para análisis de mercado o competencia, planificación de proyectos complejos, síntesis de información propia dispersa entre email/calendario/documentos, documentación técnica que cruza varias fuentes, y briefings que requieren información actual y verificada — no para lo que resuelve una búsqueda de una sola fuente."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-030",
+          "title": "Cómo funciona: planificar, buscar, sintetizar, citar",
+          "summary": "Research combina Thinking para planificar el abordaje con múltiples rondas de búsqueda que se retroalimentan entre sí, cerrando en un reporte con cada afirmación enlazada a su fuente.",
+          "subsections": [
+            {
+              "title": "Las cuatro etapas",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    { "title": "Planificar el abordaje", "body": "Claude usa Thinking para descomponer el pedido antes de buscar: identifica qué información necesita y planea cómo investigar los distintos ángulos de la pregunta." },
+                    { "title": "Buscar en múltiples rondas", "body": "En vez de una búsqueda única, Claude encadena varias que se construyen sobre las anteriores — determina qué investigar después según lo que ya encontró, persiguiendo pistas y completando vacíos." },
+                    { "title": "Sintetizar los hallazgos", "body": "Con información reunida de la web y, si están conectadas, de integraciones como Gmail, Calendar o Drive, Claude compila todo en un reporte organizado." },
+                    { "title": "Citar cada afirmación", "body": "Cada dato del reporte enlaza a su fuente, lo que permite verificar la información y profundizar en cualquier punto sin tener que confiar a ciegas en el resultado." }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔎",
+                  "content": "Research requiere tener la búsqueda web habilitada — es el mecanismo de base sobre el que se apoya todo el proceso agéntico; sin eso, no hay nada que investigar."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-031",
+          "title": "Escribir un buen prompt de Research",
+          "summary": "Como cada corrida tarda minutos, conviene invertir esfuerzo en el prompt inicial — ser específico sobre el objetivo, la estructura esperada y las restricciones relevantes rinde más que iterar después.",
+          "subsections": [
+            {
+              "title": "Cuatro hábitos que mejoran el resultado",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    { "icon": "🎯", "title": "Ser específico sobre el objetivo", "body": "\"Contame sobre el mercado de autos eléctricos\" devuelve un panorama genérico. \"Analizá el mercado de baterías para autos eléctricos — identificá jugadores clave, tendencias tecnológicas y riesgos de cadena de suministro relevantes para una decisión de inversión\" enfoca la búsqueda desde el arranque." },
+                    { "icon": "🗂️", "title": "Especificar la estructura esperada", "body": "Claude organiza el reporte alrededor de la estructura que se le da: pedir secciones concretas (\"resumen ejecutivo, panorama competitivo, oportunidades de crecimiento\") evita que arme una estructura genérica por defecto." },
+                    { "icon": "📏", "title": "Incluir restricciones relevantes", "body": "Rango de presupuesto, plazos, alcance geográfico u otros parámetros ayudan a Claude a enfocar la investigación en opciones realmente aplicables, en vez de un panorama amplio sin filtrar." },
+                    { "icon": "🤝", "title": "Pedirle ayuda a Claude con el prompt", "body": "Si no está claro cómo encuadrar la pregunta de investigación, se le puede pedir a Claude que ayude a redactar un mejor prompt de Research antes de activar el modo." }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "c101-032",
+          "title": "Research con integraciones conectadas",
+          "summary": "Con Google Workspace u otros connectors activos, Research combina la web con el contexto propio del usuario — email, calendario, documentos — en una misma investigación.",
+          "subsections": [
+            {
+              "title": "Cruzar información propia con investigación externa",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Cuando hay integraciones conectadas (ver Connectors, Lección 8), Research puede combinar contexto propio con investigación web en la misma corrida: resumir lo que se discutió sobre un proyecto en email y Slack y después investigar mejores prácticas de la industria para iniciativas similares; revisar los compromisos de la agenda de la semana próxima e investigar cada empresa con la que hay una reunión agendada; o encontrar los documentos internos sobre estrategia de pricing propia y compararlos contra cómo se posiciona la competencia en el mercado."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🧭",
+                  "content": "Se puede guiar explícitamente qué fuentes propias usar dentro del prompt — \"traé contexto relevante de mi Google Drive\" o \"incluí información de mis emails recientes sobre este tema\" — en vez de dejar que Claude decida solo si vale la pena consultarlas."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

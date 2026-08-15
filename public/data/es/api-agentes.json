@@ -192,6 +192,59 @@
           "title": "Agentes autónomos",
           "subsections": [
             {
+              "title": "Dónde vale la pena la autonomía: alto valor, bajo costo de error",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Antes de decidir el diseño interno de un agente autónomo, conviene filtrar primero en qué tareas tiene sentido aplicarlo. Los mejores candidatos combinan dos cualidades: trabajo complejo e intensivo en conocimiento —donde la automatización ahorra tiempo real— y un costo de error bajo, donde un resultado incorrecto se detecta y se corrige en la siguiente iteración sin consecuencias graves. Escribir código es el ejemplo característico: requiere expertise real, pero un bug se corrige revirtiendo el cambio o iterando de nuevo."
+                },
+                {
+                  "type": "text",
+                  "content": "La contracara es la misma idea que aparece más abajo en Human-in-the-loop: decisiones de alto riesgo —impacto económico, de seguridad, o irreversibles— no son buen terreno para un loop completamente autónomo, con o sin límite de iteraciones. Ahí el diseño correcto no es afinar el agente hasta que falle menos, sino insertar un punto de aprobación humana antes de ejecutar."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Computer Use y Claude Code, en extremos distintos",
+                  "content": "Computer Use tiene un costo de error particularmente bajo — una acción sobre una interfaz rara vez es irreversible. Claude Code lo tiene bajo pero no nulo: un archivo mal editado sí puede requerir intervención manual para revertirse, sobre todo si el cambio ya se commiteó cuando se detecta el problema. La autonomía tolerable es distinta en cada caso, aunque ambos sean buenos candidatos frente a una decisión de negocio irreversible."
+                }
+              ]
+            },
+            {
+              "title": "Por qué el contexto no viene del prompt",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude no tiene conocimiento inherente del entorno en el que corre: no sabe qué archivos existen, qué dice la base de datos, o qué hay en pantalla en un momento dado. La respuesta no es compensarlo con prompts cada vez más largos o con contexto pre-cargado de antemano (RAG armado por adelantado) — es darle herramientas para que vaya a buscar ese contexto él mismo, en el momento en que lo necesita."
+                },
+                {
+                  "type": "text",
+                  "content": "Esto tiene una consecuencia concreta con archivos grandes (logs, uploads de usuario): en vez de cargar el archivo completo, el agente lo lee de forma selectiva con herramientas tipo grep o tail, trayendo solo la porción relevante. Es el mismo principio de no cargar contexto de sobra que aplica a la ventana de conversación completa (ver Gestión de contexto largo más abajo) — acá aplicado a la decisión de qué meter en el contexto en primer lugar, no a cómo podarlo después de que ya creció."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "\"Let Claude fetch what it needs\"",
+                  "content": "Así lo formulan las guías oficiales de mejores prácticas de Claude Code: dejar que el modelo decida qué leer y cuándo, en vez de que el desarrollador adivine de antemano todo el contexto que la tarea va a requerir."
+                }
+              ]
+            },
+            {
+              "title": "Toolset chico y bien definido",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Un toolset amplio y con herramientas solapadas no hace al agente más capaz — lo hace más lento para decidir cuál usar en cada paso, y más caro en cada turno, porque las definiciones de todas las herramientas disponibles viajan en el contexto se usen o no. La guía oficial de Anthropic sobre diseño de herramientas para agentes es explícita en este punto: más herramientas no llevan a mejores resultados; conviene un conjunto chico donde cada una tiene un propósito claro y no compite con otra por el mismo caso de uso."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Ya hay dos mecanismos concretos de carga bajo demanda en este sitio",
+                  "content": "Skills resuelve esto con Progressive Disclosure (ver Skills): el cuerpo completo de una skill solo se carga cuando Claude decide usarla. MCP resuelve el mismo problema con Tool Search (ver MCP → Lazy loading de herramientas): las definiciones de herramientas de un servidor se traen bajo demanda en vez de todas de antemano. Ambos son variantes del mismo principio aplicado a nivel de agente: no todo el toolset tiene que estar presente en cada turno, solo lo que hace falta para el paso actual."
+                }
+              ]
+            },
+            {
               "title": "Herramientas abstractas y componibles",
               "blocks": [
                 {
@@ -272,6 +325,12 @@
                   "style": "info",
                   "title": "No es lo mismo que un gate de workflow",
                   "content": "Los gates de la sección Chaining son checkpoints programáticos entre pasos fijos de un pipeline predefinido. La inspección del entorno es más general: aplica a cualquier acción de cualquier agente, incluso en un loop abierto sin pasos predefinidos, porque el problema no es la calidad del output sino que Claude no tiene otra forma de percibir el efecto de sus propias acciones."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El loop formal: gather context → take action → verify work",
+                  "content": "El Agent SDK de Anthropic —el mismo motor que corre por debajo de Claude Code— formaliza este comportamiento como un loop de tres fases que se repite: reunir contexto, tomar una acción, verificar el resultado. No es una heurística informal de este sitio: es el modelo con el que Anthropic recomienda diseñar cualquier agente nuevo, más allá de Claude Code o Computer Use."
                 }
               ]
             },

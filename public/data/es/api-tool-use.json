@@ -384,6 +384,42 @@
               ]
             },
             {
+              "title": "Caso de uso: QA visual de una interfaz",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Un uso concreto de computer use es como QA de interfaz: se le da a Claude una lista de casos de test sobre una app corriendo en el navegador y Claude los ejecuta de punta a punta, apoyándose en el mismo mecanismo de screenshot-tras-cada-acción para juzgar visualmente si el resultado es el esperado. La diferencia con un test end-to-end clásico (Playwright, Cypress) es que ahí las assertions están programadas de antemano; acá Claude interpreta la pantalla, lo que lo hace útil específicamente para bugs de layout o posicionamiento — un dropdown que aparece en el lugar equivocado, un elemento tapado — que son fáciles de describir en lenguaje natural pero tediosos de capturar como assertion exacta."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Definir casos de test verificables",
+                      "description": "Cada caso como una acción y un resultado visual esperado: \"escribir @ debe mostrar una lista de autocompletado\", \"presionar Enter sobre una opción debe insertarla en el texto\"."
+                    },
+                    {
+                      "title": "Ejecutar cada caso con screenshot antes y después",
+                      "description": "Claude navega a la app, ejecuta la acción del caso y compara el screenshot resultante contra el resultado esperado."
+                    },
+                    {
+                      "title": "Refrescar la página entre casos",
+                      "description": "Sin este paso, el estado dejado por un caso (texto ya tipeado, un menú ya abierto) contamina el siguiente y el resultado deja de ser confiable."
+                    },
+                    {
+                      "title": "Reportar pass/fail con detalle",
+                      "description": "Un resumen por caso, y para los que fallan, el detalle específico de qué se esperaba ver contra lo que efectivamente apareció en el screenshot."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Complemento del test suite, no reemplazo",
+                  "content": "Cada screenshot son tokens y latencia adicionales, así que este flujo corre más lento y caro por caso que un test suite programático. Tiene más sentido como herramienta dirigida a bugs de comportamiento visual difíciles de capturar en una assertion, corrida puntualmente o en un job aparte, que como reemplazo del test suite de CI — y los hallazgos que reporta conviene revisarlos antes de confiar en ellos a ciegas, igual que con cualquier otro output de Claude."
+                }
+              ]
+            },
+            {
               "title": "Seguridad en tool use",
               "blocks": [
                 {

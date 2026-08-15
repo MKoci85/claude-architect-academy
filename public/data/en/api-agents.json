@@ -192,6 +192,59 @@
           "title": "Autonomous Agents",
           "subsections": [
             {
+              "title": "Where autonomy is worth it: high value, low cost of error",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Before deciding on an autonomous agent's internal design, it's worth first filtering which tasks it's actually worth applying to. The best candidates combine two qualities: complex, knowledge-intensive work — where automation saves real time — and a low cost of error, where an incorrect result gets caught and corrected in the next iteration without serious consequences. Writing code is the characteristic example: it requires real expertise, but a bug gets fixed by reverting the change or iterating again."
+                },
+                {
+                  "type": "text",
+                  "content": "The flip side is the same idea that shows up further below in Human-in-the-loop: high-risk decisions — economic impact, security, or irreversible ones — aren't good ground for a fully autonomous loop, with or without an iteration limit. There, the right design isn't tuning the agent until it fails less, but inserting a human approval point before executing."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Computer Use and Claude Code, at different extremes",
+                  "content": "Computer Use has a particularly low cost of error — an action on an interface is rarely irreversible. Claude Code's is low but not zero: a badly edited file can require manual intervention to revert, especially if the change was already committed by the time the problem is caught. The tolerable amount of autonomy differs in each case, even though both are good candidates next to an irreversible business decision."
+                }
+              ]
+            },
+            {
+              "title": "Why context doesn't come from the prompt",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude has no inherent knowledge of the environment it runs in: it doesn't know what files exist, what the database says, or what's on screen at any given moment. The answer isn't to compensate with longer and longer prompts or context pre-loaded ahead of time (RAG assembled in advance) — it's giving it tools to go fetch that context itself, at the moment it needs it."
+                },
+                {
+                  "type": "text",
+                  "content": "This has a concrete consequence with large files (logs, user uploads): instead of loading the whole file, the agent reads it selectively with tools like grep or tail, pulling only the relevant portion. It's the same principle of not loading excess context that applies to the full conversation window (see Managing long context below) — here applied to the decision of what to put into context in the first place, not to how it gets pruned after it's already grown."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "\"Let Claude fetch what it needs\"",
+                  "content": "That's how Claude Code's official best-practices guidance puts it: let the model decide what to read and when, instead of the developer guessing all the context the task will need ahead of time."
+                }
+              ]
+            },
+            {
+              "title": "A small, well-defined toolset",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A large toolset with overlapping tools doesn't make the agent more capable — it makes it slower to decide which one to use at each step, and more expensive on every turn, because the definitions of every available tool travel in the context whether they're used or not. Anthropic's official guidance on designing tools for agents is explicit about this: more tools don't lead to better outcomes; a small set where each tool has a clear purpose and doesn't compete with another for the same use case works better."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Two concrete on-demand loading mechanisms already exist on this site",
+                  "content": "Skills solves this with Progressive Disclosure (see Skills): a skill's full body only loads once Claude decides to use it. MCP solves the same problem with Tool Search (see MCP → Lazy loading of tools): a server's tool definitions get fetched on demand instead of all upfront. Both are variants of the same principle applied at the agent level: the whole toolset doesn't need to be present on every turn, only what the current step needs."
+                }
+              ]
+            },
+            {
               "title": "Abstract, composable tools",
               "blocks": [
                 {
@@ -272,6 +325,12 @@
                   "style": "info",
                   "title": "Not the same as a workflow gate",
                   "content": "The gates in the Chaining section are programmatic checkpoints between fixed steps of a predefined pipeline. Environment inspection is more general: it applies to any action by any agent, even in an open loop with no predefined steps, because the problem isn't output quality but that Claude has no other way to perceive the effect of its own actions."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The formal loop: gather context → take action → verify work",
+                  "content": "Anthropic's Agent SDK — the same engine that runs under Claude Code — formalizes this behavior as a three-phase loop that repeats: gather context, take an action, verify the result. This isn't an informal heuristic from this site — it's the model Anthropic recommends for designing any new agent, beyond Claude Code or Computer Use."
                 }
               ]
             },

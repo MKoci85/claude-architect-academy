@@ -16,6 +16,7 @@
 - [What is this?](#what-is-this)
 - [Key features](#key-features)
 - [Content covered](#content-covered)
+- [Anthropic-recommended courses](#anthropic-recommended-courses)
 - [Quick start](#quick-start)
 - [Practical exercises](#practical-exercises)
 - [CCAR-F practice exam](#ccar-f-practice-exam)
@@ -61,6 +62,24 @@ Introduction, Rules, Permissions, Hooks system (plus its stdio fundamentals), Sk
 ### AI Fluency
 
 The 4D framework (*Delegation, Description, Discernment, Diligence*) from Anthropic Academy's free course, recommended as exam preparation — with practical exercises and a guided project included.
+
+---
+
+## Anthropic-recommended courses
+
+Anthropic recommends seven free Partner Academy courses as CCAR-F exam prep. This repository covers **all of them, with room to spare** — not as a course-by-course transcript, but by integrating each topic into the site's own reference structure: the content replaces the course material instead of accompanying it, so you won't find phrases like "this lesson explains..." anywhere here.
+
+| Official course | Coverage in this repo |
+|---|---|
+| **AI Fluency: Framework & Foundations** | Dedicated collection — the complete 4D framework (*Delegation, Description, Discernment, Diligence*) |
+| **Building with the Claude API** | All 14 subsections of *Claude API* — from getting started to advanced capabilities |
+| **Claude on Google Cloud** | *Claude on Vertex AI* covers the platform-specific parts (the `AnthropicVertex` client, model ID format, regional availability); the rest of the syllabus — prompting, tool use, RAG, MCP, evals, agents and workflows — already lives in the *Claude API* collections, which are cloud-platform-agnostic |
+| **Claude Code in Action** | The entire *Claude Code* section: Introduction, Rules, Permissions, Hooks (plus its stdio fundamentals), Skills, Memory System, Subagents, MCP, and Glob Patterns |
+| **Claude 101** | Dedicated collection — everyday-use fundamentals of Claude |
+| **Claude with Amazon Bedrock** | Dedicated *Claude on AWS Bedrock* collection |
+| **Introduction to Model Context Protocol** | *MCP* for hands-on protocol use, plus *Claude API → MCP in depth* for the host/client/server architecture, resources, and prompts |
+
+No course is left uncovered. The one case that doesn't follow a clean 1:1 course-to-collection mapping is *Claude on Google Cloud*: its generic API content (prompt evaluation, RAG, tool use, MCP, agents) is distributed across the *Claude API* collections rather than duplicated into its own collection — that's intentional, since that material doesn't depend on which cloud platform is used.
 
 ---
 

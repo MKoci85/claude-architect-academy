@@ -16,6 +16,7 @@
 - [¿Qué es esto?](#qué-es-esto)
 - [Características principales](#características-principales)
 - [Contenido cubierto](#contenido-cubierto)
+- [Cursos recomendados por Anthropic](#cursos-recomendados-por-anthropic)
 - [Inicio rápido](#inicio-rápido)
 - [Ejercicios prácticos](#ejercicios-prácticos)
 - [Examen de práctica CCAR-F](#examen-de-práctica-ccar-f)
@@ -61,6 +62,24 @@ Introducción, Reglas, Permisos, sistema de Hooks (más sus fundamentos de stdio
 ### AI Fluency
 
 El framework 4D (*Delegation, Description, Discernment, Diligence*) del curso gratuito de Anthropic Academy, recomendado como preparación para el examen — con ejercicios prácticos y proyecto guía incluidos.
+
+---
+
+## Cursos recomendados por Anthropic
+
+Anthropic recomienda siete cursos gratuitos de Partner Academy como preparación para la certificación CCAR-F. Este repositorio los cubre **en su totalidad, con holgura** — no como una transcripción curso por curso, sino integrando cada tema dentro de la estructura de referencia del sitio: el contenido reemplaza al material del curso en lugar de acompañarlo, así que no vas a encontrar frases como "esta lección explica..." en ninguna parte.
+
+| Curso oficial | Cobertura en este repo |
+|---|---|
+| **AI Fluency: Framework & Foundations** | Colección dedicada — el framework 4D completo (*Delegation, Description, Discernment, Diligence*) |
+| **Building with the Claude API** | Las 14 subsecciones de *API de Claude* — de primeros pasos a capacidades avanzadas |
+| **Claude on Google Cloud** | *Claude en Vertex AI* para lo específico de la plataforma (cliente `AnthropicVertex`, formato de IDs de modelo, disponibilidad por región), y el resto del temario — prompting, tool use, RAG, MCP, evals, agentes y workflows — ya vive en las colecciones de *API de Claude*, agnósticas de qué plataforma cloud se use |
+| **Claude Code in Action** | Toda la sección *Claude Code*: Introducción, Reglas, Permisos, Hooks (con sus fundamentos de stdio), Skills, Sistema de Memoria, Subagentes, MCP y Patrones Glob |
+| **Claude 101** | Colección dedicada — fundamentos de uso cotidiano de Claude |
+| **Claude with Amazon Bedrock** | Colección dedicada *Claude en AWS Bedrock* |
+| **Introduction to Model Context Protocol** | *MCP* para el uso práctico del protocolo y *API de Claude → MCP en profundidad* para la arquitectura host/cliente/servidor, resources y prompts |
+
+Ningún curso queda sin cobertura. El único caso que no sigue un mapeo 1:1 curso → colección es *Claude on Google Cloud*: sus contenidos genéricos de la API (prompt evaluation, RAG, tool use, MCP, agentes) están distribuidos entre las colecciones de *API de Claude* en lugar de duplicados en una colección propia — es intencional, ya que ese material no depende de la plataforma cloud elegida.
 
 ---
 

@@ -341,6 +341,12 @@
                 {
                   "type": "text",
                   "content": "After pre-training, models go through additional training called **fine-tuning**, where they learn to follow instructions, give helpful responses, and, importantly, avoid generating harmful content. This usually includes human feedback and reinforcement learning, which uses rewards and penalties to steer the model's behavior toward being more helpful, honest, and harmless."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Constitutional AI: Anthropic's own approach",
+                  "content": "Traditional RLHF depends on humans continuously evaluating pairs of responses throughout training — an expensive process that's hard to scale. Constitutional AI is the method Anthropic uses to reduce that dependency: instead of every \"harmlessness\" judgment coming from a human, the model critiques and revises its own responses guided by a **constitution** — a written list of principles — and that self-critique process feeds the reinforcement learning. The goal isn't a model that flatly refuses a problematic request, but one that can explain its objections using the same principle that generated them."
                 }
               ]
             },
@@ -759,6 +765,25 @@
                   "variant": "info",
                   "title": "Extension through external tools",
                   "content": "Many modern LLMs can connect to external tools and information sources — searching the web, processing files, or using other applications — which considerably expands what they can help solve."
+                }
+              ]
+            },
+            {
+              "title": "How a model's capability gets measured: benchmarks",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claims about how capable a model is aren't based on general impression alone — they're measured against standardized benchmarks: sets of questions with known correct answers, run identically on every model so they can be compared against each other. The most cited one for years was **MMLU** (Massive Multitask Language Understanding, 2020): nearly 16,000 multiple-choice questions spanning 57 subjects, from physics to international law to nutrition."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "MMLU hit its ceiling",
+                  "content": "When it was published in 2020, most models barely beat 25% — the level of chance on a four-option multiple-choice question. By mid-2024, frontier models were already scoring around 88%, close to the estimated expert-human performance (~90%). That ceiling, combined with errors found in part of the dataset and contamination (benchmark questions leaking into later models' training data), meant MMLU stopped discriminating well between frontier models — since 2025 it's increasingly complemented or replaced by harder benchmarks."
+                },
+                {
+                  "type": "text",
+                  "content": "That's why current model comparisons increasingly cite more demanding or domain-specific benchmarks (graduate-level scientific reasoning, real-world software issue resolution, competition math) instead of leaning on a single general number. A saturated benchmark is still useful as a baseline floor, but it stops being useful for telling which model is better at the current frontier."
                 }
               ]
             },

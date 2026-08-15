@@ -413,6 +413,29 @@
                   "content": "A worktree isolates files on disk. A subagent (see Subagents) isolates conversation context. They're complementary, not alternatives: you can have a subagent that also runs in its own worktree when its work involves editing files in parallel with the rest of the session."
                 }
               ]
+            },
+            {
+              "title": "Merging the work back",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "`claude --worktree` handles creating and cleaning up the worktree, but not the final step: bringing the finished work on the `worktree-<name>` branch back into the main branch is still a normal git merge, done from the root checkout once the work in the worktree is committed."
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "# from the root checkout, with the worktree's work already committed\ngit merge worktree-feature-auth"
+                },
+                {
+                  "type": "callout",
+                  "icon": "🤖",
+                  "content": "If several parallel sessions touched related areas of the code, the merge can produce conflicts. Instead of resolving them by hand, you can ask Claude Code to resolve them — it has read access to both branches and can reason about which change from each side should be kept, instead of applying a mechanical resolution based only on the conflict markers."
+                },
+                {
+                  "type": "text",
+                  "content": "This step lends itself to the same Custom commands pattern (see Rules) used for worktree creation: a `.claude/commands/merge-worktree.md` command parameterized with `$ARGUMENTS` can chain \"check the worktree's latest commit → return to the root → merge the branch → resolve conflicts if any appear\" into a single invocation, instead of repeating the sequence by hand every time a parallel session finishes."
+                }
+              ]
             }
           ]
         },
@@ -475,6 +498,16 @@
                   "content": "Everything above assumes an interactive session: a human brings the error. But the same reproduce → diagnose → fix → verify loop can run without anyone triggering it by hand, if Claude Code has access to where the error lives. By connecting an observability MCP server (for example, one that exposes CloudWatch, Sentry, or Datadog) as a tool, Claude can directly ask \"what errors happened in the last 24 hours?\", identify which ones deserve a fix, apply the correction with the same loop as always, and open a pull request — without the error ever being reported by a human first."
                 },
                 {
+                  "type": "text",
+                  "content": "MCP isn't the only way to give it that access. The simpler variant, with no server in between, is having the CI job itself fetch the logs with the provider's CLI (`aws logs tail`, `gcloud logging read`, etc.) and pass them as text to a headless Claude Code invocation (see CI headless in Rules for the `-p` / `--output-format json` / `--max-turns` trio). A daily GitHub Actions cron following that pattern — checkout → install dependencies → fetch the last 24h of logs → ask Claude to analyze, deduplicate, and fix whatever it finds → open the PR — is quicker to set up than a dedicated MCP server when this workflow is the only consumer of those logs."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "What to scope down so this cron doesn't become a problem",
+                  "content": "Read-only AWS permissions on CloudWatch, never write access to infrastructure. A cap on the number of errors processed per run so it doesn't exceed the context window. Deduplication before the logs reach Claude, so the same already-reported error doesn't get reopened every day. Repository write permissions scoped to opening the PR, not merging it. And running during off-peak hours if the log fetch competes for quota with real traffic."
+                },
+                {
                   "type": "table",
                   "columns": ["Mechanism", "Where it runs", "When to use it"],
                   "rows": [
@@ -489,6 +522,110 @@
                   "style": "warning",
                   "title": "The human doesn't disappear, they move to the PR gate",
                   "content": "This pattern doesn't remove human review: it moves it from \"before Claude investigates\" to \"before merging.\" Claude still proposes (the PR), a person still decides (the merge) — the project's golden rule (Claude proposes, you decide) doesn't change, only the point in the process where the human steps in changes."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "flujos-planning-first-tdd",
+          "title": "Structured workflows: Planning-First and Test-Driven",
+          "summary": "Two multi-step sequences that turn an ambiguous task into verifiable steps before any production code gets written: plan first without implementing, or define the tests first without implementing.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Why a single message isn't enough for complex tasks",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Asking Claude Code to \"implement feature X\" in a single message works for small, well-scoped changes. For multi-file features, or for domains with non-obvious design decisions, that same message produces inconsistent results across attempts — not because Claude \"didn't understand,\" but because the task admits more than one valid interpretation, and Claude picks one without the developer getting a chance to correct course before any code gets written. Two step sequences solve this in different ways: sign off on the plan before touching code, or sign off on the tests before touching code."
+                }
+              ]
+            },
+            {
+              "title": "Planning-First: context → plan → implementation",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Feed context",
+                      "body": "Ask Claude to read the files relevant to the feature — examples of similar existing code, reusable helpers, the module that's about to be extended."
+                    },
+                    {
+                      "title": "Plan without implementing",
+                      "body": "Describe what needs to be built but explicitly ask for no code yet, only the step-by-step plan. Turning on Plan Mode (see Plan Mode and headless CI) enforces this mechanically instead of relying on Claude respecting a prose instruction."
+                    },
+                    {
+                      "title": "Implement",
+                      "body": "Once the plan is solid and has been reviewed, ask for the implementation. Claude already has the context and the planning done — the code comes out aligned with what was agreed on, not with the first possible reading of the original request."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "The leverage point of this workflow is step 2: reviewing and correcting a plan is far cheaper than reviewing and correcting a full implementation that took the wrong approach."
+                }
+              ]
+            },
+            {
+              "title": "Test-Driven: context → tests → selection → implementation",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Feed context",
+                      "body": "Same as Planning-First: share the relevant files so the proposed tests reflect the system's actual behavior, not a generic version of it."
+                    },
+                    {
+                      "title": "Ask for test cases, no code yet",
+                      "body": "Ask Claude to think through test cases — including edge cases — before writing any implementation. This separates \"what the solution must satisfy\" from \"how it gets built,\" and surfaces edge cases the developer hadn't anticipated."
+                    },
+                    {
+                      "title": "Implement only the relevant tests",
+                      "body": "From the proposed list, pick the cases that actually apply to this feature — not everything Claude suggests is necessarily relevant — and ask for them to be implemented as tests that will fail (there's no code yet that passes them)."
+                    },
+                    {
+                      "title": "Implement code that passes the tests",
+                      "body": "Only at this step does Claude write the implementation, iterating until the selected tests pass. \"Done\" is defined upfront by the tests, not by a visual read of the code."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "💡",
+                  "content": "This workflow takes more upfront effort than asking for the feature directly, but the result is more robust because edge cases end up captured as verifiable tests before a single line of implementation exists to accidentally pass them."
+                }
+              ]
+            },
+            {
+              "title": "When to use each one",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Planning-First",
+                    "rows": [
+                      { "key": "Best for", "value": "Structural changes: which files to touch, in what order, what could break" },
+                      { "key": "What it forces a decision on upfront", "value": "The architectural approach" },
+                      { "key": "Mechanism that enforces it", "value": "Plan Mode — blocks execution until the plan is approved" }
+                    ]
+                  },
+                  "right": {
+                    "head": "Test-Driven",
+                    "rows": [
+                      { "key": "Best for", "value": "Business logic with precise rules and edge cases: calculations, validation, parsers" },
+                      { "key": "What it forces a decision on upfront", "value": "The expected behavior, case by case" },
+                      { "key": "Mechanism that enforces it", "value": "The tests themselves — there's no way to call it \"done\" without them passing" }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔁",
+                  "content": "They're not mutually exclusive: for a large feature with complex business logic, it's common to plan the overall structure first (Planning-First) and then apply Test-Driven within that structure for the module with the trickiest rules. The loop in Effective debugging with Claude Code uses a variant of this same principle — writing a failing test first for the identified root cause — but applied to existing bugs instead of new features."
                 }
               ]
             }

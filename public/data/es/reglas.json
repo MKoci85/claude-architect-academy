@@ -214,6 +214,36 @@
               "variant": "tip",
               "title": "Un cambio en CLAUDE.md solo surte efecto tras git pull",
               "content": "CLAUDE.md se lee desde disco al inicio de cada sesión. Si actualizás el archivo y lo commitéas, los compañeros que no hayan hecho `git pull` siguen viendo la versión anterior. Cuando un compañero reporta que Claude no sigue las reglas nuevas, lo primero es verificar que tenga la versión actualizada del archivo."
+            },
+            {
+              "type": "text",
+              "content": "La tabla de arriba cubre la jerarquía por **directorio** (raíz → subdirectorios), pero no es el único eje. Existen además dos niveles de scope que no dependen de en qué carpeta está el archivo, sino de **quién** lo puede ver: uno completamente personal y no versionado, y uno gestionado centralmente por la organización."
+            },
+            {
+              "type": "table",
+              "headers": ["Nivel", "Ubicación", "Propósito", "¿Se versiona?"],
+              "rows": [
+                ["Local (CLAUDE.local.md)", "./CLAUDE.local.md, en la raíz del proyecto", "Preferencias personales de ESE proyecto puntual: URLs de sandbox, datos de test propios", "No — agregar explícitamente a .gitignore"],
+                ["Managed policy", "Ruta fija por SO: macOS /Library/Application Support/ClaudeCode/CLAUDE.md · Linux/WSL /etc/claude-code/CLAUDE.md · Windows C:\\Program Files\\ClaudeCode\\CLAUDE.md", "Instrucciones de toda la organización, desplegadas por IT (MDM, GPO, Ansible)", "Se distribuye por herramientas de gestión de configuración, no por git de la app"]
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "CLAUDE.local.md: memoria personal DENTRO de un proyecto compartido",
+              "content": "No confundir con el nivel Usuario (~/.claude/CLAUDE.md, aplica a todos tus proyectos). CLAUDE.local.md vive en la raíz de un proyecto puntual y solo aplica ahí — es la forma correcta de anotar cosas como tu URL de sandbox local o tus datos de prueba, sin exponerlas al resto del equipo vía git. Dentro de un mismo directorio se carga siempre después de CLAUDE.md, así que tus notas personales son lo último que Claude lee en ese nivel."
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "Managed policy tiene la última palabra — ni siquiera se puede excluir",
+              "content": "El nivel Managed policy se carga antes que Usuario y Proyecto, y a diferencia del resto de los niveles, no puede excluirse con `claudeMdExcludes` — está pensado para políticas de seguridad y compliance que ningún desarrollador individual debería poder desactivar. Es el único de los cuatro niveles que no vive en ningún repositorio de la app: se distribuye a la máquina del desarrollador mediante las mismas herramientas que gestionan el resto del software de la organización."
+            },
+            {
+              "type": "callout",
+              "variant": "tip",
+              "title": "/init: cómo se genera el CLAUDE.md de proyecto la primera vez",
+              "content": "`/init` escanea el codebase (estructura, dependencias, comandos, convenciones) y genera un CLAUDE.md de proyecto con lo que encuentra. Es idempotente: si el archivo ya existe, la segunda corrida no lo pisa — propone mejoras sobre lo ya escrito. Con la variable de entorno `CLAUDE_CODE_NEW_INIT=1` habilitada, `/init` pasa a un flujo interactivo de varias fases: pregunta qué artefactos configurar (CLAUDE.md, skills, hooks), explora el codebase con un subagente, hace preguntas de seguimiento sobre lo que no puede inferir solo, y presenta una propuesta revisable antes de escribir ningún archivo — incluyendo, si se elige la opción personal, la creación automática de un CLAUDE.local.md ya en .gitignore."
             }
           ]
         },

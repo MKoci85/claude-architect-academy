@@ -341,6 +341,12 @@
                 {
                   "type": "text",
                   "content": "Después del pre-training, los modelos pasan por un entrenamiento adicional llamado **fine-tuning**, donde aprenden a seguir instrucciones, dar respuestas útiles y, de forma importante, evitar generar contenido dañino. Esto suele incluir feedback humano y aprendizaje por refuerzo, que usa recompensas y penalizaciones para orientar el comportamiento del modelo hacia ser más útil, honesto e inofensivo."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Constitutional AI: el enfoque propio de Anthropic",
+                  "content": "El RLHF tradicional depende de humanos evaluando pares de respuestas de forma continua durante todo el entrenamiento — un proceso caro y difícil de escalar. Constitutional AI es el método que usa Anthropic para reducir esa dependencia: en vez de que cada juicio de \"inofensivo\" venga de un humano, el propio modelo se autocritica y revisa sus respuestas guiado por una **constitución** — una lista escrita de principios — y ese proceso de autocrítica alimenta el aprendizaje por refuerzo. El resultado buscado no es un modelo que se niega en seco ante un pedido problemático, sino uno que puede explicar sus objeciones con el mismo principio que las genera."
                 }
               ]
             },
@@ -759,6 +765,25 @@
                   "variant": "info",
                   "title": "Extensión mediante herramientas externas",
                   "content": "Muchos LLM modernos pueden conectarse a herramientas y fuentes de información externas — buscar en la web, procesar archivos o usar otras aplicaciones — lo que expande de forma considerable lo que pueden ayudar a resolver."
+                }
+              ]
+            },
+            {
+              "title": "Cómo se mide la capacidad de un modelo: benchmarks",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Las afirmaciones sobre qué tan capaz es un modelo no se basan solo en impresión general — se miden contra benchmarks estandarizados: sets de preguntas con respuesta correcta conocida que se corren igual en todos los modelos para poder compararlos entre sí. El más citado durante años fue **MMLU** (Massive Multitask Language Understanding, 2020): casi 16.000 preguntas de opción múltiple repartidas en 57 materias, desde física hasta derecho internacional o nutrición."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "MMLU llegó a su techo",
+                  "content": "Al publicarse en 2020, la mayoría de los modelos apenas superaba el 25% — el nivel del azar en una opción múltiple de cuatro alternativas. Para mediados de 2024, modelos de punta ya rondaban el 88%, cerca de la estimación de desempeño humano experto (~90%). Ese techo, sumado a errores detectados en parte del dataset y a contaminación (preguntas del benchmark filtradas a los datos de entrenamiento de modelos posteriores), hizo que MMLU dejara de discriminar bien entre modelos de punta — desde 2025 se lo complementa o reemplaza con benchmarks más difíciles."
+                },
+                {
+                  "type": "text",
+                  "content": "Por eso las comparaciones actuales entre modelos citan cada vez más benchmarks más exigentes o específicos de dominio (razonamiento científico de posgrado, resolución de issues reales de software, matemática competitiva) en vez de apoyarse en un único número general. Un benchmark saturado sigue siendo útil como piso de referencia, pero deja de servir para distinguir cuál modelo es mejor en la frontera actual."
                 }
               ]
             },

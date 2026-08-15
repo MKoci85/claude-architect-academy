@@ -5,6 +5,11 @@
       "file": "introduccion.json"
     },
     {
+      "title": "Claude 101: Fundamentos",
+      "description": "Qué es Claude, cómo se diferencia de un chatbot tradicional y las distintas interfaces desde donde se puede usar",
+      "file": "claude-101.json"
+    },
+    {
       "title": "AI Fluency: Framework & Foundations",
       "description": "El framework 4D (Delegation, Description, Discernment, Diligence) recomendado por Anthropic como preparación para el examen CCAR-F",
       "file": "ai-fluency.json"
