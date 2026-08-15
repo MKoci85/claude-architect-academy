@@ -1,0 +1,74 @@
+{
+  "sections": [
+    {
+      "title": "Claude on Vertex AI",
+      "articles": [
+        {
+          "title": "Using Claude through Google Cloud Vertex AI",
+          "subsections": [
+            {
+              "title": "The AnthropicVertex client",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The Anthropic Python SDK includes dedicated support for Vertex AI through the `AnthropicVertex` class, which replaces the standard `Anthropic` client when the target is Google Cloud instead of the direct Anthropic API. The rest of the interface (`client.messages.create()`, streaming, tool use) works the same as with the standard client — only authentication and request routing change."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from anthropic import AnthropicVertex\n\nclient = AnthropicVertex(region=\"global\", project_id=\"your-project-id\")\nmodel = \"claude-sonnet-4@20250514\""
+                },
+                {
+                  "type": "text",
+                  "content": "`project_id` is the Google Cloud project ID (visible in the GCP console's project selector), and `region` indicates which Vertex region processes the request. Authentication is resolved through the environment's Google Cloud credentials (ADC), not an Anthropic API key."
+                }
+              ]
+            },
+            {
+              "title": "Model IDs use a different format",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "@ + date, not the short name",
+                  "content": "On the direct Anthropic API, models are identified like this: `claude-sonnet-4-6`. On Vertex AI, the same model is referenced with the format `claude-sonnet-4@20250514` — the model name followed by `@` and that specific version's date. These are distinct IDs for the same model family; they're not interchangeable between platforms."
+                }
+              ]
+            },
+            {
+              "title": "Regional availability",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Not every model is available in every region",
+                  "content": "Model availability varies by Vertex region. Before locking in a region for production, confirm in the Vertex AI documentation that the chosen model is enabled there."
+                }
+              ]
+            },
+            {
+              "title": "Embeddings: Vertex's model, not Claude",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude doesn't generate embeddings (see Claude API → RAG and agentic search → Embeddings and vector search). When the app already runs on Vertex, the most direct option isn't adding an external provider: Google Cloud exposes its own embeddings model, `text-embedding-005`, through the `google-genai` SDK — separate from the `AnthropicVertex` client used for text generation."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from google import genai\n\n# a different client than AnthropicVertex: this is the Google GenAI SDK\nembed_client = genai.Client(project=\"your-project-id\", location=\"global\", vertexai=True)\n\ndef generate_embedding(text):\n    response = embed_client.models.embed_content(model=\"text-embedding-005\", contents=text)\n    return [e.values for e in response.embeddings] if response.embeddings else []"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Two SDKs, two purposes",
+                  "content": "`AnthropicVertex` (Anthropic's SDK) generates text with Claude. `genai.Client` (Google's SDK) generates embeddings with Google's model. They're independent libraries and credentials that coexist in the same app — there's no need to force everything through a single client."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

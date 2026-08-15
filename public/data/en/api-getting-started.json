@@ -1,0 +1,163 @@
+{
+  "sections": [
+    {
+      "title": "Getting Started",
+      "articles": [
+        {
+          "title": "What is the Claude API?",
+          "subsections": [
+            {
+              "title": "Overview",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The Claude API lets you integrate Anthropic's AI models into your applications. You can send text and image messages, and receive model-generated responses."
+                },
+                {
+                  "type": "text",
+                  "content": "The API is RESTful: you make HTTP POST requests to specific endpoints with your content, and receive JSON responses with the results."
+                }
+              ]
+            },
+            {
+              "title": "Common use cases",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "cards": [
+                    {
+                      "title": "Chatbots and assistants",
+                      "description": "Build interactive conversations with message history"
+                    },
+                    {
+                      "title": "Content processing",
+                      "description": "Analyze, summarize, translate, or transform text"
+                    },
+                    {
+                      "title": "Data extraction",
+                      "description": "Extract structured information from unstructured documents"
+                    },
+                    {
+                      "title": "Tool use",
+                      "description": "Let the model call functions to solve complex problems"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Difference from Claude Code",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Important",
+                  "content": "Claude Code is a CLI/IDE tool that helps you develop software. The Claude API is a remote service you can call from your code. They are complementary but different things."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Authentication and API Keys",
+          "subsections": [
+            {
+              "title": "Getting an API key",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "steps": [
+                    {
+                      "step": 1,
+                      "title": "Go to console.anthropic.com",
+                      "description": "Open https://console.anthropic.com in your browser"
+                    },
+                    {
+                      "step": 2,
+                      "title": "Create an account or sign in",
+                      "description": "You need an Anthropic account"
+                    },
+                    {
+                      "step": 3,
+                      "title": "Navigate to API Keys",
+                      "description": "In the menu, select 'API Keys' or 'Workspaces'"
+                    },
+                    {
+                      "step": 4,
+                      "title": "Create a new key",
+                      "description": "Click 'Create Key' and copy it immediately"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "The key is shown only once. Store it somewhere safe."
+                }
+              ]
+            },
+            {
+              "title": "Using the API key",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Pass the key in the `x-api-key` header of every request:"
+                },
+                {
+                  "type": "code",
+                  "language": "bash",
+                  "code": "curl https://api.anthropic.com/v1/messages \\\n  -H \"x-api-key: sk-ant-...\" \\\n  -H \"content-type: application/json\" \\\n  -d '{\"model\": \"claude-opus-4-8\", \"max_tokens\": 1024, \"messages\": [{\"role\": \"user\", \"content\": \"Hello\"}]}'"
+                }
+              ]
+            },
+            {
+              "title": "Security",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Never expose your API key",
+                  "content": "Store keys in environment variables (.env) and never commit them to Git. If you accidentally expose a key, revoke it immediately at console.anthropic.com"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "SDK Installation",
+          "subsections": [
+            {
+              "title": "Python",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "bash",
+                  "code": "pip install anthropic"
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic(api_key=\"sk-ant-...\")\n\nmessage = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    messages=[\n        {\"role\": \"user\", \"content\": \"Hi, how are you?\"}\n    ]\n)\n\nprint(message.content[0].text)"
+                }
+              ]
+            },
+            {
+              "title": "JavaScript/Node.js",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "bash",
+                  "code": "npm install @anthropic-ai/sdk"
+                },
+                {
+                  "type": "code",
+                  "language": "javascript",
+                  "code": "import Anthropic from \"@anthropic-ai/sdk\";\n\nconst client = new Anthropic({\n  apiKey: process.env.ANTHROPIC_API_KEY,\n});\n\nconst message = await client.messages.create({\n  model: \"claude-opus-4-8\",\n  max_tokens: 1024,\n  messages: [\n    { role: \"user\", content: \"Hi, how are you?\" }\n  ],\n});\n\nconsole.log(message.content[0].text);"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

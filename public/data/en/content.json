@@ -1,0 +1,93 @@
+{
+  "collections": [
+    {
+      "title": "Introduction to Claude Code",
+      "file": "introduction.json"
+    },
+    {
+      "title": "AI Fluency: Framework & Foundations",
+      "description": "The 4D framework (Delegation, Description, Discernment, Diligence) recommended by Anthropic as preparation for the CCAR-F exam",
+      "file": "ai-fluency.json"
+    },
+    {
+      "title": "Rules",
+      "file": "rules.json"
+    },
+    {
+      "title": "Permissions",
+      "file": "permissions.json"
+    },
+    {
+      "title": "Hooks",
+      "description": "Claude Code's hooks system and the technical fundamentals of stdio",
+      "isSuper": true,
+      "items": [
+        {
+          "title": "Hooks System",
+          "file": "hooks.json",
+          "description": "Extension points to validate, block, and automate the agent"
+        },
+        {
+          "title": "Stdio & Fundamentals",
+          "file": "stdio-hooks.json",
+          "description": "How stdin, stdout, stderr, pipes, and exit codes work"
+        }
+      ]
+    },
+    {
+      "title": "Skills",
+      "file": "skills.json"
+    },
+    {
+      "title": "Memory System",
+      "file": "memory-system.json"
+    },
+    {
+      "title": "Subagents",
+      "file": "subagents.json"
+    },
+    {
+      "title": "MCP",
+      "description": "Model Context Protocol: commands, scopes, transports, Tool Search, and security",
+      "file": "mcp.json"
+    },
+    {
+      "title": "Concepts",
+      "description": "Cross-cutting topics that complement working with Claude Code",
+      "items": [
+        {
+          "title": "Glob Patterns",
+          "file": "glob-patterns.json",
+          "description": "Glob pattern syntax for rules and file matching"
+        }
+      ]
+    },
+    {
+      "title": "Claude API",
+      "description": "Anthropic REST API documentation",
+      "isSuper": true,
+      "items": [
+        {
+          "title": "Getting Started",
+          "file": "api-getting-started.json",
+          "description": "What the API is, authentication, and SDK installation"
+        },
+        {
+          "title": "Models and Versions",
+          "file": "api-models.json",
+          "description": "Catalog of available models and when to use each one"
+        },
+        {
+          "title": "Tool Use",
+          "file": "api-tool-use.json",
+          "description": "Schemas, multi-turn loop, errors, tool_choice, parallelism, server tools, computer use, security"
+        },
+        {
+          "title": "Claude on Vertex AI",
+          "file": "api-vertex.json",
+          "description": "Using Claude through Google Cloud Vertex AI: the AnthropicVertex client, model ID format, and regional availability"
+        }
+      ]
+    }
+  ]
+}

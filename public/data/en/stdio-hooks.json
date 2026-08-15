@@ -1,0 +1,574 @@
+{
+  "title": "stdin, stdout, stderr, and hooks",
+  "sections": [
+    {
+      "title": "Concepts",
+      "articles": [
+        {
+          "id": "stdio-fd",
+          "title": "File descriptors",
+          "summary": "Unix's basic communication channels: stdin, stdout, and stderr",
+          "subsections": [
+            {
+              "title": "Definition",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When a process starts on Unix/Linux, the operating system automatically assigns it numbered communication channels called file descriptors (FDs). They're simply integers that represent an open connection — it could be to a file, to the screen, to the keyboard, to a network, or to another process."
+                },
+                {
+                  "type": "text",
+                  "content": "Three of those channels come assigned by default in every process, always, with no exceptions:"
+                }
+              ]
+            },
+            {
+              "title": "The three default file descriptors",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "stdin (FD 0)",
+                      "body": "Standard Input. What goes into the process. By default it comes from the keyboard. The process reads it when it needs input."
+                    },
+                    {
+                      "title": "stdout (FD 1)",
+                      "body": "Standard Output. The process's normal output. By default it goes to the screen. It's where the process writes its results."
+                    },
+                    {
+                      "title": "stderr (FD 2)",
+                      "body": "Standard Error. Errors and diagnostic messages. Also goes to the screen by default, but it's a separate channel."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "The key abstraction",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "blue",
+                  "icon": "💡",
+                  "content": "They're channels, not files. You can redirect them wherever you want. The process doesn't know or care whether it's reading from the keyboard or from a file — either way it reads from FD 0. That abstraction is what makes the whole system so flexible."
+                },
+                {
+                  "type": "callout",
+                  "variant": "blue",
+                  "icon": "💡",
+                  "content": "Why are there two output channels (stdout and stderr)? Because mixing normal output with errors is a problem. If your script produces useful data on stdout and an error on stderr, whoever processes the output can ignore the errors without them contaminating the data."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "stdio-channels",
+          "title": "stdin, stdout, stderr in action",
+          "summary": "Each channel has a well-defined role and a convention everyone follows",
+          "subsections": [
+            {
+              "title": "Writing to all three channels",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "example-script.sh",
+                  "content": "#!/bin/bash\n# Read from stdin (FD 0)\nread -r INPUT\n# Write to stdout (FD 1) — normal output\necho \"Processed: $INPUT\"\n# Write to stderr (FD 2) — errors only\necho \"Something went wrong\" >&2"
+                },
+                {
+                  "type": "text",
+                  "content": "`>&2` is how you tell the shell \"send this to file descriptor 2 instead of 1.\" Without that suffix, echo always writes to stdout."
+                }
+              ]
+            },
+            {
+              "title": "Viewing them separately",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "terminal",
+                  "content": "./script.sh 2>/dev/null           # discard stderr, show only stdout\n./script.sh 1>/dev/null           # discard stdout, show only stderr\n./script.sh 2>&1                  # combine stderr into stdout to see them together"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "stdio-pipes",
+          "title": "Pipes: connecting processes",
+          "summary": "A pipe (|) connects one process's stdout to the next one's stdin",
+          "subsections": [
+            {
+              "title": "How they work",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "terminal",
+                  "content": "echo \"hello world\"\n# without a pipe: echo writes to the screen\n\necho \"hello world\" | wc -w\n# with a pipe: echo's stdout → wc's stdin\n# result: 2\n\necho '{\"name\":\"John\"}' | jq '.name'\n# the same happens with JSON\n# result: \"John\""
+                },
+                {
+                  "type": "text",
+                  "content": "The pipe is **synchronous** — the second process waits on the first. Data flows as a continuous stream, not as a file that's written and then read later."
+                }
+              ]
+            },
+            {
+              "title": "Relevance to hooks",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "green",
+                  "icon": "🔗",
+                  "content": "This is exactly what Claude Code does with hooks. Claude Code is 'Process A' — it builds a JSON with the event context and writes it to stdout. Your hook is 'Process B' — it receives it via stdin, does something with it, and writes its response to stdout. Claude Code reads that response and makes a decision."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "stdio-exit-codes",
+          "title": "Exit codes: result signals",
+          "summary": "The exit code is how a process communicates success or failure",
+          "subsections": [
+            {
+              "title": "The convention",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When a process ends, it leaves a number for the process that called it. That number is the exit code. In Unix, the convention is universal: **0 means success**, any other number means some kind of failure. The range is 0-255."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "exit 0",
+                      "body": "Success. The process finished without issues. Claude Code parses stdout looking for control JSON."
+                    },
+                    {
+                      "title": "exit 1",
+                      "body": "Generic error. Unix convention for failure. In Claude Code it's a non-blocking error — it continues but shows a notice."
+                    },
+                    {
+                      "title": "exit 2",
+                      "body": "Active block. Specific to Claude Code. A 'stop the action' signal. stdout is ignored and stderr is passed to Claude."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "The most common trap",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "red",
+                  "icon": "⚠️",
+                  "content": "exit 1 is the Unix convention for 'something failed,' but in Claude Code it **blocks nothing**. Only exit 2 blocks. If you want to prevent Claude from executing something, you have to use exit 2 explicitly — exit 1 simply logs an error and moves on."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "stdio-hooks-mechanism",
+          "title": "How Claude Code calls hooks",
+          "summary": "The full mechanism of stdin, stdout, stderr, and exit codes in action",
+          "subsections": [
+            {
+              "title": "The step-by-step flow",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Builds the context JSON",
+                      "body": "Claude Code constructs a JSON object with all the relevant event information: what happened, which tool was called, what arguments it has, the session_id, the cwd, etc.",
+                      "tag": "internal"
+                    },
+                    {
+                      "title": "Launches the hook process",
+                      "body": "Runs the command defined in the config — it can be a bash script, a Python binary, any executable. Launches it as a child process.",
+                      "tag": "fork/exec"
+                    },
+                    {
+                      "title": "Writes the JSON to the hook's stdin",
+                      "body": "The JSON is written directly to FD 0 (stdin) of the hook process. The hook reads it with cat, jq, sys.stdin in Python, etc.",
+                      "tag": "stdin → hook"
+                    },
+                    {
+                      "title": "Waits for the hook to finish",
+                      "body": "Claude Code blocks and waits. The hook has a configured timeout (600s by default). If it exceeds the timeout, Claude Code kills the process.",
+                      "tag": "wait()"
+                    },
+                    {
+                      "title": "Reads the exit code",
+                      "body": "When the hook finishes, Claude Code reads its exit code. This determines what to do with stdout and stderr next.",
+                      "tag": "exit code"
+                    },
+                    {
+                      "title": "Processes stdout and stderr based on exit code",
+                      "body": "Exit 0: parses stdout as control JSON. Exit 2: ignores stdout, takes stderr and passes it to Claude as the reason for the block.",
+                      "tag": "decision"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Real example: blocking rm -rf",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Let's see exactly what happens when Claude tries to run `rm -rf /tmp` and a hook is configured."
+                },
+                {
+                  "type": "code",
+                  "lang": "json",
+                  "label": "What Claude Code writes to the hook's stdin",
+                  "content": "{\n  \"hook_event_name\": \"PreToolUse\",\n  \"session_id\": \"abc123def456\",\n  \"transcript_path\": \"/home/user/.claude/.../transcript.jsonl\",\n  \"cwd\": \"/home/user/mi-proyecto\",\n  \"permission_mode\": \"default\",\n  \"tool_name\": \"Bash\",\n  \"tool_input\": {\n    \"command\": \"rm -rf /tmp\"\n  }\n}"
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "guard.sh",
+                  "content": "#!/bin/bash\n# Read everything that arrived on stdin\nINPUT=$(cat /dev/stdin)\n\n# Extract the command from the JSON with jq\nCMD=$(echo \"$INPUT\" | jq -r '.tool_input.command')\n\n# rm -rf is dangerous → block it\nif echo \"$CMD\" | grep -q 'rm -rf'; then\n  # Write to stderr — this is what Claude will see\n  echo \"rm -rf blocked by security policy\" >&2\n  # Exit 2 → Claude Code knows it must block\n  exit 2\nfi\n\n# No problems → exit 0, normal flow\nexit 0"
+                },
+                {
+                  "type": "text",
+                  "content": "Claude receives the hook's stderr and processes it as a system error. Claude understands it and responds:"
+                },
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "What Claude sees",
+                  "content": "Error: rm -rf blocked by security policy\n\nClaude adjusts its behavior: \"I can't run that\ncommand because it's blocked by a security policy.\nWould you like me to look for a safer alternative?\""
+                }
+              ]
+            },
+            {
+              "title": "The illusion",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "purple",
+                  "icon": "🧠",
+                  "content": "From Claude's perspective, when a hook blocks something with exit 2, it's as if the operating system had returned an error. Claude **doesn't distinguish** between 'the hook blocked it' and 'the command failed on its own.' The hook's stderr becomes the error message Claude processes."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "stdio-redirecciones",
+          "title": "Redirections: fine control over channels",
+          "summary": "Redirecting stdin, stdout, and stderr to files or other destinations",
+          "subsections": [
+            {
+              "title": "The most common redirections",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "terminal",
+                  "content": "./script.sh > output.txt                    # redirect stdout to a file\n./script.sh >> output.txt                   # append (don't overwrite)\n./script.sh 2> errores.txt                  # redirect stderr to a file\n./script.sh 2> /dev/null                    # discard stderr\n./script.sh 2>&1                            # combine stderr into stdout\n./script.sh < input.json                    # feed stdin from a file\n./script.sh < input.json > output.txt 2>/dev/null  # all together"
+                },
+                {
+                  "type": "text",
+                  "content": "`2>&1` is read literally as 'redirect FD 2 to the same destination as FD 1.' The `&` indicates that what follows is a file descriptor, not a file name."
+                }
+              ]
+            },
+            {
+              "title": "Relevance in hooks",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "blue",
+                  "icon": "🔗",
+                  "content": "When Claude Code launches your hook, internally it's doing something equivalent to `echo \"$JSON\" | ./your-hook.sh` but capturing stdout and stderr separately — it doesn't combine them. That's why you can write to stderr with `>&2` for error messages and to stdout for the response JSON, and Claude Code treats them differently."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "stdio-jq",
+          "title": "jq: processing JSON from shell",
+          "summary": "The essential tool for working with JSON in hooks",
+          "subsections": [
+            {
+              "title": "Why jq matters",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Hooks receive and emit JSON. In bash, the standard tool for reading and building JSON is **jq**. It's nearly mandatory for writing hooks."
+                }
+              ]
+            },
+            {
+              "title": "Common patterns",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "Read the full JSON",
+                  "content": "INPUT=$(cat /dev/stdin)"
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "Extract fields with -r (raw)",
+                  "content": "TOOL=$(echo \"$INPUT\" | jq -r '.tool_name')\nCMD=$(echo \"$INPUT\" | jq -r '.tool_input.command // empty')\n# The // empty avoids the variable ending up with the string 'null'"
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "Build response JSON",
+                  "content": "jq -n '{ \"hookSpecificOutput\": { \"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\" } }'"
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "Build JSON with bash variables",
+                  "content": "jq -n \\\n  --arg reason \"Command blocked: $CMD\" \\\n  '{ \"hookSpecificOutput\": { \"hookEventName\": \"PreToolUse\", \"permissionDecision\": \"deny\", \"permissionDecisionReason\": $reason } }'"
+                }
+              ]
+            },
+            {
+              "title": "Important flags",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "-r (raw output)",
+                      "body": "Without -r, jq prints strings with quotes: \"hello\". With -r, it prints plain: hello. To assign to bash variables, always use -r."
+                    },
+                    {
+                      "title": "-n (null input)",
+                      "body": "Without -n, jq expects input on stdin. With -n, it builds JSON from scratch without reading stdin. Ideal for generating responses."
+                    },
+                    {
+                      "title": "--arg",
+                      "body": "--arg name value injects a bash variable into jq as a string. Avoids escaping issues when building JSON with dynamic values."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Alternative: Python",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "green",
+                  "icon": "🐍",
+                  "content": "If the hook is a Python script, `import json, sys` and `data = json.load(sys.stdin)` does exactly the same thing as `cat /dev/stdin | jq`. Python is more convenient for complex logic — the stdin/stdout/exit code mechanism is identical."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "stdio-streams",
+          "title": "Streams, buffers, and why they matter",
+          "summary": "Subtle details about how data flows between processes",
+          "subsections": [
+            {
+              "title": "The difference between a stream and a file",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Data on stdin doesn't all arrive at once like a file — it arrives as a **stream**. You can start reading it before it's finished arriving."
+                },
+                {
+                  "type": "text",
+                  "content": "When you run `cat /dev/stdin` in a hook, you're telling the system 'read all of stdin until it closes.' Claude Code writes the complete JSON and closes the pipe — at that point cat returns with all the data."
+                }
+              ]
+            },
+            {
+              "title": "How to read stdin in different languages",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "Bash: read it all at once (recommended)",
+                  "content": "INPUT=$(cat)              # cat with no args = cat /dev/stdin\nINPUT=$(cat /dev/stdin)   # equivalent, more explicit"
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "Bash: read line by line",
+                  "content": "while IFS= read -r line; do\n  echo \"$line\"\ndone"
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "label": "Python: read it all",
+                  "content": "import json, sys\ndata = json.load(sys.stdin)   # parses directly from the stream"
+                },
+                {
+                  "type": "code",
+                  "lang": "javascript",
+                  "label": "Node.js: read it all",
+                  "content": "const chunks = []\nprocess.stdin.on('data', c => chunks.push(c))\nprocess.stdin.on('end', () => {\n  const data = JSON.parse(Buffer.concat(chunks).toString())\n})"
+                }
+              ]
+            },
+            {
+              "title": "The classic bug",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "red",
+                  "icon": "⚠️",
+                  "content": "If you use `read -r INPUT` instead of `INPUT=$(cat)`, you only read the **first line** of stdin. Claude Code's JSON can be multiline or very long — you'd lose everything that doesn't fit on the first line. Always use `$(cat)` or `$(cat /dev/stdin)` to read the complete JSON."
+                }
+              ]
+            },
+            {
+              "title": "Buffering on stdout",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When your hook writes to stdout, the system may buffer the data before sending it to Claude Code. In most cases this doesn't matter because the process ends and the buffer flushes. But if your hook writes output and then hangs, Claude Code might not see anything until the hook finishes."
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "label": "Python: force a flush",
+                  "content": "print(json.dumps(response), flush=True)"
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "Bash: no problem",
+                  "content": "echo '{\"continue\": true}'  # echo always flushes automatically"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "stdio-entorno",
+          "title": "Environment variables and working directory",
+          "summary": "What context your hook receives when Claude Code runs it",
+          "subsections": [
+            {
+              "title": "The environment variables Claude Code injects",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "CLAUDE_PROJECT_DIR",
+                      "body": "Current project directory. Example: /home/user/mi-proyecto"
+                    },
+                    {
+                      "title": "CLAUDE_SESSION_ID",
+                      "body": "Unique session identifier. Example: abc123def456"
+                    },
+                    {
+                      "title": "CLAUDE_TRANSCRIPT_PATH",
+                      "body": "Path to the transcript file. You can read the transcript for historical context."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "The working directory matters",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "blue",
+                  "icon": "📁",
+                  "content": "The hook's cwd is the project directory (the same as CLAUDE_PROJECT_DIR). You can run `git status` or `npm test` directly without navigating there first — you're already in the right place."
+                }
+              ]
+            },
+            {
+              "title": "Using the transcript for context",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "Count tool calls in the session",
+                  "content": "grep -c '\"type\":\"tool_use\"' \"$CLAUDE_TRANSCRIPT_PATH\""
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "View the last 3 events",
+                  "content": "tail -3 \"$CLAUDE_TRANSCRIPT_PATH\" | jq '.'"
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "label": "Extract all bash commands",
+                  "content": "jq -r 'select(.type==\"tool_use\" and .name==\"Bash\") | .input.command' \\\n  \"$CLAUDE_TRANSCRIPT_PATH\""
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "label": "In Python",
+                  "content": "import json, os\npath = os.environ['CLAUDE_TRANSCRIPT_PATH']\nevents = [json.loads(l) for l in open(path)]"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "stdio-http",
+          "title": "How HTTP hooks work",
+          "summary": "HTTP hooks use a different mechanism but the contract is the same",
+          "subsections": [
+            {
+              "title": "The difference",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "HTTP-type hooks don't launch a process — they make an HTTP POST. Instead of connecting stdin/stdout between processes, Claude Code serializes the event context as a JSON body and sends it to your endpoint. The server responds with the same JSON format a command hook would return."
+                }
+              ]
+            },
+            {
+              "title": "Mapping status codes to exit codes",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "HTTP 200",
+                      "body": "Equivalent to exit 0. The response body is parsed as control JSON. The permissionDecision, additionalContext, etc. fields work the same way."
+                    },
+                    {
+                      "title": "HTTP 4xx / 5xx",
+                      "body": "Equivalent to a non-zero exit. Non-blocking error. The body is treated as stderr — shown as a notice in the transcript but execution continues."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Security consideration",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "purple",
+                  "icon": "🔒",
+                  "content": "HTTP hooks are the only ones that can exfiltrate data off your machine. That's why `allowedHttpHookUrls` in managed settings lets you restrict which URLs they can connect to. A malicious HTTP hook could send the contents of your files to an external server — exactly the kind of attack you want to prevent in team environments."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

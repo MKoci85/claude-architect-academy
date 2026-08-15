@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
-[![Idioma](https://img.shields.io/badge/idioma-espa%C3%B1ol-red)](#)
+[![Idioma](https://img.shields.io/badge/idioma-espa%C3%B1ol%20%2B%20ingl%C3%A9s%20parcial-red)](#)
 
 ---
 
@@ -29,6 +29,8 @@
 Un hub editorial estático — sin backend, sin base de datos — que centraliza en español la documentación técnica de Claude, la complementa con ejercicios de arquitectura resueltos paso a paso como los abordaría un arquitecto de soluciones senior, y la combina con un simulador de examen basado en el formato de preguntas y los pesos por dominio publicados por Anthropic para la certificación **Claude Certified Architect — Foundations**.
 
 No es una traducción automática de la documentación oficial: es contenido curado, verificado activamente contra la documentación viva de Anthropic (CLI, Agent SDK, API, MCP), pensado específicamente para cerrar la brecha entre "conozco la teoría" y "puedo tomar la decisión de arquitectura correcta bajo presión de examen".
+
+El sitio tiene un selector de idioma (ES/EN) en la barra superior. La traducción al inglés está en curso: solo las colecciones ya traducidas aparecen en modo inglés, el resto queda oculto hasta traducirse — ver [Estructura del proyecto](#estructura-del-proyecto).
 
 ---
 
@@ -155,12 +157,16 @@ El banco de preguntas está en inglés (formato del examen real) y evalúa crite
 
 ```
 public/
-  data/                   → Archivos JSON con todo el contenido (cargados en runtime)
-    content.json          → Índice maestro de colecciones
-    ejercicios.json       → Los 4 ejercicios prácticos resueltos
-    *.json                → Una colección por archivo
+  data/
+    es/                   → Contenido completo en español (fuente de verdad)
+      content.json        → Índice maestro de colecciones (ES)
+      ejercicios.json     → Los 4 ejercicios prácticos resueltos (solo en español, por ahora)
+      *.json               → Una colección por archivo
+    en/                   → Traducción al inglés — solo lo ya traducido
+      content.json        → Índice maestro (EN) — lista únicamente colecciones/items traducidos
+      *.json               → Un archivo por cada colección traducida, con nombre en inglés (ej. introduccion.json → introduction.json)
   practice/
-    index.html            → Página standalone del examen (sin dependencia del bundle principal)
+    index.html            → Página standalone del examen (sin dependencia del bundle principal, ya en inglés)
     examen_cca_f_en.json  → Pool de 265 preguntas del examen, agrupadas por dominio
 
 src/
@@ -168,6 +174,8 @@ src/
   searchEngine.js   → Motor de búsqueda full-text con sistema de puntuación
   styles.css        → Directivas Tailwind + propiedades CSS para tema claro/oscuro
 ```
+
+El selector de idioma (botón ES/EN en la barra superior) alterna qué carpeta (`data/es/` o `data/en/`) se usa para el fetch de `content.json` y de cada colección. Si una colección o sub-item no tiene su archivo equivalente en `en/`, **no aparece** en el modo inglés — no hay fallback silencioso al español ni placeholders.
 
 ---
 
@@ -184,9 +192,10 @@ No hay backend, base de datos ni build step para el contenido: todo se resuelve 
 
 ## Agregar contenido
 
-1. Crear o editar un archivo JSON en `public/data/` siguiendo el esquema de colecciones (ver [CLAUDE.md](CLAUDE.md) para el schema completo y las convenciones por archivo).
-2. Registrarlo en `public/data/content.json`.
-3. No se requiere rebuild — los archivos se cargan en runtime.
+1. Crear o editar un archivo JSON en `public/data/es/` siguiendo el esquema de colecciones (ver [CLAUDE.md](CLAUDE.md) para el schema completo y las convenciones por archivo) — español es la fuente de verdad, se escribe ahí primero.
+2. Registrarlo en `public/data/es/content.json`.
+3. *(Opcional)* Traducir al inglés: crear `public/data/en/<nombre-en-inglés>.json` (el nombre del archivo también se traduce, no se reutiliza el nombre en español) con idéntico schema y estructura (mismos `id`, mismo orden de bloques), traduciendo solo texto — nunca código, IDs de modelo ni flags de CLI. Registrarlo en `public/data/en/content.json`. Si se omite este paso, esa colección simplemente no aparece en modo inglés — es el comportamiento esperado, no un bug.
+4. No se requiere rebuild — los archivos se cargan en runtime.
 
 Antes de escribir contenido nuevo sobre CLI de Claude Code, Agent SDK o protocolo MCP, verificá la sintaxis exacta contra documentación viva en vez de recordarla de memoria — ver las convenciones de precisión técnica en `CLAUDE.md`.
 

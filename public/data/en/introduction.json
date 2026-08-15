@@ -1,0 +1,500 @@
+{
+  "id": "introduccion",
+  "title": "Introduction to Claude Code",
+  "summary": "What Claude Code is, how the agentic loop works, its tools, the interfaces available, and how to make the most of the full ecosystem.",
+  "sections": [
+    {
+      "title": "What is Claude Code?",
+      "articles": [
+        {
+          "id": "que-es-claude-code",
+          "title": "Claude Code is a coding agent",
+          "summary": "It's not a chatbot. It's not autocomplete. It's an agent that makes decisions, takes actions, and verifies results.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Definition",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude Code is a coding agent. It's not a chatbot you ask things of and copy the answer from. It's not line-by-line autocomplete. It's an agent that makes decisions, takes actions on your project, and verifies the results."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "What it's NOT",
+                    "rows": [
+                      { "key": "Chatbot", "value": "Gives you answers. You copy, paste, adapt. Loses context. Doesn't know what files you have." },
+                      { "key": "Copilot", "value": "Autocompletes. Suggests the next line. Doesn't understand the project. Doesn't execute or verify." }
+                    ]
+                  },
+                  "right": {
+                    "head": "What it IS",
+                    "rows": [
+                      { "key": "Claude Code", "value": "Works with you. Reads your entire codebase. Edits multiple files. Executes and verifies." }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "bucle-agentico",
+          "title": "The agentic loop",
+          "summary": "How Claude Code processes each task: plans, uses real tools, evaluates the result, and repeats until done.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "The five phases of the loop",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Every task you give Claude Code goes through a cycle that repeats until completion. It's not a single response: it's a loop of action and evaluation."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Prompt",
+                      "body": "You describe the task. The more context and constraints you give, the better."
+                    },
+                    {
+                      "title": "Plans",
+                      "body": "Claude decides the steps needed to complete the task."
+                    },
+                    {
+                      "title": "Tool",
+                      "body": "Reads files, edits code, runs bash commands. Real actions, not simulations."
+                    },
+                    {
+                      "title": "Evaluates",
+                      "body": "Analyzes the result of the action taken."
+                    },
+                    {
+                      "title": "Done?",
+                      "body": "If not → repeats from Plans. If so → responds with the result."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "icon": "⚡",
+                  "content": "Every iteration of the loop uses real tools: reads files, runs commands, edits code. It's not a simulation."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "herramientas-del-agente",
+          "title": "The agent's tools",
+          "summary": "The internal tools Claude Code uses to interact with your project: read, edit, execute, search, and delegate.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Available tools",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "👁",
+                      "title": "Read",
+                      "body": "Reads files in your project. Can read the entire codebase to understand context."
+                    },
+                    {
+                      "icon": "✏️",
+                      "title": "Write / Edit",
+                      "body": "Creates or modifies files. Edit sends only the diff; Write rewrites the whole file."
+                    },
+                    {
+                      "icon": "💻",
+                      "title": "Bash",
+                      "body": "Runs any terminal command: tests, builds, git, scripts, etc."
+                    },
+                    {
+                      "icon": "🔍",
+                      "title": "Glob / Grep",
+                      "body": "Searches for files by pattern and text within the project. Equivalent to find + grep."
+                    },
+                    {
+                      "icon": "🤝",
+                      "title": "Task",
+                      "body": "Delegates work to specialized subagents for parallel or complex tasks."
+                    },
+                    {
+                      "icon": "🌐",
+                      "title": "WebFetch",
+                      "body": "Fetches content from URLs. Useful for reading external documentation or APIs."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "When to use each one",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Tool", "What it's for", "When to choose it"],
+                  "rows": [
+                    ["Grep", "Searches for a pattern within file contents (function names, error messages, imports)", "When you know what text to search for but not which file it's in — finding every caller of a function"],
+                    ["Glob", "Finds files by path or name pattern (doesn't look at content)", "When you know the shape of the filename — every `**/*.test.tsx`, every `config/*.yaml`"],
+                    ["Read", "Loads the full contents of a specific file", "When you've already identified the exact file (via Grep or Glob) and need to see it whole to understand context"],
+                    ["Edit", "Modifies a specific section of a file, anchored on a unique piece of text", "Surgical changes to existing files — safer than rewriting the whole file"],
+                    ["Write", "Creates a new file, or fully rewrites an existing one", "New files, or when Edit fails because the anchor text isn't unique in the file"],
+                    ["Bash", "Runs shell commands: tests, builds, git, scripts", "Any action that isn't directly reading/writing files — running the test suite, making a commit"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "🔧",
+                  "content": "Fallback pattern: if Edit fails because the text meant to anchor the change appears more than once in the file (non-unique match), the reliable alternative is Read to load the full file and Write to rewrite it with the change already applied — instead of insisting with increasingly long and fragile text anchors."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🧭",
+                  "content": "Typical exploration flow: start with Grep to find entry points (a function, an error, a keyword), use Read to follow imports and trace the flow from there, and only then decide what to modify. Reading the entire codebase file by file from the start wastes context on information irrelevant to the task."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "interfaces-disponibles",
+          "title": "One agent, multiple interfaces",
+          "summary": "Claude Code is available in the terminal, VS Code/Cursor, web, and the desktop app. Each interface has its own advantages.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Where you can use it",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "⌨️",
+                      "title": "Terminal (CLI)",
+                      "body": "The full experience. All features. Ideal for power users."
+                    },
+                    {
+                      "icon": "🖥",
+                      "title": "VS Code / Cursor",
+                      "body": "Visual inline diffs. Checkpoints and rewind. The recommended option for the course."
+                    },
+                    {
+                      "icon": "🌐",
+                      "title": "Web (claude.ai/code)",
+                      "body": "No local install. For long-running tasks. From any device."
+                    },
+                    {
+                      "icon": "🖱",
+                      "title": "Desktop App",
+                      "body": "Parallel sessions. Visual diffs. Scheduled tasks (crons)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "capacidades",
+          "title": "What can you do with Claude Code?",
+          "summary": "A tour of the main capabilities: features, debugging, tests, refactoring, git, security, and automation.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Main use cases",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "✨",
+                      "title": "Build complete features",
+                      "body": "You describe what you want and Claude implements the full feature across multiple files."
+                    },
+                    {
+                      "icon": "🔎",
+                      "title": "Explore codebases",
+                      "body": "Understand projects you don't know: what each part does, how they connect."
+                    },
+                    {
+                      "icon": "🐛",
+                      "title": "Debug errors",
+                      "body": "You paste the error and Claude finds the root cause and proposes the fix."
+                    },
+                    {
+                      "icon": "♻️",
+                      "title": "Refactor legacy code",
+                      "body": "Modernizes and improves existing code safely, backed by tests."
+                    },
+                    {
+                      "icon": "✅",
+                      "title": "Generate tests",
+                      "body": "Writes tests with thorough coverage, including edge cases."
+                    },
+                    {
+                      "icon": "🌿",
+                      "title": "Manage Git",
+                      "body": "Descriptive commits, branches, PRs — all from natural language."
+                    },
+                    {
+                      "icon": "🔒",
+                      "title": "Review security",
+                      "body": "Use /security-review for a vulnerability analysis of pending code."
+                    },
+                    {
+                      "icon": "⚡",
+                      "title": "Automate tasks",
+                      "body": "Hooks, MCP, and subagents for fully automated workflows."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "ecosistema-claude-code",
+          "title": "The ecosystem: more than a chat",
+          "summary": "Claude Code is a complete system: CLAUDE.md, MCP, Hooks, Subagents, Skills, and the Agent SDK all work together.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "The components of the ecosystem",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude Code isn't just a chat with a model. It's an ecosystem of components that combine to produce advanced behaviors and automation."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "📄",
+                      "title": "CLAUDE.md",
+                      "body": "Persistent project memory. Claude always reads it at the start of every session."
+                    },
+                    {
+                      "icon": "🔌",
+                      "title": "MCP",
+                      "body": "Model Context Protocol. Connection to external tools: databases, APIs, services."
+                    },
+                    {
+                      "icon": "⚡",
+                      "title": "Hooks",
+                      "body": "Event-based automation. Scripts that run before/after Claude's actions."
+                    },
+                    {
+                      "icon": "👥",
+                      "title": "Subagents",
+                      "body": "Specialized AI teams. Claude can delegate tasks to parallel agents."
+                    },
+                    {
+                      "icon": "🧩",
+                      "title": "Skills",
+                      "body": "Reusable capabilities. Custom workflows invoked on demand."
+                    },
+                    {
+                      "icon": "💻",
+                      "title": "Agent SDK",
+                      "body": "Programmatic use as a library. For integrating Claude Code into your own applications."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "que-no-es-claude-code",
+          "title": "What Claude Code is NOT",
+          "summary": "Setting the right expectations: Claude Code is a productivity multiplier, not a replacement for the developer or a magic fix.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Myths and reality",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "❌ It's not this",
+                    "rows": [
+                      { "key": "A replacement for the developer", "value": "It doesn't make business decisions or understand the full context of your product." },
+                      { "key": "Infallible", "value": "It makes mistakes. Its proposals are a first draft you review." },
+                      { "key": "Magic with vague prompts", "value": "\"Just do it\" without context produces generic results. Context and constraints are key." },
+                      { "key": "Safe by default", "value": "Without permissions configured it can run destructive commands. Set up the sandbox." }
+                    ]
+                  },
+                  "right": {
+                    "head": "✅ It IS this",
+                    "rows": [
+                      { "key": "A productivity multiplier", "value": "Speeds up what you already know how to do. Amplifies your capabilities." },
+                      { "key": "A first draft that YOU review", "value": "Always review the diff before accepting. Claude proposes, you decide." },
+                      { "key": "Effective with context and constraints", "value": "Give it the project's CLAUDE.md, the exact error, the technical constraints." },
+                      { "key": "Safe with permissions configured", "value": "Use settings.json, sandbox, and allow/deny rules to control what it can do." }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "icon": "🏆",
+                  "content": "The golden rule: Claude proposes, you decide. Always review the diff before accepting."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Advanced workflows",
+      "articles": [
+        {
+          "id": "paralelizar-claude-code",
+          "title": "Parallelizing Claude Code with worktrees",
+          "summary": "Run several Claude Code sessions at the same time without changes colliding, using git worktrees.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "The problem: one session, one checkout",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Two Claude Code sessions working on the same directory compete for the same files: if one is halfway through a feature and the other is fixing a bug, changes collide. A git worktree is a separate checkout (its own directory and its own branch) that shares the same repository's history — each session edits its own set of files, without conflict."
+                },
+                {
+                  "type": "code",
+                  "language": "bash",
+                  "code": "claude --worktree feature-auth\n# in another terminal, with a different name:\nclaude --worktree fix-bug-123"
+                },
+                {
+                  "type": "text",
+                  "content": "Each call creates the worktree under `.claude/worktrees/<name>/` on a new `worktree-<name>` branch, and starts the session there. When an unnamed session ends with no pending changes, Claude Code deletes the worktree on its own; if there's uncommitted work, it asks before deleting."
+                }
+              ]
+            },
+            {
+              "title": "What's shared and what isn't",
+              "blocks": [
+                {
+                  "type": "table",
+                  "columns": ["Shared across worktrees", "Specific to each worktree"],
+                  "rows": [
+                    ["The .git directory and its history", "The working files (working tree)"],
+                    ["Approved permissions (\"don't ask again\")", "The active branch"],
+                    ["Plugins installed at the project level", "Untracked files (.env, etc. — unless in .worktreeinclude)"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "A new worktree is a clean checkout",
+                  "content": "It doesn't bring gitignored files like .env. For those files to automatically appear in every new worktree, declare a .worktreeinclude file at the project root, using .gitignore syntax."
+                }
+              ]
+            },
+            {
+              "title": "Isolating subagents with worktrees",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The same mechanism applies to subagents: adding `isolation: worktree` to the frontmatter of a subagent defined in `.claude/agents/`, that subagent always runs in its own temporary worktree. Useful for agents that apply mechanical changes to many files (large refactors) in parallel with the main session, without risking the checkout the user is currently looking at."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Worktrees vs. subagents: they isolate different things",
+                  "content": "A worktree isolates files on disk. A subagent (see Subagents) isolates conversation context. They're complementary, not alternatives: you can have a subagent that also runs in its own worktree when its work involves editing files in parallel with the rest of the session."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "debugging-con-claude-code",
+          "title": "Effective debugging with Claude Code",
+          "summary": "The reproduce → diagnose → fix → verify pattern, and how to get Claude Code to follow it instead of proposing patches blindly.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "The debugging loop",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A bug isn't solved by a plausible-sounding explanation or a reasonable-looking patch: it's solved when the failing behavior can be reproduced, and after applying the fix, it no longer occurs. Claude Code performs better at debugging when the session is structured as a closed loop, not a single question-and-answer."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Reproduce",
+                      "body": "Give Claude the exact command that triggers the error (not just the pasted message), so it can run it and see the full stack trace itself."
+                    },
+                    {
+                      "title": "Diagnose",
+                      "body": "Let it explore the relevant code and propose a root cause before touching anything — asking for the diagnosis as a separate step prevents it from jumping straight to a superficial patch."
+                    },
+                    {
+                      "title": "Fix",
+                      "body": "Apply the fix. If the bug is reproducible with a test, ask first for a failing test that captures the identified cause, and only then the fix that makes it pass — that way the bug can't reappear without a test catching it."
+                    },
+                    {
+                      "title": "Verify",
+                      "body": "Run the original reproduction again (not just the test suite) to confirm the reported symptom actually disappeared."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Context that changes the diagnosis",
+                  "content": "Saying whether the error is intermittent or consistent completely changes which hypotheses are plausible — a race condition and a deterministic bug are investigated differently. That detail is rarely mentioned spontaneously and is always worth giving."
+                }
+              ]
+            },
+            {
+              "title": "Automating parts of the loop with hooks",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Asking Claude to \"run the tests after every change\" depends on it remembering to do so every turn. A PostToolUse hook that automatically runs the relevant test after each Edit makes that step deterministic — it doesn't matter whether Claude asks for it or not, the verification loop happens regardless. See the Hooks System for the full configuration."
+                }
+              ]
+            },
+            {
+              "title": "Autonomous debugging: from interactive session to continuous monitoring",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Everything above assumes an interactive session: a human brings the error. But the same reproduce → diagnose → fix → verify loop can run without anyone triggering it by hand, if Claude Code has access to where the error lives. By connecting an observability MCP server (for example, one that exposes CloudWatch, Sentry, or Datadog) as a tool, Claude can directly ask \"what errors happened in the last 24 hours?\", identify which ones deserve a fix, apply the correction with the same loop as always, and open a pull request — without the error ever being reported by a human first."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Mechanism", "Where it runs", "When to use it"],
+                  "rows": [
+                    ["Routines", "Cloud, managed by Anthropic", "Runs even if your machine is off; can be triggered on a schedule or by GitHub/API events"],
+                    ["Desktop App scheduled tasks", "Your machine, via the desktop app", "Needs direct access to local files, tools, or uncommitted changes"],
+                    ["GitHub Actions", "Your CI pipeline", "Tasks tied to repo events (PR opened) or a cron that already lives alongside the rest of the CI config"],
+                    ["/loop", "The current CLI session", "Fast polling while a session stays open; stops when a new conversation starts"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The human doesn't disappear, they move to the PR gate",
+                  "content": "This pattern doesn't remove human review: it moves it from \"before Claude investigates\" to \"before merging.\" Claude still proposes (the PR), a person still decides (the merge) — the project's golden rule (Claude proposes, you decide) doesn't change, only the point in the process where the human steps in changes."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

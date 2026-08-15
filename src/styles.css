@@ -82,6 +82,9 @@ body {
 }
 
 .topbar-logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 15px;
   font-weight: 600;
   color: var(--text-1);
@@ -208,9 +211,7 @@ body {
 }
 
 .theme-btn {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
+  flex-shrink: 0;
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -225,6 +226,25 @@ body {
   font-size: 15px;
 }
 .theme-btn:hover { opacity: 0.8; }
+
+.lang-btn {
+  flex-shrink: 0;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: none;
+  background: var(--text-1);
+  color: var(--bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.lang-btn:hover { opacity: 0.8; }
 
 .exam-btn {
   flex-shrink: 0;

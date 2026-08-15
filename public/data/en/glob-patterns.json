@@ -1,0 +1,536 @@
+{
+  "title": "Glob Patterns",
+  "sections": [
+    {
+      "title": "Concepts",
+      "articles": [
+        {
+          "id": "glob-intro",
+          "title": "What is a glob?",
+          "summary": "A compact way to describe sets of paths using wildcards",
+          "subsections": [
+            {
+              "title": "Definition",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A glob is a template that either matches a path or doesn't. It's not code that executes, nor a regular expression: it's a matching pattern. The name comes from a Unix program called glob — short for global — meant to expand wildcards on the command line."
+                },
+                {
+                  "type": "text",
+                  "content": "This is what determines whether a rule fires or not when Claude works with a file."
+                }
+              ]
+            },
+            {
+              "title": "Basic example",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The pattern `src/**/*.ts` matches:"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "✓ src/utils/format.ts",
+                      "body": "matches"
+                    },
+                    {
+                      "title": "✓ src/index.ts",
+                      "body": "matches"
+                    },
+                    {
+                      "title": "✗ lib/utils/format.ts",
+                      "body": "doesn't start with src/"
+                    },
+                    {
+                      "title": "✗ src/components/Button.tsx",
+                      "body": ".tsx extension, not .ts"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "glob-asterisco",
+          "title": "Single asterisk: *",
+          "summary": "Any string within one path segment (doesn't cross directories)",
+          "subsections": [
+            {
+              "title": "How it works",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "`*` matches any string of characters within a single path segment. **The key nuance: it doesn't cross directory separators** (`/`)."
+                }
+              ]
+            },
+            {
+              "title": "Examples",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Pattern: src/*.ts",
+                  "content": "✓ src/index.ts\n✓ src/utils.ts\n✗ src/utils/helpers.ts    (there's another level in between)\n✗ index.ts                (not inside src/)"
+                },
+                {
+                  "type": "text",
+                  "content": "Other examples:"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "*.test.ts",
+                      "body": "Matches: login.test.ts, utils.test.ts"
+                    },
+                    {
+                      "title": "test-*.js",
+                      "body": "Matches: test-auth.js, test-api.js"
+                    },
+                    {
+                      "title": "components/*Form.*",
+                      "body": "Matches: LoginForm.tsx, SignupForm.jsx"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "glob-globstar",
+          "title": "Globstar: **",
+          "summary": "Any string, crossing directories",
+          "subsections": [
+            {
+              "title": "The difference from *",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "`**` matches any string **including directory separators**. It crosses as many levels as needed. The difference from `*` is fundamental."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "src/*.ts",
+                      "body": "Only .ts files directly inside src/"
+                    },
+                    {
+                      "title": "src/**/*.ts",
+                      "body": ".ts files in src/ and in any of its subdirectories"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Globstar positions",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "**At the start: 'anywhere in the project'**"
+                },
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Examples",
+                  "content": "**/node_modules    — any node_modules, regardless of location\n**/*.log            — all logs\n**/src              — every folder named src"
+                },
+                {
+                  "type": "text",
+                  "content": "**In the middle: skips unknown levels**"
+                },
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Examples",
+                  "content": "src/**/*.test.ts       — tests in src, at any depth\npackages/**/dist       — the dist folder of any package\nsrc/**/config/db.ts    — db.ts inside any config folder in src"
+                },
+                {
+                  "type": "text",
+                  "content": "**At the end: 'everything from here on'**"
+                },
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Examples",
+                  "content": "docs/**              — absolutely everything inside docs\nsrc/legacy/**        — the entire contents of the legacy directory"
+                }
+              ]
+            },
+            {
+              "title": "Golden rule",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "blue",
+                  "icon": "💡",
+                  "content": "`**` must appear as a **complete segment** between slashes. `src**/foo` doesn't work as a globstar; the correct form is `src/**/foo`."
+                }
+              ]
+            },
+            {
+              "title": "Alternative: brace expansion",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "If you want three specific subdirectories out of six that exist, use brace expansion instead of `**`:"
+                },
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Example",
+                  "content": "src/directory/{alpha,beta,gamma}/**/*.java\n\nMatches: src/directory/alpha/Model.java\n         src/directory/beta/sub/Repo.java\n         src/directory/gamma/Service.java\n\nDoesn't match: src/directory/delta/Config.java"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "glob-interrogacion",
+          "title": "Question mark: ?",
+          "summary": "Exactly one character",
+          "subsections": [
+            {
+              "title": "How it works",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "`?` matches **exactly one** character of any kind, except the `/` separator. Much more restrictive than `*`: used when you know the exact length of what you're looking for."
+                }
+              ]
+            },
+            {
+              "title": "Examples",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Pattern: test?.js",
+                  "content": "✓ test1.js        (one character)\n✓ testA.js        (one character)\n✗ test.js         (missing a character)\n✗ test10.js       (that's two characters)"
+                },
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Pattern: v?.?.?.md",
+                  "content": "✓ v1.2.3.md       (short version)\n✓ v9.0.1.md       (short version)\n✗ v1.10.0.md      ('10' is two characters)"
+                }
+              ]
+            },
+            {
+              "title": "When to use it",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Used sparingly in practice, but useful for fixed-format names: short version numbers, identifiers with a strict length."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "glob-clases",
+          "title": "Character classes: [ ]",
+          "summary": "A single character from a set",
+          "subsections": [
+            {
+              "title": "How it works",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Brackets let you specify a set of acceptable characters for a single position. It matches exactly one of the listed characters."
+                }
+              ]
+            },
+            {
+              "title": "Common ranges",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "[0-9]",
+                      "body": "any digit"
+                    },
+                    {
+                      "title": "[a-z]",
+                      "body": "any lowercase letter"
+                    },
+                    {
+                      "title": "[A-Z]",
+                      "body": "any uppercase letter"
+                    },
+                    {
+                      "title": "[a-zA-Z]",
+                      "body": "any letter"
+                    },
+                    {
+                      "title": "[0-9a-f]",
+                      "body": "any hex digit"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Realistic examples",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Patterns",
+                  "content": "log-[0-9].txt      — log-0.txt through log-9.txt\nv[0-9].[0-9].ts    — v1.0.ts, v2.3.ts...\n[A-Z]*.md          — .md files starting with an uppercase letter"
+                }
+              ]
+            },
+            {
+              "title": "Negation with [!...]",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "If the first character inside the brackets is `!`, the meaning is inverted: it matches any character that is **not** in the set."
+                },
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Examples",
+                  "content": "[!0-9]*.txt      — .txt whose name does NOT start with a digit\n[!_]*.js         — .js whose name does NOT start with an underscore"
+                },
+                {
+                  "type": "callout",
+                  "variant": "blue",
+                  "icon": "💡",
+                  "content": "**Note:** negation inside brackets `[!abc]` only affects that single position in the pattern. To exclude entire paths you use `!pattern` at the start of a line — a different mechanism."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "glob-alternativas",
+          "title": "Alternatives: { }",
+          "summary": "OR across several patterns",
+          "subsections": [
+            {
+              "title": "How it works",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Braces let you list comma-separated alternatives. The pattern matches if the path matches **any** of them. Especially useful for grouping extensions."
+                }
+              ]
+            },
+            {
+              "title": "Common examples",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "*.{jpg,jpeg,png,gif,webp}",
+                      "body": "image formats"
+                    },
+                    {
+                      "title": "*.{ts,tsx}",
+                      "body": "TypeScript with and without JSX"
+                    },
+                    {
+                      "title": "src/**/*.{test,spec}.ts",
+                      "body": "both test-naming conventions"
+                    },
+                    {
+                      "title": "{src,lib,packages}/**/*.ts",
+                      "body": "TS in any of the three dirs"
+                    },
+                    {
+                      "title": "{Dockerfile,docker-compose.yml}",
+                      "body": "Docker files"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Alternatives with path segments",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Complex pattern",
+                  "content": "src/directory/{alpha,beta,gamma}/**/*.java\n\n✓ src/directory/alpha/Model.java\n✓ src/directory/beta/sub/Repo.java\n✓ src/directory/gamma/Service.java\n✗ src/directory/delta/Config.java\n✗ src/directory/epsilon/Utils.java"
+                },
+                {
+                  "type": "text",
+                  "content": "Alternatives can contain full path segments. This is exactly what lets you select three specific subdirectories without repeating the whole pattern."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "glob-negacion",
+          "title": "Pattern negation: !",
+          "summary": "Exclude paths from the set",
+          "subsections": [
+            {
+              "title": "How it works",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A pattern starting with `!` excludes paths from the accumulated set. They're evaluated in order: first you include a broad set, then you trim what you don't want."
+                }
+              ]
+            },
+            {
+              "title": "Example 1: All TS without tests or generated code",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Patterns",
+                  "content": "**/*.ts                    — include all TS\n!**/*.test.ts              — except tests\n!**/*.spec.ts              — and specs\n!**/node_modules/**        — and never anything from node_modules\n!src/**/generated/**        — nor generated code"
+                }
+              ]
+            },
+            {
+              "title": "Example 2: Docs without drafts",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "label": "Patterns",
+                  "content": "docs/**/*.md               — include markdown docs\n!docs/**/DRAFT-*.md        — except drafts"
+                }
+              ]
+            },
+            {
+              "title": "Important distinction",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "red",
+                  "icon": "⚠️",
+                  "content": "Don't confuse `[!abc]` (character negation at one position) with `!pattern` (whole-pattern negation). They are **completely different** mechanisms."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "glob-errors",
+          "title": "Common mistakes",
+          "summary": "Typical traps when writing globs",
+          "subsections": [
+            {
+              "title": "Mistake 1: Confusing * with **",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The classic mistake: writing `src/*.ts` expecting it to cover all of src, and being surprised that files in subdirectories don't show up."
+                },
+                {
+                  "type": "callout",
+                  "variant": "blue",
+                  "icon": "💡",
+                  "content": "**Mental rule:** a single asterisk doesn't cross slashes, two do. As soon as a pattern 'isn't picking up what's inside folders,' swap `*` for `**/*`."
+                }
+              ]
+            },
+            {
+              "title": "Mistake 2: The ** isn't isolated",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Writing `src**` or `**foo` doesn't work as a globstar in most implementations. The globstar wants to live alone between separators: `src/**/foo`, not `src**/foo`."
+                }
+              ]
+            },
+            {
+              "title": "Mistake 3: Thinking globs are regex",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "They aren't. In a glob, the dot `.` is a literal dot, not 'any character.' `app.js` in a glob means exactly `app.js`. And there are no quantifiers like `+` or `{3,5}`: if you need that, globs aren't the tool."
+                }
+              ]
+            },
+            {
+              "title": "Mistake 4: Forgetting hidden files",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Files starting with a dot (`.env`, `.gitignore`) are often outside what a generic pattern captures. A `*.json` may not catch `.babelrc.json` depending on the implementation. If you want to include them, be explicit: `.*` or `**/.*.json`."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "glob-reference",
+          "title": "Quick reference",
+          "summary": "Glob pattern cheat sheet",
+          "subsections": [
+            {
+              "title": "All the symbols",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Symbol", "Description", "Example"],
+                  "rows": [
+                    ["*", "Any string within one segment. Doesn't cross slashes.", "*.ts → index.ts, utils.ts"],
+                    ["**", "Any string crossing directories. Must be isolated between slashes.", "src/**/*.ts → src/a/b/c.ts"],
+                    ["?", "Exactly one character. Doesn't cross slashes.", "v?.md → v1.md, vA.md"],
+                    ["[ ]", "One character from the set or range.", "[0-9].txt → 0.txt, 9.txt"],
+                    ["[! ]", "A character NOT in the set.", "[!_]*.js → excludes _private.js"],
+                    ["{ }", "Comma-separated alternatives. Works as OR.", "*.{js,ts} → app.js, app.ts"],
+                    ["!", "Excludes paths matching the pattern. Goes at the start.", "!**/*.test.ts → excludes tests"],
+                    [".", "Literal dot. In globs it doesn't mean 'any character.'", "app.js matches only app.js"]
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "glob-tips",
+          "title": "Tips for writing globs",
+          "summary": "A strategy for writing correct patterns",
+          "subsections": [
+            {
+              "title": "The three key questions",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Which exact files should trigger the rule?",
+                      "body": "Be specific. For example: 'all TypeScript tests in src'"
+                    },
+                    {
+                      "title": "Which similar files should be left out?",
+                      "body": "Think about files that look alike but you don't want: .test.js vs .test.ts, /src vs /dist"
+                    },
+                    {
+                      "title": "Are there any trap subdirectories?",
+                      "body": "node_modules, dist, build — worth excluding explicitly"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "Answering those three questions first makes the pattern write almost itself."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

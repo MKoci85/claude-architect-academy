@@ -1,0 +1,165 @@
+{
+  "sections": [
+    {
+      "title": "Models and Versions",
+      "articles": [
+        {
+          "title": "Model catalog",
+          "subsections": [
+            {
+              "title": "Available models",
+              "blocks": [
+                {
+                  "type": "table",
+                  "columns": ["Model", "ID", "Input tokens", "Output tokens", "Best for"],
+                  "rows": [
+                    ["Haiku 4.5", "claude-haiku-4-5-20251001", "200K", "8K", "Fast, economical tasks"],
+                    ["Sonnet 4.6", "claude-sonnet-4-6", "200K", "8K", "Cost/performance balance"],
+                    ["Opus 4.8", "claude-opus-4-8", "200K", "8K", "Maximum capability and complexity"]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Features by model",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "items": [
+                    {
+                      "title": "Haiku 4.5",
+                      "items": [
+                        "Fastest",
+                        "Most economical",
+                        "200K context",
+                        "Simple, straightforward tasks"
+                      ]
+                    },
+                    {
+                      "title": "Sonnet 4.6",
+                      "items": [
+                        "Versatile",
+                        "Moderate cost",
+                        "200K context",
+                        "General production use"
+                      ]
+                    },
+                    {
+                      "title": "Opus 4.8",
+                      "items": [
+                        "Most powerful",
+                        "Highest cost",
+                        "200K context",
+                        "Complex tasks"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Querying available models via API",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The catalog above is a snapshot: it changes whenever Anthropic releases or retires models. `GET /v1/models` returns the list of models enabled for your API key at request time, instead of relying on a fixed table in your code or on this page."
+                },
+                {
+                  "type": "code",
+                  "language": "bash",
+                  "code": "curl https://api.anthropic.com/v1/models \\\n  -H \"x-api-key: $ANTHROPIC_API_KEY\" \\\n  -H \"anthropic-version: 2023-06-01\""
+                },
+                {
+                  "type": "text",
+                  "content": "It makes sense to use it when:"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🔀",
+                      "title": "Dynamic selector",
+                      "description": "Populate a model dropdown in an admin UI without hardcoding or redeploying every time a new model ships."
+                    },
+                    {
+                      "icon": "✅",
+                      "title": "Validate before pinning an ID",
+                      "description": "Confirm that a model ID is still current before saving it to configuration, instead of discovering in production that it was retired."
+                    },
+                    {
+                      "icon": "🔔",
+                      "title": "Detect new models",
+                      "description": "A periodic job that checks whether a newer model appeared, without relying on manually reading the changelog."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Not needed for normal use",
+                  "content": "To simply call Claude with a known model, `GET /models` isn't necessary — the `model` is passed directly in `POST /messages`. This endpoint matters only when the catalog itself is part of the application logic (dynamic selection, validation, availability monitoring)."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "When to use each model",
+          "subsections": [
+            {
+              "title": "Selection criteria",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Choose the model based on three factors: required speed, task complexity, and budget."
+                },
+                {
+                  "type": "stats",
+                  "stats": [
+                    {
+                      "label": "Haiku 4.5",
+                      "value": "Fastest",
+                      "note": "For millisecond responses and low cost"
+                    },
+                    {
+                      "label": "Sonnet 4.6",
+                      "value": "Balanced",
+                      "note": "For most use cases"
+                    },
+                    {
+                      "label": "Opus 4.8",
+                      "value": "Premium",
+                      "note": "For maximum quality and complexity"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Usage examples",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Haiku 4.5",
+                      "description": "Quick summaries, FAQ answers, simple classification, basic chatbot"
+                    },
+                    {
+                      "title": "Sonnet 4.6",
+                      "description": "Content analysis, writing, professional translation, advanced search"
+                    },
+                    {
+                      "title": "Opus 4.8",
+                      "description": "Complex reasoning, advanced code, deep analysis, research"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
