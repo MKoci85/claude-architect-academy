@@ -974,17 +974,17 @@
             "id": "D1-Q61",
             "taskStatement": "1.3",
             "scenario": "developer-productivity",
-            "concept": "task-tool-required-for-spawning",
+            "concept": "agent-tool-required-for-spawning",
             "difficulty": "hard",
-            "text": "A team builds a coordinator agent using the Claude Agent SDK. The coordinator's AgentDefinition specifies tools: [\"Read\", \"Grep\", \"WebSearch\"] but does not include \"Task\" in that list. During testing, the coordinator generates a text response describing which subagents it would invoke, but no subagent ever actually runs. What is the most likely cause?",
+            "text": "A team builds a coordinator agent using the Claude Agent SDK. The coordinator's AgentDefinition specifies tools: [\"Read\", \"Grep\", \"WebSearch\"] but does not include \"Agent\" in that list. During testing, the coordinator generates a text response describing which subagents it would invoke, but no subagent ever actually runs. What is the most likely cause?",
             "options": [
               "The subagent AgentDefinitions themselves are missing a required 'model' field, so the SDK silently declines to spawn them.",
-              "The coordinator's allowedTools does not include \"Task\", so the model has no mechanism available to invoke subagents — it can only describe the intent in text.",
-              "WebSearch and Task are mutually exclusive in the same tools array; the coordinator must choose one capability set per invocation.",
+              "The coordinator's allowedTools does not include \"Agent\", so the model has no mechanism available to invoke subagents — it can only describe the intent in text.",
+              "WebSearch and Agent are mutually exclusive in the same tools array; the coordinator must choose one capability set per invocation.",
               "The subagents are defined correctly, but the coordinator needs an explicit 'delegate_to' tool_choice forcing to trigger the first invocation."
             ],
             "correctAnswer": 1,
-            "explanation": "Spawning subagents requires the Task tool in the parent's allowed tools; without it the model can only narrate intent in text; the trap is option A, which sounds like a plausible configuration miss (a missing 'model' field) but that field is optional and inherits from the parent — it wouldn't block spawning at all."
+            "explanation": "Spawning subagents requires the Agent tool in the parent's allowed tools (renamed from \"Task\" to \"Agent\" in Claude Code v2.1.63); without it the model can only narrate intent in text. The trap is option A, which sounds like a plausible configuration miss (a missing 'model' field) but that field is optional and inherits from the parent — it wouldn't block spawning at all."
           },
           {
             "id": "D1-Q62",
@@ -1006,17 +1006,17 @@
             "id": "D1-Q63",
             "taskStatement": "1.5",
             "scenario": "developer-productivity",
-            "concept": "posttool-hook-data-normalization",
+            "concept": "mcp-output-normalize-at-source",
             "difficulty": "medium",
             "text": "A team wants every MCP tool result returned by a third-party inventory server to be normalized before the model sees it — timestamps converted from Unix epoch to ISO 8601, and numeric status codes translated into human-readable strings. They also want this transformation to happen deterministically, every time, without depending on the model choosing to re-format the data itself. Which mechanism is the correct fit?",
             "options": [
               "A system prompt instruction telling the model to always convert timestamps and status codes before including them in its reasoning.",
-              "A few-shot example showing a raw tool result being converted to the normalized format, so the model learns to replicate the transformation.",
               "A PostToolUse hook that intercepts the tool result and rewrites it into the normalized format before it is appended to the conversation.",
+              "Wrap the MCP server (or add a thin proxy in front of it) so the tool itself returns already-normalized timestamps and status strings, with no separate transformation step needed afterward.",
               "A PreToolUse hook that validates the tool call parameters match the expected schema before the call is executed."
             ],
             "correctAnswer": 2,
-            "explanation": "A PostToolUse hook deterministically normalizes tool output before the model sees it, independent of model behavior; the trap is option A, a system prompt instruction, which sounds sufficient since it directly tells the model what to do, but prompt-based conversion is probabilistic and can be skipped under load or ambiguity."
+            "explanation": "Wrapping the tool at the source is the only deterministic fix here, because no Claude Code hook can transform a tool's return value: PreToolUse only inspects and can block before the call runs, and PostToolUse only observes and can trigger side effects after the call completes — neither rewrites what the model actually sees. The trap is option B, a PostToolUse hook 'intercepting and rewriting' the result — it sounds exactly right and matches how many teams assume hooks work, but PostToolUse is read-only observation, not a rewrite point; the only way to guarantee normalized data reaches the model is to fix the format at the source."
           },
           {
             "id": "D1-Q64",
@@ -1099,7 +1099,7 @@
             "text": "A coordinator spawns a synthesis subagent after web-search and document-analysis subagents finish. The synthesis subagent produces oddly generic output that ignores specific facts the other subagents found, even though all three subagents report success. Which two of the following are plausible causes worth checking first?",
             "options": [
               "The coordinator's prompt to the synthesis subagent references that prior findings exist but doesn't include their complete content.",
-              "The coordinator's allowedTools configuration is missing \"Task\", so subagent invocation silently fails.",
+              "The coordinator's allowedTools configuration is missing \"Agent\", so subagent invocation silently fails.",
               "The prior findings were passed to the synthesis subagent as unstructured text, without separating content from source metadata.",
               "The synthesis subagent is running with a smaller context window than the other subagents."
             ],
@@ -1107,7 +1107,7 @@
               0,
               2
             ],
-            "explanation": "Generic output usually traces back to findings being referenced rather than fully included, or passed as unstructured text without separating content from source metadata; the trap is option B, which sounds like a plausible infrastructure failure, but a missing Task tool would prevent subagent spawning entirely — the whole pipeline would fail, not just degrade to generic output.",
+            "explanation": "Generic output usually traces back to findings being referenced rather than fully included, or passed as unstructured text without separating content from source metadata; the trap is option B, which sounds like a plausible infrastructure failure, but a missing Agent tool would prevent subagent spawning entirely — the whole pipeline would fail, not just degrade to generic output.",
             "selectCount": 2
           },
           {
@@ -1134,21 +1134,17 @@
             "id": "D1-Q70",
             "taskStatement": "1.5",
             "scenario": "developer-productivity",
-            "concept": "posttool-hook-data-normalization",
-            "difficulty": "medium",
-            "text": "Your agent pulls order data from three different MCP tools, each returning dates in a different format (Unix timestamp, ISO 8601, and a custom \"MM/DD/YYYY\" string). The agent frequently reasons incorrectly about which order is most recent. Which two of the following are appropriate fixes?",
+            "concept": "posttool-cannot-block-already-ran",
+            "difficulty": "hard",
+            "text": "A team wants to prevent Claude Code from ever running `rm -rf` inside a shared data directory. They configure a hook on the PostToolUse event that detects the command in the Bash tool's input and attempts to reject it. During a test, the agent runs the destructive command and the files are deleted before the team is alerted. What is the architecturally correct fix?",
             "options": [
-              "Add a PostToolUse hook that normalizes each tool's date field into one consistent format before the result is appended to the conversation.",
-              "Instruct the agent in the system prompt to mentally convert every date format to ISO 8601 before comparing them.",
-              "Modify or wrap the underlying MCP tools so they all return dates in one agreed-upon format at the source.",
-              "Increase max_tokens so the agent has more room to reason through the date conversions."
+              "Nothing needs to change structurally — a hook attached to PostToolUse can reject a tool call just like one attached to PreToolUse; the deletion in the test was caused by an unrelated bug in the hook script.",
+              "Move the check to a PreToolUse hook, which runs before the command executes and can deny the call outright, instead of a PostToolUse hook, which only runs after the tool has already completed.",
+              "Keep the check on PostToolUse, but make the resulting alert more urgent (e.g., paging on-call immediately) so a human can intervene before real damage occurs.",
+              "Add a second, redundant PostToolUse hook that re-checks the same condition, so at least one of the two catches the destructive command in time."
             ],
-            "correctAnswers": [
-              0,
-              2
-            ],
-            "explanation": "A PostToolUse normalization hook and fixing the format at the source both deterministically guarantee consistent dates reach the model; the trap is option B, which sounds workable by asking the agent to mentally convert formats, but relying on the model to reformat inconsistently-structured data on the fly is exactly the probabilistic approach known to fail under load.",
-            "selectCount": 2
+            "correctAnswer": 1,
+            "explanation": "PostToolUse fires only after a tool call has already executed, so no hook attached to that event — no matter how it's written — can prevent the action itself; by the time it runs, the destructive command has already deleted the files. Only a PreToolUse hook, which runs before execution and can deny the call, can actually stop it. The trap is option D, adding a second redundant PostToolUse hook — doubling up sounds like it improves the odds of catching the problem, but both hooks fire at the same point in the lifecycle, after the command already ran, so neither one — nor both together — changes the fundamental timing problem."
           },
           {
             "id": "D1-Q71",
@@ -1194,12 +1190,12 @@
             "id": "D1-Q73",
             "taskStatement": "1.3",
             "scenario": "multi-agent-research",
-            "concept": "parallel-task-tool-calls",
+            "concept": "parallel-agent-tool-calls",
             "difficulty": "medium",
             "text": "A coordinator needs to research three independent subtopics in parallel using three subagents. Which two implementation choices correctly achieve true parallel execution consistent with the Agent SDK's design?",
             "options": [
-              "Emit all three Task tool calls within a single coordinator response, rather than issuing them across separate turns.",
-              "Issue the three Task tool calls across three separate coordinator turns, waiting for each subagent to finish before starting the next.",
+              "Emit all three Agent tool calls within a single coordinator response, rather than issuing them across separate turns.",
+              "Issue the three Agent tool calls across three separate coordinator turns, waiting for each subagent to finish before starting the next.",
               "Give each subagent its own scoped subtopic and context directly in its prompt so results can be aggregated independently.",
               "Route all three subagents through a shared, live conversation history so they can see each other's progress in real time."
             ],
@@ -1207,7 +1203,7 @@
               0,
               2
             ],
-            "explanation": "True parallel execution requires all Task calls in one coordinator response plus scoped context passed to each subagent directly; the trap is option D, which sounds collaborative by sharing a live conversation feed across subagents, but that breaks the context isolation subagents are designed to have and isn't how parallel subagent execution works.",
+            "explanation": "True parallel execution requires all Agent tool calls in one coordinator response plus scoped context passed to each subagent directly; the trap is option D, which sounds collaborative by sharing a live conversation feed across subagents, but that breaks the context isolation subagents are designed to have and isn't how parallel subagent execution works.",
             "selectCount": 2
           }
         ]
@@ -2786,20 +2782,20 @@
             "id": "D3-Q43",
             "taskStatement": "2.5",
             "scenario": "developer-productivity",
-            "concept": "grep-vs-glob-selection",
+            "concept": "bash-vs-dedicated-search-tools",
             "difficulty": "medium",
-            "text": "A developer-productivity agent is asked to trace every caller of a function named calculateShipping across a large codebase, including calls that go through two wrapper modules that re-export it under different names. Which two tool-use strategies are correct for this task?",
+            "text": "A coding agent has both a Bash tool and dedicated Grep/Glob tools available. For a task that requires finding every file containing a specific string across a large monorepo, the agent instead runs a hand-built Bash pipeline (`find . -type f | xargs grep -l \"pattern\"`) and gets correct results. Which two problems does this choice introduce even though the output was correct this time?",
             "options": [
-              "Start with Grep to find calculateShipping's definition and initial direct callers, then identify the wrapper modules' exported names and Grep again for each of those names.",
-              "Use Glob to locate all files matching a naming pattern like **/shipping*.ts before reading any of them, to scope the investigation before searching content.",
-              "Use Read to open every file in the repository sequentially, scanning each one visually for the string \"calculateShipping\".",
-              "Use Write to create a new file listing the callers the agent expects based on its general knowledge of typical shipping-calculation code, without actually searching the codebase."
+              "A small shell-escaping or quoting mistake in the hand-built pipeline can silently return incomplete or wrong results without raising any error, whereas the dedicated tool takes structured parameters with no shell-escaping surface.",
+              "Routing the search through a general-purpose shell command is a broader, less-scoped action to grant permission for than a single-purpose tool built for exactly that operation.",
+              "The dedicated Grep tool's underlying search algorithm is asymptotically faster than any shell-based grep implementation, so it always completes before a Bash pipeline would.",
+              "Bash cannot execute a command containing the word \"grep\" inside a sandboxed agent environment, so the pipeline would fail outright rather than merely being discouraged."
             ],
             "correctAnswers": [
               0,
               1
             ],
-            "explanation": "Grep first for the direct definition and callers, then Grep again for each re-exported wrapper name, plus Glob to narrow scope by filename pattern before deeper searching, is the standard incremental-search pattern for tracing indirection. The trap is option D, using Write to list expected callers based on general knowledge of typical shipping-calculation code — this produces a plausible-looking but entirely unverified list; nothing in that approach actually searches the codebase, so the result may not reflect the real call sites at all.",
+            "explanation": "A hand-built shell pipeline has a real, silent failure mode from quoting or escaping mistakes that a structured tool call doesn't, and it also asks for a broader permission grant (arbitrary shell execution) than a scoped search tool needs. The trap is option D, claiming Bash would categorically fail to run a command containing \"grep\" in a sandboxed environment — it sounds like a hard technical safety rule, but no such blanket restriction exists; the real reason to prefer the dedicated tool is scope and reliability, not that the shell alternative is impossible.",
             "selectCount": 2
           },
           {
@@ -3662,21 +3658,17 @@
             "id": "D4-Q50",
             "taskStatement": "4.6",
             "scenario": "ci-cd",
-            "concept": "review-architecture-combo",
-            "difficulty": "medium",
-            "text": "A code-review pipeline currently has the same Claude session generate a fix and then, within that same session, review its own diff. Separately, a 20-file pull request reviewed in a single pass produces contradictory findings — a pattern flagged as problematic in one file is approved in another. Which two architectural changes correctly address these two problems?",
+            "concept": "reviewer-model-capability-parity",
+            "difficulty": "hard",
+            "text": "A team adopts independent-instance review: a flagship-model instance generates code changes, and a separate, smaller/cheaper model instance reviews each diff with no access to the generator's reasoning, to cut review costs. A race condition introduced by a change to async task ordering passes review undetected three times in a row before a human catches it in staging. What is the correct architectural response?",
             "options": [
-              "Use a second, independent Claude instance without the generator's reasoning context to review the generated fix.",
-              "Split the 20-file review into focused per-file passes plus a separate cross-file integration pass to reduce attention dilution.",
-              "Ask the generating session to enable extended thinking before self-review, since more reasoning steps reliably substitute for independent review.",
-              "Increase max_tokens for the single-pass 20-file review so the model has enough room to give every file equal attention within the same context."
+              "Nothing needs to change — the independent-instance principle already worked correctly since the reviewer wasn't the same session as the generator; the miss is unrelated to which model did the reviewing.",
+              "Upgrade the reviewing instance to a model of at least comparable capability to the generator, since a reviewer that can't reason as deeply as the code that produced the change will systematically miss the same class of subtle bugs.",
+              "Keep the smaller review model, but run it three times per diff and require agreement between at least two of the three passes, since more sampling substitutes for capability.",
+              "Route every future async/concurrency-related change to a rule-based static analysis linter instead of any LLM review, since deterministic tools should replace the review model wherever possible."
             ],
-            "correctAnswers": [
-              0,
-              1
-            ],
-            "explanation": "An independent reviewing instance without the generator's retained reasoning avoids the self-review bias where a session justifies decisions it already made, and splitting the 20-file review into per-file passes plus a cross-file integration pass fixes the attention-dilution problem causing contradictory findings. The trap is option C, enabling extended thinking before self-review — more visible reasoning steps sound like they'd substitute for genuine independent scrutiny, but extended thinking makes the same session's reasoning more transparent, not less biased; the session still carries forward the justification for choices it already made, which is the actual problem independent review solves.",
-            "selectCount": 2
+            "correctAnswer": 1,
+            "explanation": "A reviewer with a genuine capability gap misses the same class of subtle bug consistently, because the miss comes from what the model can reason about, not from randomness — so review-model capability has to be addressed directly. The trap is option C, running the same weaker model three times and requiring majority agreement — that pattern worked for the per-file/integration-pass split elsewhere in this task area, which tempts you to over-generalize 'more passes fixes review gaps,' but a systematic capability gap produces the same blind spot on every pass, so voting across three identical-capability runs doesn't surface what none of them can reason about."
           },
           {
             "id": "D4-Q51",
@@ -4406,41 +4398,33 @@
             "id": "D5-Q43",
             "taskStatement": "5.5",
             "scenario": "structured-extraction",
-            "concept": "stratified-sampling-calibration",
-            "difficulty": "easy",
-            "text": "An extraction system reports 97% overall accuracy, but a spot-check reveals accuracy on handwritten invoices specifically is closer to 70%, while typed invoices are near 99%. The 97% aggregate had hidden this gap. Which two practices correctly prevent this kind of blind spot going forward?",
+            "concept": "stratum-sample-size-adequacy",
+            "difficulty": "hard",
+            "text": "After adopting stratified sampling by document type, a team looks at the smallest stratum — handwritten invoices, only 40 records out of 50,000 total. They draw 2 samples from that stratum, find both correctly extracted, and conclude the stratum is now safe to automate with no human review. What is wrong with this conclusion?",
             "options": [
-              "Analyze accuracy by document type and field segment, rather than relying on a single aggregate accuracy number, to catch performance gaps hidden within specific segments.",
-              "Use stratified random sampling across document types, not just high-confidence extractions in aggregate, to measure error rates and catch novel error patterns in underperforming segments.",
-              "Continue reporting only the aggregate 97% figure, since the overall number is what matters for the automation go/no-go decision.",
-              "Stop measuring accuracy on handwritten invoices entirely, since they are inherently harder and will always underperform typed documents."
+              "The conclusion is valid — stratified sampling already accounts for stratum size proportionally, so drawing any number of samples from each stratum is sufficient by design.",
+              "Two samples is far too small to estimate that stratum's error rate with any real confidence; for a stratum this small, the sample size needed for a meaningful estimate may approach reviewing the entire 40-record stratum rather than a token draw.",
+              "The conclusion is invalid, but only because stratified sampling should never be applied to a stratum smaller than 1% of the total population; a stratum that small should be merged into the next-largest stratum instead.",
+              "The conclusion is invalid because handwritten invoices should be excluded from the automated pipeline entirely, regardless of what any sample shows."
             ],
-            "correctAnswers": [
-              0,
-              1
-            ],
-            "explanation": "Segmenting accuracy by document type and field is what surfaces a gap like handwritten-invoice performance (70%) hidden inside an aggregate (97%), and stratified sampling ensures that underperforming segment actually gets measured instead of being diluted away by the much larger typed-invoice population. The trap is option D, excluding handwritten invoices from measurement entirely since they're 'inherently harder' — this sounds like an honest acknowledgment of a known weakness, but it doesn't fix the accuracy problem, it just stops looking at it, which reintroduces exactly the kind of blind spot stratified sampling was adopted to prevent.",
-            "selectCount": 2
+            "correctAnswer": 1,
+            "explanation": "Stratification guarantees that every stratum gets represented in the sample, but it says nothing about whether the number drawn from a given stratum is large enough to estimate that stratum's error rate reliably — two samples from a 40-record stratum could show 2/2 correct by chance even if the stratum's true error rate is high. The trap is option C, inventing a specific-sounding '1% of total population' threshold rule for when to merge strata — it has the shape of a real statistical convention, but no such rule exists here; the actual fix is sizing the sample (or reviewing the stratum in full, given how small it is) to the confidence the decision requires, not discarding the stratum's own visibility."
           },
           {
             "id": "D5-Q44",
             "taskStatement": "5.6",
             "scenario": "multi-agent-research",
-            "concept": "source-conflict-and-temporal-provenance",
-            "difficulty": "easy",
-            "text": "A synthesis agent combines findings from two credible sources reporting different GDP growth figures for the same quarter (2.1% vs. 3.4%), and separately combines two reports published six months apart that show different revenue figures for the same company. Which two synthesis practices are correct?",
+            "concept": "supersession-vs-genuine-conflict",
+            "difficulty": "hard",
+            "text": "A synthesis agent processes two filings from the same company: an April earnings report stating Q1 revenue of $12M, and a July restated filing stating, explicitly, \"This restatement corrects and supersedes the Q1 figure reported in April; the corrected Q1 revenue is $10.5M due to a revenue-recognition error.\" The agent's synthesis logic treats every numeric mismatch between sources as a contested figure to preserve with both values and attribution, per the standard rule against silently resolving conflicts. Applying that rule here, what is the correct outcome?",
             "options": [
-              "Preserve both conflicting GDP figures in the output with explicit source attribution for each, rather than arbitrarily selecting one or averaging them.",
-              "Require subagents to include publication or data-collection dates in their structured outputs, so a six-month gap is correctly interpreted as a temporal difference rather than a contradiction.",
-              "Average the two conflicting GDP figures into a single blended number to present a clean, unambiguous result to the reader.",
-              "Omit the revenue figures entirely from the final report, since any numeric discrepancy between sources should be treated as unreliable and excluded."
+              "Preserve both $12M and $10.5M as contested figures with source attribution for each, exactly like any other numeric disagreement between two sources.",
+              "Recognize that this is not a genuine conflict between two independent sources but an explicit self-correction: the restated $10.5M is the current authoritative figure, and the April figure should be represented as the superseded prior value, not as a competing claim.",
+              "Average $12M and $10.5M into a blended $11.25M figure, since both numbers originate from the same company and should be reconciled into one number.",
+              "Discard the April figure entirely and omit any mention that a restatement occurred, since only the most recent number should ever appear in a synthesis report."
             ],
-            "correctAnswers": [
-              0,
-              1
-            ],
-            "explanation": "Preserving both conflicting GDP figures with source attribution surfaces the real disagreement instead of manufacturing a false consensus, and requiring publication/collection dates lets a genuine six-month gap in the revenue reports be correctly read as a temporal difference rather than a contradiction. The trap is option D, omitting the revenue figures entirely because 'any numeric discrepancy should be treated as unreliable' — this treats a temporal difference as if it were the same kind of problem as a true contradiction, discarding real information instead of correctly attributing it to when each report was published, which the date field in option B would have already resolved.",
-            "selectCount": 2
+            "correctAnswer": 1,
+            "explanation": "The July filing isn't a second, independent source disagreeing with the first — it's the same source explicitly stating the earlier number is superseded, which makes this a correction to represent, not a conflict to preserve. The trap is option A: it correctly recalls the rule from other cases (never silently resolve a numeric disagreement, always preserve both with attribution), but applies it past where it holds — a source's own explicit self-correction isn't a disagreement between two claims, so treating it as one misrepresents a routine restatement as an open dispute."
           }
         ]
       }

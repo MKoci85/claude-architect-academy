@@ -62,8 +62,38 @@
                   "code": "def chunk_by_size(text, size=800, overlap=150):\n    chunks = []\n    start = 0\n    while start < len(text):\n        end = start + size\n        chunks.append(text[start:end])\n        start = end - overlap  # step back to preserve continuity\n    return chunks"
                 },
                 {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The risk isn't just cosmetic",
+                  "content": "Poor chunking doesn't just cut sentences in half — it can make retrieval pull the wrong chunk entirely. Example: a document with a medical research section describing a pathogen called \"bug\" (XDR-47) and an engineering section describing \"infection vectors\" in distributed systems. Given the question \"how many bugs did engineers fix this year?\", a chunk that doesn't respect the boundary between the two sections can rank the medical fragment highly: it shares the word \"bug\" with the query, even though it's about something completely different."
+                },
+                {
                   "type": "text",
-                  "content": "There's a third strategy, semantic chunking: instead of cutting by character count or structural markers, it measures the meaning similarity between consecutive sentences (with embeddings) and groups the ones that are thematically related, cutting where the topic changes. It produces the most coherent chunks of the three, but it's the most expensive to compute (one embedding per sentence, not per chunk) and the most complex to implement — for most cases, fixed size with overlap or by-structure is enough."
+                  "content": "Between fixed-size and semantic chunking there's a cheap middle ground: cutting on sentence boundaries. It doesn't need to measure meaning similarity (no embedding-model call involved), but it avoids the mid-sentence cutoff problem that character-based chunking has."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import re\n\ndef chunk_by_sentence(text, sentences_per_chunk=5, sentence_overlap=1):\n    sentences = re.split(r\"(?<=[.!?])\\s+\", text)\n    chunks = []\n    start = 0\n    while start < len(sentences):\n        end = min(start + sentences_per_chunk, len(sentences))\n        chunks.append(\" \".join(sentences[start:end]))\n        start += sentences_per_chunk - sentence_overlap\n    return chunks"
+                },
+                {
+                  "type": "text",
+                  "content": "By-structure chunking, in its simplest version, is a split on the document's header marker:"
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import re\n\ndef chunk_by_section(text):\n    return re.split(r\"\\n## \", text)"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The naive split loses the header marker",
+                  "content": "re.split discards the delimiter (\"\\n## \") from the result — the chunk keeps the title text as its first line but loses the \"##\" that identified it as a header. If that title is valuable information for retrieval (it signals which section the chunk came from), it's worth re-injecting it into the chunk explicitly instead of relying on it surviving the split — the same idea contextual retrieval applies more generally, see below."
+                },
+                {
+                  "type": "text",
+                  "content": "There's a fourth strategy, semantic chunking: instead of cutting by character count or structural markers, it measures the meaning similarity between consecutive sentences (with embeddings) and groups the ones that are thematically related, cutting where the topic changes. It produces the most coherent chunks of all four, but it's the most expensive to compute (one embedding per sentence, not per chunk) and the most complex to implement — for most cases, fixed size with overlap, by-sentence, or by-structure is enough."
                 },
                 {
                   "type": "table",
@@ -203,6 +233,32 @@
                   "type": "code",
                   "language": "python",
                   "code": "from rank_bm25 import BM25Okapi\n\n# lexical search with BM25\ntokenized_corpus = [chunk.lower().split() for chunk in all_chunks]\nbm25 = BM25Okapi(tokenized_corpus)\nquery_tokens = \"error code E04 payment failure\".lower().split()\nscores = bm25.get_scores(query_tokens)\ntop_k_bm25 = sorted(zip(all_chunks, scores), key=lambda x: x[1], reverse=True)[:5]\n\n# ranking fusion: vector + BM25\ndef reciprocal_rank_fusion(vector_ranking, bm25_ranking, k=60):\n    scores = {}\n    for rank, (chunk_id, _) in enumerate(vector_ranking):\n        scores[chunk_id] = scores.get(chunk_id, 0) + 1 / (k + rank)\n    for rank, (chunk_id, _) in enumerate(bm25_ranking):\n        scores[chunk_id] = scores.get(chunk_id, 0) + 1 / (k + rank)\n    return sorted(scores.items(), key=lambda x: x[1], reverse=True)\n\n# re-ranking with Claude (for moderate corpora)\nrelevance_tool = {\n    \"name\": \"score_relevance\",\n    \"description\": \"Scores how relevant a fragment is to the question\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\"score\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1}},\n        \"required\": [\"score\"],\n    },\n}\n\ndef score(question, chunk):\n    r = client.messages.create(\n        model=\"claude-haiku-4-5-20251001\", max_tokens=50,\n        tools=[relevance_tool], tool_choice={\"type\": \"tool\", \"name\": \"score_relevance\"},\n        messages=[{\"role\": \"user\", \"content\": f\"Question: {question}\\nFragment: {chunk}\"}],\n    )\n    return r.content[0].input[\"score\"]\n\nreranked_candidates = sorted(top_20_candidates, key=lambda c: score(question, c), reverse=True)[:5]"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "BM25 doesn't do preprocessing for you",
+                  "content": "`rank_bm25` doesn't apply any text preprocessing — the library documents this itself: lowercasing, stopword removal, stemming are the caller's responsibility. The `chunk.lower().split()` in the code above tokenizes on whitespace only, so punctuation stays glued to the token (\"E04\" and \"E04,\" are different tokens). This hits especially hard for BM25, because its advantage over embeddings is precisely exact matching of codes and acronyms — the same case the example above uses. In production it's worth at least stripping punctuation before tokenizing, or passing a custom tokenizer: `BM25Okapi(corpus, tokenizer=my_tokenizer)`."
+                },
+                {
+                  "type": "table",
+                  "columns": ["BM25Okapi parameter", "What it controls", "Default"],
+                  "rows": [
+                    ["k1", "Term frequency saturation: how much a term repeating many times in the document keeps adding to the score. Higher = repetitions keep mattering; lower = repeating a term more than once or twice stops adding much.", "1.5"],
+                    ["b", "Document length normalization: 0 disables it (a long document isn't penalized), 1 applies it fully (a long document needs a higher term density to rank the same as a short one).", "0.75"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "If the corpus has documents of very uneven length",
+                  "content": "`rank_bm25` also exposes `BM25L` and `BM25Plus`, built for corpora where `BM25Okapi` tends to undervalue long documents (or gives a score of 0 to a relevant document that doesn't contain any exact query term). Both add a `delta` parameter (default 0.5 and 1 respectively) that keeps the score from collapsing to zero. They share the same interface — `BM25L(tokenized_corpus)`, `.get_scores(query_tokens)` — so switching between them doesn't touch the rest of the fusion and re-ranking pipeline."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "What the RRF k parameter does",
+                  "content": "`k` isn't a ranking id, it's a smoothing constant: the smaller it is, the more relative weight the first position carries over the second (with k=1, position 1 contributes 1/2=0.5 and position 2 contributes 1/3≈0.33 — a large gap). The larger it is, the more it flattens the differences between nearby positions (with k=60, 1/61≈0.0164 vs 1/62≈0.0161 — almost the same) and the result behaves more like an average across both rankings. The value 60 isn't arbitrary: it comes from the original RRF paper (Cormack, Clarke, and Büttcher, SIGIR 2009), chosen empirically and still holding up nearly two decades later — no need to reinvent it without concrete evidence that another value performs better for your own corpus."
                 },
                 {
                   "type": "callout",

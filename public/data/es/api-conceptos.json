@@ -138,6 +138,32 @@
                 {
                   "type": "text",
                   "content": "Las imágenes se envían en base64 o como URLs. Soporta PNG, JPEG, GIF, WebP."
+                },
+                {
+                  "type": "text",
+                  "content": "Se pueden mandar varias imágenes en un mismo mensaje — Claude las analiza en conjunto, útil para comparar imágenes o para una secuencia como las páginas de un documento. Conviene anteponerle a cada una una etiqueta de texto corta (\"Image 1:\", \"Image 2:\") para poder referenciarlas por nombre en el prompt."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Límite", "Valor"],
+                  "rows": [
+                    ["Imágenes por request", "20 en claude.ai · 100 vía API en modelos con ventana de 200K tokens · 600 vía API en el resto"],
+                    ["Tamaño máximo por imagen", "10MB (base64) en la API directa"],
+                    ["Dimensión máxima", "8000×8000px"],
+                    ["Formatos soportados", "JPEG, PNG, GIF, WebP — las animaciones no, solo se usa el primer frame"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Con más de 20 imágenes en un mismo request, el límite de dimensión se pone más estricto",
+                  "content": "Por encima de 20 imágenes o bloques de documento en un mismo request se aplica un límite de tamaño por imagen más chico que los 8000px habituales — pasarlo devuelve un `invalid_request_error` que menciona \"many-image requests\". Para no pisarlo, conviene redimensionar cada imagen a un máximo de 2000px de lado, o mantener el request en 20 imágenes/documentos o menos."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El costo en tokens ya no es width×height/750",
+                  "content": "Claude ve las imágenes en parches de 28×28px (\"tokens visuales\"), no en píxeles sueltos: el costo real es `⌈width/28⌉ × ⌈height/28⌉`. Si viste la fórmula `(width × height) / 750` en algún lado, quedó obsoleta. Cada modelo tiene un tope de resolución nativa: los modelos Claude 4.7 en adelante usan el tier de alta resolución (hasta 2576px de lado largo, hasta 4784 tokens visuales); el resto usa el tier estándar (hasta 1568px de lado largo, hasta 1568 tokens visuales). Una imagen más grande que el tope de su tier se reescala antes de procesarse, preservando el aspect ratio."
                 }
               ]
             },
@@ -148,6 +174,34 @@
                   "type": "code",
                   "language": "python",
                   "code": "import anthropic\nimport base64\n\nclient = anthropic.Anthropic()\n\nwith open(\"imagen.jpg\", \"rb\") as f:\n    image_data = base64.standard_b64encode(f.read()).decode(\"utf-8\")\n\nmessage = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    messages=[\n        {\n            \"role\": \"user\",\n            \"content\": [\n                {\n                    \"type\": \"image\",\n                    \"source\": {\n                        \"type\": \"base64\",\n                        \"media_type\": \"image/jpeg\",\n                        \"data\": image_data,\n                    },\n                },\n                {\n                    \"type\": \"text\",\n                    \"text\": \"¿Qué ves en esta imagen?\"\n                }\n            ],\n        }\n    ],\n)\n\nprint(message.content[0].text)"
+                }
+              ]
+            },
+            {
+              "title": "Prompt engineering para vision",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Las mismas técnicas de prompt engineering que funcionan con texto aplican a imágenes — es un error común tratarlas como si necesitaran menos guía. Pedir \"¿cuántas canicas hay en esta imagen?\" a secas rinde peor que pedir un método explícito de conteo, con pasos de verificación."
+                },
+                {
+                  "type": "text",
+                  "content": "Ejemplo de prompt estructurado para una tarea de conteo:"
+                },
+                {
+                  "type": "code",
+                  "language": "text",
+                  "code": "Analizá esta imagen de canicas y determiná el conteo exacto con esta metodología:\n1. Identificá cada canica una por una. Asignale un número a cada una a medida que la identificás.\n2. Verificá el resultado contando con un método distinto: empezá desde la esquina inferior izquierda y contá fila por fila, de izquierda a derecha.\n¿Cuál es el número exacto y verificado de canicas en la imagen?"
+                },
+                {
+                  "type": "text",
+                  "content": "One-shot prompting también funciona igual que con texto: mandar una imagen de ejemplo junto con el análisis correcto antes de la imagen real a evaluar ancla el formato y el nivel de detalle de la respuesta."
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "Caso de uso real: evaluación de riesgo de incendio",
+                  "content": "Un ejemplo de producción: aseguradoras que evalúan riesgo de incendio en propiedades a partir de imagen satelital de alta resolución, en vez de mandar un inspector — pidiéndole a Claude que evalúe densidad y proximidad de árboles a la vivienda, ramas que cuelgan sobre el techo, y accesibilidad para vehículos de emergencia. Funciona por el mismo motivo que el conteo de canicas: un prompt con pasos de análisis específicos rinde muchísimo mejor que pedir una evaluación genérica de \"riesgo\"."
                 }
               ]
             }

@@ -15,7 +15,7 @@
                 },
                 {
                   "type": "table",
-                  "head": ["Parámetro", "Tipo", "Descripción"],
+                  "columns": ["Parámetro", "Tipo", "Descripción"],
                   "rows": [
                     ["model", "string", "El identificador del modelo, por ejemplo claude-sonnet-4-6. Determina costo por token, velocidad y capacidad de razonamiento."],
                     ["messages", "array de objetos", "La conversación completa hasta este punto. Cada objeto tiene role (user o assistant) y content. La API es stateless: hay que reenviar todo el historial en cada llamada."],
@@ -29,7 +29,7 @@
               "blocks": [
                 {
                   "type": "table",
-                  "head": ["Parámetro", "Tipo", "Descripción"],
+                  "columns": ["Parámetro", "Tipo", "Descripción"],
                   "rows": [
                     ["system", "string", "Instrucciones de contexto, rol y reglas que aplican desde el primer turno. Se envía como campo separado, no dentro de messages."],
                     ["temperature", "number · 0.0–1.0", "Controla aleatoriedad. Valores bajos = respuestas predecibles y enfocadas. Valores altos = más variación. Desde Opus 4.7 (incluye Opus 4.8): enviar un valor no-default devuelve error 400."],
@@ -47,7 +47,7 @@
               "blocks": [
                 {
                   "type": "table",
-                  "head": ["Parámetro", "Tipo", "Descripción"],
+                  "columns": ["Parámetro", "Tipo", "Descripción"],
                   "rows": [
                     ["tools", "array de objetos", "Define funciones externas que Claude puede invocar: nombre, descripción y un input_schema en JSON Schema. Claude decide cuándo y cómo usarlas."],
                     ["tool_choice", "object", "Controla si Claude debe usar una herramienta: auto (decide solo), any (debe usar alguna), tool (fuerza una específica), o none."],
@@ -84,7 +84,7 @@
                 },
                 {
                   "type": "table",
-                  "head": ["Valor", "Descripción", "Qué hacer"],
+                  "columns": ["Valor", "Descripción", "Qué hacer"],
                   "rows": [
                     ["end_turn", "El modelo terminó su respuesta de forma natural.", "Caso normal. Procesar la respuesta."],
                     ["max_tokens", "Se alcanzó el límite de max_tokens. La respuesta puede estar incompleta.", "Considerar continuar la generación o subir el límite según el caso."],
@@ -127,7 +127,7 @@
                 },
                 {
                   "type": "table",
-                  "head": ["Código", "Tipo", "Descripción"],
+                  "columns": ["Código", "Tipo", "Descripción"],
                   "rows": [
                     ["400", "invalid_request_error", "Problema con el formato o contenido de la petición: un parámetro mal escrito, un modelo inexistente, o prefill en un modelo que ya no lo soporta."],
                     ["401", "authentication_error", "Hay un problema con la API key: falta, está mal formada, o es inválida."],
@@ -171,7 +171,7 @@
                 },
                 {
                   "type": "table",
-                  "head": ["Evento", "Descripción"],
+                  "columns": ["Evento", "Descripción"],
                   "rows": [
                     ["message_start", "Llega primero, con un objeto Message vacío que define el inicio de la respuesta."],
                     ["content_block_start", "Marca el inicio de un nuevo bloque de contenido (texto, tool_use, etc.)."],

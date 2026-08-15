@@ -139,20 +139,11 @@
                   "items": [
                     {
                       "title": "Geographic (us., eu., apac.)",
-                      "rows": [
-                        "Routes only within the prefix's geography (US, EU, APAC, etc.)",
-                        "Standard model pricing",
-                        "Designed for data residency / regional compliance requirements"
-                      ]
+                      "rows": ["Routes only within the prefix's geography (US, EU, APAC, etc.)", "Standard model pricing", "Designed for data residency / regional compliance requirements"]
                     },
                     {
                       "title": "Global (global.)",
-                      "rows": [
-                        "Routes to any commercial AWS region worldwide",
-                        "Roughly 10% cheaper than standard pricing",
-                        "Designed to optimize cost when there's no data residency restriction",
-                        "Currently only available for Claude Sonnet 4"
-                      ]
+                      "rows": ["Routes to any commercial AWS region worldwide", "Roughly 10% cheaper than standard pricing", "Designed to optimize cost when there's no data residency restriction", "Currently only available for Claude Sonnet 4"]
                     }
                   ]
                 },
@@ -457,7 +448,6 @@
               "blocks": [
                 {
                   "type": "table",
-                  "head": ["Event", "Description"],
                   "rows": [
                     ["messageStart", "Starts a new message."],
                     ["contentBlockStart", "Starts a new content block — text, tool_use, or another type."],
@@ -465,7 +455,8 @@
                     ["contentBlockStop", "The current content block finished."],
                     ["messageStop", "The message finished. Carries the final `stopReason`."],
                     ["metadata", "Closes the stream with `usage` (tokens) and latency metrics."]
-                  ]
+                  ],
+                  "columns": ["Event", "Description"]
                 },
                 {
                   "type": "callout",
@@ -494,6 +485,681 @@
                   "style": "tip",
                   "title": "Billed by tokens generated, not by how they're delivered",
                   "content": "Using `converse_stream` instead of `converse` doesn't change the price: the model generates the same tokens, streaming only changes the transport (they arrive in chunks via events instead of all together at the end). The `usage` count that arrives in the `metadata` event reflects the same calculation you'd get without streaming. If your application closes the connection as soon as it has what it needs, it can even come out cheaper — you're only billed for the tokens generated up to that point, not for a full response that was never finished generating."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tool use in Bedrock",
+          "subsections": [
+            {
+              "title": "Message helpers need to accept multi-part content",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Multi-turn conversations → Helper functions for handling messages defines `add_user_message`/`add_assistant_message` assuming `content` is always a string. That stops being enough as soon as tool use enters the picture: an assistant message with tool use carries text and `toolUse` blocks mixed in the same `content` list, and a user message with a tool result carries `toolResult` blocks, not text. The helpers need to accept both shapes."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def add_user_message(messages, content):\n    if isinstance(content, str):\n        user_message = {\"role\": \"user\", \"content\": [{\"text\": content}]}\n    else:\n        user_message = {\"role\": \"user\", \"content\": content}\n    messages.append(user_message)\n\ndef add_assistant_message(messages, content):\n    if isinstance(content, str):\n        assistant_message = {\"role\": \"assistant\", \"content\": [{\"text\": content}]}\n    else:\n        assistant_message = {\"role\": \"assistant\", \"content\": content}\n    messages.append(assistant_message)"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Extracting text with content[0][\"text\"] is fragile",
+                  "content": "When Claude requests a tool, `content` carries several parts — typically text explaining the intent followed by one or more `toolUse` blocks. Reading only `content[0][\"text\"]` assumes the first part is always text and that there's exactly one text part; if the order changes or the text is split across more than one block, it either raises a `KeyError` or silently drops content. It's more robust to walk every part and join the ones that have `text`: `\"\\n\".join(p[\"text\"] for p in parts if \"text\" in p)`."
+                }
+              ]
+            },
+            {
+              "title": "toolConfig: the equivalent of tools in the Converse API",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Same concept, different shape",
+                  "content": "Declaring tools so the model can request their execution is the same tool use technique already documented in Claude API → Tool Use. What changes in Bedrock's Converse API is the parameter name (`toolConfig` instead of `tools`) and the nested shape of each tool's schema."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def chat(messages, system=None, temperature=1.0, stop_sequences=[], tools=None):\n    params = {\n        \"modelId\": model_id,\n        \"messages\": messages,\n        \"inferenceConfig\": {\n            \"temperature\": temperature,\n            \"stopSequences\": stop_sequences,\n        },\n    }\n\n    if system:\n        params[\"system\"] = [{\"text\": system}]\n\n    if tools:\n        params[\"toolConfig\"] = {\"tools\": tools, \"toolChoice\": {\"auto\": {}}}\n\n    response = client.converse(**params)\n    parts = response[\"output\"][\"message\"][\"content\"]\n\n    return {\n        \"parts\": parts,\n        \"stop_reason\": response[\"stopReason\"],\n        \"text\": \"\\n\".join(p[\"text\"] for p in parts if \"text\" in p),\n    }"
+                },
+                {
+                  "type": "text",
+                  "content": "`toolConfig` accepts two keys: `tools` (required, the list of tools) and `toolChoice` (optional — if omitted, the default is already `{\"auto\": {}}`, the model decides freely)."
+                }
+              ]
+            },
+            {
+              "title": "toolSpec: the schema nested under inputSchema.json",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Each entry in `tools` wraps the schema in a `toolSpec` key with `name`, `description`, and `inputSchema`. The difference from the Anthropic SDK (where `input_schema` is directly the JSON Schema) is that in Bedrock the actual JSON Schema sits one level deeper, under `inputSchema.json`."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "get_current_datetime_schema = {\n    \"toolSpec\": {\n        \"name\": \"get_current_datetime\",\n        \"description\": (\n            \"Retrieves the current date and time formatted according to the \"\n            \"specified format string. Use it when the user needs to know the \"\n            \"current date, time, or both in a specific format. Does not support \"\n            \"other time zones or historical/future dates.\"\n        ),\n        \"inputSchema\": {\n            \"json\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"date_format\": {\n                        \"type\": \"string\",\n                        \"description\": \"strftime format string, e.g. '%Y-%m-%d %H:%M:%S'\",\n                    }\n                },\n            }\n        },\n    }\n}"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The most common mistake: putting the JSON Schema directly in inputSchema",
+                  "content": "`inputSchema` is itself a Union object — its only documented member is `json`. Writing `\"inputSchema\": {\"type\": \"object\", ...}` instead of `\"inputSchema\": {\"json\": {\"type\": \"object\", ...}}` is the most frequent nesting mistake when porting a schema from the Anthropic SDK."
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "strict: structured output enforcement at the tool level",
+                  "content": "`ToolSpecification` also accepts an optional boolean `strict` field, to force that tool's output to strictly follow the schema. It wasn't present in earlier versions of the Converse API — if the goal is guaranteed structured output, confirm the chosen model supports it before relying on it."
+                }
+              ]
+            },
+            {
+              "title": "toolChoice: auto, any, and the tool exception",
+              "blocks": [
+                {
+                  "type": "table",
+                  "rows": [
+                    ["{\"auto\": {}}", "Default. The model freely decides whether to use a tool or respond with text."],
+                    ["{\"any\": {}}", "The model must request some tool from the list — it can't respond with text alone."],
+                    ["{\"tool\": {\"name\": \"...\"}}", "Forces a specific tool. Only supported by Anthropic Claude 3 and Amazon Nova models per AWS documentation — don't assume it applies to every model on Bedrock."]
+                  ],
+                  "columns": ["Mode", "Behavior"]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "tool isn't universal across Bedrock models",
+                  "content": "Unlike `auto` and `any`, forcing a specific tool with `{\"tool\": {\"name\": \"...\"}}` is a per-model capability, not a guarantee of the Converse API in general. Check the chosen model's availability before relying on this mode for structured output."
+                }
+              ]
+            },
+            {
+              "title": "The loop: toolUse and toolResult blocks",
+              "blocks": [
+                {
+                  "type": "table",
+                  "rows": [
+                    ["`tool_use` (block in content)", "`toolUse` (block in content, camelCase)"],
+                    ["`id`", "`toolUseId`"],
+                    ["`tool_result` with `is_error: true/false`", "`toolResult` with `status: \"success\"/\"error\"`"],
+                    ["`content` as a string or object", "`content` always as a list of content blocks, e.g. `[{\"text\": \"...\"}]`"]
+                  ],
+                  "columns": ["Anthropic SDK", "Bedrock Converse API"]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def run_tools(parts):\n    tool_requests = [part for part in parts if \"toolUse\" in part]\n    tool_result_parts = []\n\n    for tool_request in tool_requests:\n        tool_use_id = tool_request[\"toolUse\"][\"toolUseId\"]\n        tool_name = tool_request[\"toolUse\"][\"name\"]\n        tool_input = tool_request[\"toolUse\"][\"input\"]\n\n        try:\n            tool_output = run_tool(tool_name, tool_input)\n            tool_result_part = {\n                \"toolResult\": {\n                    \"toolUseId\": tool_use_id,\n                    \"content\": [{\"text\": json.dumps(tool_output)}],\n                    \"status\": \"success\",\n                }\n            }\n        except Exception as e:\n            tool_result_part = {\n                \"toolResult\": {\n                    \"toolUseId\": tool_use_id,\n                    \"content\": [{\"text\": f\"Error: {e}\"}],\n                    \"status\": \"error\",\n                }\n            }\n\n        tool_result_parts.append(tool_result_part)\n\n    return tool_result_parts"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "status is only read by some models",
+                  "content": "The `status` field of `toolResult` is documented as supported only by Amazon Nova and Anthropic Claude 3 and 4 — it isn't a generic Converse API property. With other models, communicating a tool failure depends entirely on the text inside `content`, not on this field."
+                },
+                {
+                  "type": "text",
+                  "content": "The rest of the principle is identical to the Anthropic SDK: the model's full response (`result[\"parts\"]`, including text and `toolUse` blocks) is re-added as-is as an `assistant` message, and all `toolResult` blocks from the same turn travel together inside a single `user` message."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The request that sends the toolResult also needs toolConfig",
+                  "content": "Just like with `tools` in the Anthropic SDK (see Claude API → Tool Use), passing `toolConfig` only on the first request and dropping it on the next one breaks the context: Bedrock needs the `toolSpec` entries available to interpret the `toolUse`/`toolResult` blocks already sitting in the `messages` history, not just to decide whether to request a new tool. Every call to `chat(messages, tools=[...])` in the conversation has to keep passing the same tools list, including the one that closes the loop with the result already folded in."
+                }
+              ]
+            },
+            {
+              "title": "stopReason: it's not just 4 values",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The field that decides whether to keep looping (`stopReason != \"tool_use\"`) has quite a few more possible values than usually get mentioned. Worth knowing the full set, not just the ones that show up in one particular example:"
+                },
+                {
+                  "type": "table",
+                  "rows": [
+                    ["end_turn", "The model finished its response naturally."],
+                    ["tool_use", "The model wants a tool to be executed."],
+                    ["max_tokens", "The `maxTokens` limit was reached before finishing."],
+                    ["stop_sequence", "One of the strings passed in `stopSequences` appeared."],
+                    ["guardrail_intervened", "A configured guardrail blocked or modified the response."],
+                    ["content_filtered", "The content was filtered by content policies."],
+                    ["malformed_model_output", "The model generated output that couldn't be parsed correctly."],
+                    ["malformed_tool_use", "The model requested a tool with arguments that don't match the declared `inputSchema`."],
+                    ["model_context_window_exceeded", "The input exceeded the model's context window."]
+                  ],
+                  "columns": ["Value", "Meaning"]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "A loop that only checks != \"tool_use\" treats everything else as success",
+                  "content": "The `if stop_reason != \"tool_use\": break` pattern correctly separates \"wants a tool\" from \"finished\", but it lumps `end_turn` together with `max_tokens`, `content_filtered`, `guardrail_intervened`, and the rest under the same exit branch. For a production application it's worth distinguishing `end_turn` (a genuine success) from the other cases (a cut-off, blocked, or invalid response) instead of assuming any value other than `tool_use` means everything went fine."
+                }
+              ]
+            },
+            {
+              "title": "The complete loop: run_conversation",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def run_conversation(messages):\n    while True:\n        result = chat(\n            messages,\n            tools=[\n                get_current_datetime_schema,\n                add_duration_to_datetime_schema,\n                set_reminder_schema,\n            ],\n        )\n\n        add_assistant_message(messages, result[\"parts\"])\n        print(result[\"text\"])\n\n        if result[\"stop_reason\"] != \"tool_use\":\n            break\n\n        tool_result_parts = run_tools(result[\"parts\"])\n        add_user_message(messages, tool_result_parts)\n\n    return messages"
+                },
+                {
+                  "type": "text",
+                  "content": "This is the same loop already documented conceptually in Claude API → Tool Use → The multi-turn loop, adapted to Bedrock's helper functions and `stopReason`: each pass calls `chat()`, re-adds the full response as an `assistant` message, and if the stop reason was `tool_use`, runs the tools and re-adds the result as a `user` message before calling Claude again."
+                }
+              ]
+            },
+            {
+              "title": "Example: splitting a task into several tools due to model weaknesses",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A reminder system (\"remind me about my appointment, it's a week from Tuesday\") can't be solved with a single `set_reminder(when: string)` tool that relies on the model computing the exact date on its own: Claude may know today's date, but not always the exact time, isn't reliable at compound date arithmetic (months with different lengths, leap years), and has no native way to set a reminder. The fix is to expose each step as its own tool."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🕐",
+                      "title": "get_current_datetime",
+                      "description": "No required parameters. Returns the formatted current date/time — the starting point Claude can't assume on its own."
+                    },
+                    {
+                      "icon": "➕",
+                      "title": "add_duration_to_datetime",
+                      "description": "Takes a date, a duration, and a unit (days, weeks, months, years...). Does the actual arithmetic in Python instead of letting the model infer it in text."
+                    },
+                    {
+                      "icon": "🔔",
+                      "title": "set_reminder",
+                      "description": "Takes the content and an already-resolved timestamp — never a relative expression like 'next week'."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "A third reason to split tools, distinct from Claude API → Tool Use",
+                  "content": "The tool granularity section already documents that splitting tools makes sense when inputs are structurally distinct. This case is a different, independent reason: isolating as its own tool a computation step the model can't reliably solve in text (date arithmetic, time zone conversion), even if it's conceptually 'one request' from the user's perspective."
+                }
+              ]
+            },
+            {
+              "title": "batch_tool in pre-Claude 4 models: why declaring it isn't enough",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude API → Tool Use already documents that the `batch_tool` pattern (a meta-tool that groups several invocations) became obsolete with Claude 4+, which parallelizes independent tool calls by default. That improved default isn't guaranteed on Bedrock if the model behind the inference profile predates Claude 4."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "With Claude 3.7 Sonnet, the model called the three tools in separate turns",
+                  "content": "Running this example against `us.anthropic.claude-3-7-sonnet-20250219-v1:0` (Claude 3.7, a generation prior to Claude 4), the model resolved \"remind me about my appointment, it's a week from Tuesday\" with three sequential turns — get_current_datetime, then add_duration_to_datetime, then set_reminder — despite having `batch_tool` declared and available. It didn't even use it: declaring the tool doesn't force its use. To parallelize on a pre-Claude 4 model, you need an explicit system prompt instruction — exposing the batch_tool schema alone isn't enough."
+                },
+                {
+                  "type": "text",
+                  "content": "If that reinforcement is still needed (for example, for a case with many independent operations, like \"What is March 12th + 50 days? And + 100 days?\"), the `batch_tool` schema is implemented just like any other Bedrock tool — wrapped in `toolSpec`, with the JSON Schema under `inputSchema.json`:"
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "batch_tool_schema = {\n    \"toolSpec\": {\n        \"name\": \"batch_tool\",\n        \"description\": \"Invoke multiple other tool calls simultaneously\",\n        \"inputSchema\": {\n            \"json\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"invocations\": {\n                        \"type\": \"array\",\n                        \"description\": \"The tool calls to invoke\",\n                        \"items\": {\n                            \"type\": \"object\",\n                            \"properties\": {\n                                \"name\": {\n                                    \"type\": \"string\",\n                                    \"description\": \"The name of the tool to invoke\",\n                                },\n                                \"arguments\": {\n                                    \"type\": \"string\",\n                                    \"description\": \"The arguments to the tool, encoded as a JSON string\",\n                                },\n                            },\n                            \"required\": [\"name\", \"arguments\"],\n                        },\n                    }\n                },\n                \"required\": [\"invocations\"],\n            }\n        },\n    }\n}"
+                },
+                {
+                  "type": "text",
+                  "content": "`arguments` is a string, not an object: each invocation arrives JSON-encoded, and `run_batch` decodes it before dispatching to `run_tool` — the same router that already handles every other tool:"
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def run_batch(tool_input):\n    batch_output = []\n    for invocation in tool_input[\"invocations\"]:\n        tool_name = invocation[\"name\"]\n        args = json.loads(invocation[\"arguments\"])\n\n        tool_output = run_tool(tool_name, args)\n        batch_output.append({\"tool_name\": tool_name, \"output\": tool_output})\n\n    return batch_output\n\n\ndef run_tool(tool_name, tool_input):\n    if tool_name == \"get_current_datetime\":\n        return get_current_datetime(**tool_input)\n    elif tool_name == \"set_reminder\":\n        return set_reminder(**tool_input)\n    elif tool_name == \"add_duration_to_datetime\":\n        return add_duration_to_datetime(**tool_input)\n    elif tool_name == \"batch_tool\":\n        return run_batch(tool_input)\n    else:\n        raise Exception(f\"Unknown tool name: {tool_name}\")"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "batch_tool is the one branch that doesn't splat with **",
+                  "content": "Every other tool is called as `get_current_datetime(**tool_input)` — the dict gets unpacked because each key is a named parameter of the real function. `batch_tool` is different: `run_batch(tool_input)` receives the whole dict as-is, because it needs the `invocations` key as a structure, not as loose function arguments."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "batch_tool saves round-trips with the model, it doesn't give you concurrency for free",
+                  "content": "These are two separate benefits, and only the first one is automatic. (1) Fewer round-trips: instead of Claude resolving N independent operations across N sequential turns (each one a round-trip to `converse()`), it packs them all into a single `batch_tool` invocation — that much you get just by declaring the tool. (2) Real concurrent execution: `run_batch` as shown above is a plain sequential `for` loop in Python, running each invocation one after another. If you also need true parallel execution, you have to add a `ThreadPoolExecutor` (or another concurrency mechanism) inside `run_batch` — the same pattern already used by the `ThreadPoolExecutor` in Claude API → Tool Use for Anthropic's native parallel tool_use case."
+                }
+              ]
+            },
+            {
+              "title": "Structured output by forcing a tool",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The same technique already documented in Claude API → Prefill and Alternatives",
+                  "content": "Forcing `tool_choice` onto a tool that doesn't represent a real action, but only the schema of the data to extract, is the technique already explained in Claude API → Prefill and Alternatives → Case 2: JSON with a specific shape. The only thing that changes in Bedrock is the syntax: instead of a flat `tool_choice`, you have to build the full `toolChoice` object."
+                },
+                {
+                  "type": "text",
+                  "content": "With `toolChoice: {\"tool\": {\"name\": \"...\"}}`, Claude doesn't respond with text — it responds directly with a `toolUse` whose `input` is already the extracted JSON, shaped exactly like the declared `inputSchema`. There's no need to close the loop with a `toolResult`: the \"tool\" doesn't execute anything server-side, so it's enough to read `parts[0][\"toolUse\"][\"input\"]` and stop there."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def chat(\n    messages,\n    system=None,\n    temperature=1.0,\n    stop_sequences=[],\n    tools=None,\n    tool_choice=\"auto\",\n):\n    params = {\n        \"modelId\": model_id,\n        \"messages\": messages,\n        \"inferenceConfig\": {\n            \"temperature\": temperature,\n            \"stopSequences\": stop_sequences,\n        },\n    }\n\n    if system:\n        params[\"system\"] = [{\"text\": system}]\n\n    tool_choices = {\n        \"auto\": {\"auto\": {}},\n        \"any\": {\"any\": {}},\n    }\n    if tools:\n        choice = tool_choices.get(tool_choice, {\"tool\": {\"name\": tool_choice}})\n        params[\"toolConfig\"] = {\"tools\": tools, \"toolChoice\": choice}\n\n    response = client.converse(**params)\n    parts = response[\"output\"][\"message\"][\"content\"]\n\n    return {\n        \"parts\": parts,\n        \"stop_reason\": response[\"stopReason\"],\n        \"text\": \"\\n\".join(p[\"text\"] for p in parts if \"text\" in p),\n    }"
+                },
+                {
+                  "type": "text",
+                  "content": "The trick is `tool_choices.get(tool_choice, {\"tool\": {\"name\": tool_choice}})`: if `tool_choice` is `\"auto\"` or `\"any\"` it uses those modes, and any other string gets treated as the name of a specific tool to force. So `chat(messages, tools=[...], tool_choice=\"article_details\")` automatically builds `{\"tool\": {\"name\": \"article_details\"}}` without having to write the full dict on every call."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "article_details_schema = {\n    \"toolSpec\": {\n        \"name\": \"article_details\",\n        \"description\": (\n            \"This tool should be called with details about an article. It accepts \"\n            \"information about the article's title, author, and related topics.\"\n        ),\n        \"inputSchema\": {\n            \"json\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"title\": {\"type\": \"string\", \"description\": \"The title of the article. Can be left empty.\"},\n                    \"author\": {\"type\": \"string\", \"description\": \"The name of the article's author. Can be left empty.\"},\n                    \"topics\": {\n                        \"type\": \"array\",\n                        \"items\": {\"type\": \"string\"},\n                        \"description\": \"A list of topics or categories that the article covers. Can be an empty list.\",\n                    },\n                },\n            }\n        },\n    }\n}\n\nresult = chat(messages, tools=[article_details_schema], tool_choice=\"article_details\")\n# result[\"parts\"][0][\"toolUse\"][\"input\"] ==\n# {'author': 'Dr. Alexandra Reynolds', 'title': '...', 'topics': ['deep learning', ...]}"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Forcing a specific tool: the same model restriction already documented",
+                  "content": "toolChoice: auto, any, and the tool exception already warns that `{\"tool\": {\"name\": \"...\"}}` is only supported by Anthropic Claude 3 and Amazon Nova. For guaranteed structured extraction on other models, the native alternative is `outputConfig.textFormat` (see below)."
+                }
+              ]
+            },
+            {
+              "title": "to_json: a flexible tool instead of one fixed schema per use case",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Declaring a tool with a strict `inputSchema` for every shape of data you need to extract doesn't always scale. The alternative is a single generic tool, with an `inputSchema` that accepts any property, describing the desired structure directly in the prompt text instead of in the schema."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "to_json_schema = {\n    \"toolSpec\": {\n        \"name\": \"to_json\",\n        \"description\": (\n            \"This tool processes any JSON data and can be used for generating \"\n            \"structured content, transforming information, or creating any \"\n            \"JSON-based output needed for your task.\"\n        ),\n        \"inputSchema\": {\n            \"json\": {\"type\": \"object\", \"additionalProperties\": True}\n        },\n    }\n}\n\nadd_user_message(messages, f\"\"\"\nAnalyze the article below and extract key data. Then call the to_json tool.\n\n<article_text>\n{article_text}\n</article_text>\n\nWhen you call to_json, pass in the following structure:\n{{\n    \"title\": str,        # title of the article\n    \"author\": str,       # author of the article\n    \"topics\": List[str], # list of topics mentioned\n    \"num_topics\": int    # number of topics mentioned\n}}\n\"\"\")\n\nresult = chat(messages, tools=[to_json_schema], tool_choice=\"to_json\")"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "additionalProperties: true moves where the guarantee lives",
+                  "content": "With `article_details_schema`, the `inputSchema` is the guarantee: Claude can't invent a field outside what's declared. With `to_json_schema`, `additionalProperties: true` validates nothing — the only source of truth for the expected shape is the prompt text (the `{...}` block with `str`/`List[str]`-style annotations). It's more flexible (one tool covers any extraction), but it loses the structural validation a strict `inputSchema` provides: Claude can skip `num_topics` or write `topics` as a string instead of a list, and no schema error catches it."
+                }
+              ]
+            },
+            {
+              "title": "outputConfig.textFormat: the native mechanism, no tool involved",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Bedrock's equivalent of output_config.format",
+                  "content": "Claude API → Prefill and Alternatives already documents that, on the direct Anthropic API side, `output_config.format` with `json_schema` replaced the trick of forcing a tool for guaranteed JSON: it's a real API-level guarantee, without the conceptual noise of a tool that doesn't do anything. Bedrock's Converse API has the same native mechanism, under a different name: `outputConfig.textFormat`."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import json\n\nresponse = client.converse(\n    modelId=model_id,\n    messages=messages,\n    outputConfig={\n        \"textFormat\": {\n            \"type\": \"json_schema\",\n            \"structure\": {\n                \"jsonSchema\": {\n                    \"name\": \"article_details\",\n                    \"schema\": json.dumps({\n                        \"type\": \"object\",\n                        \"properties\": {\n                            \"title\": {\"type\": \"string\"},\n                            \"author\": {\"type\": \"string\"},\n                            \"topics\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n                        },\n                        \"required\": [\"title\", \"author\", \"topics\"],\n                    }),\n                }\n            },\n        }\n    },\n)"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "schema is a string, not a nested dict — unlike toolSpec",
+                  "content": "In `toolSpec.inputSchema.json` the JSON Schema goes in as a nested object. In `jsonSchema.schema` it goes in as a **string** — you have to serialize it with `json.dumps()` before sending it, or the request fails. It's the most likely trap when migrating a schema already written for a tool over to `outputConfig.textFormat`."
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "Same decision criteria as on the Anthropic side",
+                  "content": "outputConfig.textFormat makes sense when the only goal is guaranteed JSON, without needing the model to reason about whether to use a tool. Forcing a tool with `toolChoice` is still preferable when extraction coexists with real tools in the same conversation, or when tool infrastructure (validation, logging) already exists and you'd rather reuse it than duplicate it."
+                }
+              ]
+            },
+            {
+              "title": "The Text Editor Tool in Bedrock: it doesn't go through toolConfig",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The Text Editor Tool (and its siblings `bash`, `computer`, and `memory`) are Anthropic-defined tools: the schema is already built into the model, so the declaration carries no `description` or `input_schema` — just an identifier. The app still has to implement the real execution (reading/writing files, running commands) and return the result; that part is already documented in Claude API → Tool Use → Tools provided by Anthropic for the direct API."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "On Bedrock, these tools don't use the Converse API",
+                  "content": "AWS's documentation distinguishes two separate mechanisms under separate names: \"Client-side tool use\" (regular tools, available on both Converse and InvokeModel, with their own schema wrapped in `toolSpec`) and \"Anthropic Claude tool use\" (`computer_*`, `bash_*`, `text_editor_*`, `memory_*` — requires the Anthropic Messages API request format, via `InvokeModel`/`InvokeModelWithResponseStream` or the `anthropic` SDK's `AnthropicBedrock` client, not `client.converse()` with `toolConfig`). Adding the Text Editor Tool to the same `tools=[...]` list already used by `get_current_datetime_schema` and friends in a `converse()`-based `chat()` doesn't work — it's a different invocation mechanism, not just another tool in the same array."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "# Declaration: Anthropic Messages format, no toolSpec/inputSchema —\n# type identifies the tool, name is the name exposed to the model\ntext_editor_tool = {\n    \"type\": \"text_editor_20250124\",\n    \"name\": \"str_replace_based_edit_tool\",\n}\n\nfrom anthropic import AnthropicBedrock\n\nclient = AnthropicBedrock()\n\nresponse = client.beta.messages.create(\n    model=\"us.anthropic.claude-3-7-sonnet-20250219-v1:0\",\n    max_tokens=1024,\n    anthropic_beta=[\"computer-use-2025-01-24\"],\n    tools=[text_editor_tool],\n    messages=[{\"role\": \"user\", \"content\": \"Write a one sentence description of ./main.py\"}],\n)\n# response.content may carry a {\"type\": \"tool_use\", \"id\": ..., \"name\": \"str_replace_based_edit_tool\", \"input\": {...}} block —\n# Anthropic format (snake_case, tool_use/tool_result), NOT Converse's toolUse/toolResult"
+                },
+                {
+                  "type": "table",
+                  "rows": [
+                    ["text_editor_20250124", "str_replace_based_edit_tool", "computer-use-2025-01-24 or computer-use-2025-11-24"],
+                    ["text_editor_20241022 (legacy)", "str_replace_editor", "computer-use-2024-10-22"]
+                  ],
+                  "columns": ["type", "exposed name", "required anthropic_beta"]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The anthropic_beta header is mandatory, and the course never mentions it",
+                  "content": "Without the `anthropic_beta` header matching the declared tool version, the request fails — the correct `type`/`name` alone isn't enough. Each version of `computer`/`bash`/`text_editor` is tied to a specific beta value, per the table above."
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "This table changes — the course's note about \"up-to-date IDs\" still holds",
+                  "content": "The original course material correctly points out that it's worth checking AWS's documentation for current IDs instead of trusting a fixed value: as of this writing, the direct Anthropic API already offers `text_editor_20250728` (with `max_characters` support, see Claude API → Tool Use), but Bedrock's Anthropic-defined tools catalog doesn't list that version yet — it stops at `text_editor_20250124` as the newest one available there. Bedrock doesn't necessarily keep pace with the direct API's update cadence."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Embeddings with Amazon Titan",
+          "subsections": [
+            {
+              "title": "invoke_model with a Titan model_id, not a separate endpoint",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The Claude API doesn't expose its own embeddings endpoint (see Claude API → RAG and Agentic Search → Quality Retrieval → Embeddings and Vector Search, where that step is solved with an external provider like Voyage AI). On Bedrock this isn't necessary: Amazon Titan's embedding models go through the same `invoke_model` used by any other Bedrock model — there's no separate API, just a different `model_id` pointing at Titan instead of Claude."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import json\n\n# client = boto3.client(\"bedrock-runtime\", ...) already defined\n\ndef generate_embedding(\n    text,\n    embedding_model_id=\"amazon.titan-embed-text-v2:0\",\n    dimensions=1024,\n    normalize=True,\n):\n    request_body = {\n        \"inputText\": text,\n        \"dimensions\": dimensions,\n        \"normalize\": normalize,\n    }\n    response = client.invoke_model(\n        modelId=embedding_model_id,\n        body=json.dumps(request_body),\n        accept=\"application/json\",\n        contentType=\"application/json\",\n    )\n    response_body = json.loads(response.get(\"body\").read())\n    return response_body[\"embedding\"]"
+                },
+                {
+                  "type": "table",
+                  "rows": [
+                    ["inputText", "Only required field — the text to convert into a vector"],
+                    ["dimensions", "1024 by default; also accepts 512 or 256 — no other values are valid"],
+                    ["normalize", "true by default — the same unit-magnitude normalization already documented in Claude API → RAG and Agentic Search → Embeddings and Vector Search"],
+                    ["embeddingTypes", "Optional list with \"float\", \"binary\", or both — defaults to [\"float\"]. response_body[\"embedding\"] only appears if \"float\" is included; otherwise read response_body[\"embeddingsByType\"]"]
+                  ],
+                  "columns": ["Parameter (Titan V2)", "Verified detail"]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Model access isn't enabled by default",
+                  "content": "Before the first call you need to enable access to Titan Embeddings in the Bedrock console (Model access) — like any third-party foundation model on Bedrock, it isn't available out of the box on a new account. If `amazon.titan-embed-text-v2:0` isn't enabled in the region/account, `amazon.titan-embed-text-v1` (Titan Embeddings G1) works as a fallback: it accepts a simpler request (only `inputText`, no `dimensions`/`normalize`/`embeddingTypes`) and always returns `embedding` directly in the response."
+                },
+                {
+                  "type": "text",
+                  "content": "The rest of the pipeline — chunking the document, indexing the vectors, computing cosine similarity, retrieving by top-k — is exactly the same one already documented in Claude API → RAG and Agentic Search. The only thing that changes on Bedrock is this one step: where the vector comes from."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Extended Thinking on Bedrock",
+          "subsections": [
+            {
+              "title": "additionalModelRequestFields: the one escape hatch that doesn't follow Converse's camelCase",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "What Extended Thinking is, what it's for, and how to decide on a `budget_tokens` value is already documented in Claude API → Advanced Capabilities → Extended Thinking — that conceptual explanation doesn't change on Bedrock. What does change is how you turn it on and how you read the response, and in this case the pattern isn't the same camelCase renaming already seen throughout this article (`toolConfig`, `stopReason`, `inferenceConfig`)."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.converse(\n    modelId=\"us.anthropic.claude-sonnet-4-20250514-v1:0\",\n    messages=messages,\n    additionalModelRequestFields={\n        \"thinking\": {\n            \"type\": \"enabled\",\n            \"budget_tokens\": 2000,\n        }\n    },\n)"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "additionalModelRequestFields doesn't translate anything — it passes Anthropic's native body through as-is",
+                  "content": "The container field itself is camelCase, like the rest of Converse. But its value skips the usual translation: it's an escape hatch that forwards Anthropic's native request body untouched, so `thinking` and `budget_tokens` stay in snake_case inside it — verified against AWS's official example (`additionalModelRequestFields={\"thinking\": {\"type\": \"enabled\", \"budget_tokens\": 2000}}`, from the Converse-with-Claude-3.7-Sonnet-reasoning guide). It's the only place in the whole Converse API where the two conventions mix."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "for block in response[\"output\"][\"message\"][\"content\"]:\n    if \"reasoningContent\" in block:\n        reasoning = block[\"reasoningContent\"]\n        if \"reasoningText\" in reasoning:\n            print(reasoning[\"reasoningText\"][\"text\"])       # readable reasoning\n            signature = reasoning[\"reasoningText\"][\"signature\"]  # forward unmodified in the next turn\n        elif \"redactedContent\" in reasoning:\n            pass  # boto3 already returns this as Python bytes (b\"...\"), not a base64 string — opaque, but still must be forwarded unmodified\n    elif \"text\" in block:\n        print(block[\"text\"])  # final response"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The response doesn't use thinking/redacted_thinking — it uses reasoningContent",
+                  "content": "Unlike the direct Anthropic API (`thinking` and `redacted_thinking` blocks, see Claude API → Advanced Capabilities → Extended Thinking → Redacted thinking), Bedrock's Converse API returns a union-type `reasoningContent` block, verified against the official reference: either `reasoningText` (`{\"text\": ..., \"signature\": ...}`, the readable reasoning) or `redactedContent` (base64 data, when the reasoning tripped Anthropic's safety filters). The concept is the same one already documented for the direct API — what changes is the field's name and nesting."
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "The signature gets forwarded the same way as on the direct API",
+                  "content": "Just like Claude API → Advanced Capabilities → Extended Thinking → Thinking with multi-turn tool use already documents, if you forward a reasoning block in a later turn you need to include `text` and `signature` unmodified — AWS's own reference spells this out in the definition of `reasoningText.signature`. The `budget_tokens` minimum is still 1024, and it must be smaller than `maxTokens` inside `inferenceConfig` — the same constraint that already applies on the direct API."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Vision on Bedrock",
+          "subsections": [
+            {
+              "title": "source.bytes instead of manual base64",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "How to process images conceptually and vision-specific prompting techniques (structured step-by-step counting, one-shot examples) are the same regardless of API surface, and don't change on Bedrock. The direct Anthropic API's own current limits are also higher than Bedrock's — see the numbers below. What actually changes on Bedrock is the shape of the content block, and in one concrete way it's simpler than the direct API."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "with open(\"image.png\", \"rb\") as f:\n    image_bytes = f.read()\n\nadd_user_message(messages, [\n    {\n        \"image\": {\n            \"format\": \"png\",\n            \"source\": {\"bytes\": image_bytes},\n        }\n    },\n    {\"text\": \"What do you see in this image?\"},\n])"
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "No base64.encode needed — verified against AWS's reference",
+                  "content": "The direct Anthropic API requires sending the image already base64-encoded inside `source.data`. On Converse, `ImageSource.bytes` accepts the file's raw bytes directly — AWS's documentation states this explicitly: \"if you use an AWS SDK, you don't need to encode the image bytes in base64,\" the SDK handles it underneath. `format` only accepts `png`, `jpeg`, `gif`, or `webp` — the same four formats the direct API supports."
+                },
+                {
+                  "type": "table",
+                  "rows": [
+                    ["Images per request", "20"],
+                    ["Max size per image", "3.75MB"],
+                    ["Max dimension", "8000×8000px"],
+                    ["Documents (PDF, etc.) per request", "5, up to 4.5MB each"]
+                  ],
+                  "columns": ["Limit on Bedrock (Converse)", "Verified value"]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Bedrock hasn't kept pace with the direct API's newer limits",
+                  "content": "The direct Anthropic API now supports up to 100-600 images per request (depending on the model) and 10MB per image — noticeably more generous than Bedrock's numbers. Porting code written for the direct API without checking these figures is a typical source of `ValidationException` in production. Also watch the encoding: even though `ImageSource.bytes` doesn't force you to base64-encode it yourself, the SDK still does it underneath to transport it — that inflates the actual transmitted size by roughly 33%, so to stay under the 3.75MB post-encoding limit it's worth keeping the raw file under ~2.8MB."
+                },
+                {
+                  "type": "text",
+                  "content": "`ImageSource` is a union type: the alternative to `bytes` is `s3Location`, which points at an object already uploaded to an S3 bucket instead of sending the bytes inline in the request — an option that doesn't exist on the direct Anthropic API, useful for large or reused images without paying the cost of re-transmitting them on every request."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Documents (PDF) on Bedrock",
+          "subsections": [
+            {
+              "title": "The document block and the required name field",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "How Claude processes a PDF visually and textually at once, and the citations mechanism, are already documented in Claude API → Advanced Capabilities → Multimodal: Images and PDFs. Bedrock's Converse API repeats the same pattern already seen in Vision on Bedrock — a `document`-type block with `source.bytes` instead of manual base64, with the same size and count limits already listed in that table — but it adds a required field that `image` doesn't have, and it supports quite a few more formats than just PDF."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "with open(\"earth.pdf\", \"rb\") as f:\n    file_bytes = f.read()\n\nadd_user_message(\n    messages,\n    [\n        {\"document\": {\"format\": \"pdf\", \"name\": \"earth\", \"source\": {\"bytes\": file_bytes}}},\n        {\"text\": \"Summarize this document in one sentence\"},\n    ],\n)"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "name is required — and AWS itself warns it's a prompt-injection surface",
+                  "content": "Unlike the `image` block, which has no `name` field, `document` requires it (`Required: Yes`, verified against AWS's reference): 1 to 200 characters, alphanumeric characters only, whitespace (no more than one in a row), hyphens, parentheses, and square brackets. AWS's documentation adds a warning that doesn't appear on any other Converse field: the model might interpret the content of `name` as an instruction, so it's best kept neutral (`\"earth\"`, not a sentence). This is a different nuance from the direct API's `title` field (see Citations further up in that same section), which is optional and purely cosmetic for identifying the source in citations."
+                },
+                {
+                  "type": "table",
+                  "columns": ["document format on Converse", "Note"],
+                  "rows": [
+                    ["pdf", "The only format the direct Anthropic API also supports"],
+                    ["csv, xls, xlsx", "Spreadsheets — no equivalent on the direct API"],
+                    ["doc, docx", "Word documents — no equivalent on the direct API"],
+                    ["html, md, txt", "The direct API covers plain text via `source: {\"type\": \"text\", \"media_type\": \"text/plain\"}`, but doesn't declare html or md as a format of their own"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Converse also has native citations for document",
+                  "content": "Just like the direct API (see Citations further up in that section), Converse supports verifiable citations over a document's content by adding `\"citations\": {\"enabled\": true}` inside the block — verified against `CitationsConfig` in AWS's reference: a single boolean field, the same minimal shape as `citations: {\"enabled\": True}` on Anthropic's side. Bedrock also exposes a field the direct API doesn't have under that name: `context`, a free-form string to give the model information about how to interpret the document when generating citations."
+                },
+                {
+                  "type": "text",
+                  "content": "`source` is, just like for images, a union type — but with more members: besides `bytes` and `s3Location` (same meaning as in `ImageSource`), `DocumentSource` also accepts `text` (the content already as a string, no bytes or base64 needed) and `content` (an array of structured blocks). For the simplest case — a PDF read from disk, like in the example above — `bytes` is still the most direct option."
+                }
+              ]
+            },
+            {
+              "title": "Reading citations back out of the response",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "with open(\"earth.pdf\", \"rb\") as f:\n    file_bytes = f.read()\n\nmessages = []\n\nadd_user_message(\n    messages,\n    [\n        {\n            \"document\": {\n                \"format\": \"pdf\",\n                \"name\": \"earth\",\n                \"source\": {\"bytes\": file_bytes},\n                \"citations\": {\"enabled\": True},\n            }\n        },\n        {\"text\": \"How were Earth's atmosphere and oceans formed?\"},\n    ],\n)\n\nresponse = chat(messages)"
+                },
+                {
+                  "type": "text",
+                  "content": "Unlike the direct API, which adds a `citations` field inside each regular `text` block (see Citations in Claude API → Advanced Capabilities → Multimodal: Images and PDFs), Converse returns a distinct block type instead: `citationsContent`, verified as a member of the same `ContentBlock` union that `text`, `toolUse`, and `reasoningContent` also belong to. Inside `citationsContent`, `content` carries the generated text (an array of `CitationGeneratedContent`, each with a `text` field) and `citations` carries the array of references — two parallel arrays instead of citations embedded inside the text."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "for block in response[\"output\"][\"message\"][\"content\"]:\n    if \"citationsContent\" in block:\n        cc = block[\"citationsContent\"]\n        for part in cc[\"content\"]:\n            print(part[\"text\"])  # the generated text\n        for citation in cc[\"citations\"]:\n            print(citation.get(\"title\"))                # source document title\n            for src in citation.get(\"sourceContent\", []):\n                print(src[\"text\"])                        # the cited excerpt\n            loc = citation.get(\"location\", {})\n            if \"documentPage\" in loc:\n                print(loc[\"documentPage\"][\"start\"], loc[\"documentPage\"][\"end\"])\n    elif \"text\" in block:\n        print(block[\"text\"])"
+                },
+                {
+                  "type": "table",
+                  "columns": ["Data", "Direct API (page_location)", "Converse (citationsContent)"],
+                  "rows": [
+                    ["Cited text", "cited_text", "sourceContent[].text"],
+                    ["Which document", "document_index / document_title", "location.documentPage.documentIndex / citations[].title"],
+                    ["Location", "start_page_number / end_page_number", "location.documentPage.start / .end"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Is documentPage.start 0-indexed? AWS's reference doesn't say so in prose",
+                  "content": "The direct API explicitly documents `start_page_number`/`end_page_number` as 1-indexed. AWS's reference for `DocumentPageLocation.start`/`.end` doesn't say so in words, but it does declare `Valid Range: Minimum value of 0` for both fields — a hint, not a confirmation, that Converse might number pages starting at 0. Before assuming either convention in production code, it's worth printing an actual response with citations and checking it against the source PDF's real page number."
+                },
+                {
+                  "type": "text",
+                  "content": "`location` is, again, a union type — with more members than a simple PDF needs: besides `documentPage` (the one this example uses), there are `documentChar` (character-position location, the equivalent of the direct API's `char_location`), `documentChunk`, `searchResultLocation`, and `web` — meant for RAG or search scenarios where the source isn't a document uploaded directly in the request."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Prompt Caching on Bedrock",
+          "subsections": [
+            {
+              "title": "cachePoint: a separate content block, not an added field",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The conceptual mechanism — what prompt caching is, why there's a TTL, what counts as an exact cache hit — is already documented in Claude API → Advanced Capabilities → Prompt Caching, and doesn't change on Bedrock. What does change is how you mark the breakpoint: the direct API adds a `cache_control: {\"type\": \"ephemeral\"}` field to an existing content block; Bedrock's Converse API instead inserts a new content block, `cachePoint`, as its own item in the array — not a field inside another block."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "user_message = {\n    \"role\": \"user\",\n    \"content\": [\n        {\"text\": \"<Long prompt>\"},\n        {\"cachePoint\": {\"type\": \"default\"}},\n    ],\n}"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The same tools → system → messages order already documented on the Anthropic side applies on Bedrock — with one extra rule",
+                  "content": "Just like Claude API → Advanced Capabilities → Prompt Caching → Order matters: tools → system → messages already documents, Converse chains the cache in that same order — verified against AWS's guide: modifying `tools` invalidates the `system` and `messages` cache. The difference is that on Bedrock the minimum token count is evaluated against the cumulative sum of all three sections combined, not section by section."
+                }
+              ]
+            },
+            {
+              "title": "The token minimum isn't a fixed 1024 — it depends on the model",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The course teaches a 1024-token minimum, but that's no longer universal",
+                  "content": "Verified against AWS's guide: 1024 tokens per cache checkpoint is still correct for several models (Claude 3.7 Sonnet, Claude 3.5 Sonnet v2, Claude Sonnet 4.6), but the newer Claude models available on Bedrock as of this writing — Opus 4.5, Sonnet 4.5, Haiku 4.5 — require 4096 tokens per checkpoint. This table changes with every new release, so it's worth checking AWS's guide for the specific model in use instead of assuming 1024."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Model (verified examples)", "Minimum per checkpoint", "Extended 1h TTL"],
+                  "rows": [
+                    ["Claude 3.7 Sonnet / 3.5 Sonnet v2 / Sonnet 4.6", "1,024 tokens", "No"],
+                    ["Claude Opus 4.5 / Sonnet 4.5 / Haiku 4.5", "4,096 tokens", "Yes"]
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "The maximum of 4 cache checkpoints per request for Claude models is the same limit already documented on the direct API side (see Cache rules → Up to 4 breakpoints) — that doesn't change on Bedrock."
+                }
+              ]
+            },
+            {
+              "title": "Simplified cache management for Claude models — something the direct API doesn't have under this name",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Bedrock offers, only for Claude models, a simplified cache management mode: instead of manually calculating where to place each of up to 4 breakpoints, a single `cachePoint` at the end of the static content is enough. Verified against AWS's guide: the system automatically checks back roughly 20 content blocks from that breakpoint, looking for the longest cacheable prefix possible, without the caller having to predict the optimal placement in advance."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The automatic check only looks back ~20 blocks",
+                  "content": "If the static content extends beyond those ~20 blocks, the automatic check won't reach it — in that case it's worth going back to manual breakpoints (up to 4) or reordering the prompt so the reused content falls within that range."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "tool_config = {\n    \"tools\": [\n        {\"toolSpec\": get_current_datetime_schema},\n        {\"toolSpec\": add_duration_to_datetime_schema},\n        {\"cachePoint\": {\"type\": \"default\"}},\n    ]\n}"
+                },
+                {
+                  "type": "text",
+                  "content": "`cachePoint` can also go inside `system` — which on Bedrock is already a list of blocks (see System prompts on Bedrock further up) precisely to leave room for a block like this one alongside the text block."
+                }
+              ]
+            },
+            {
+              "title": "Reading the result: cacheReadInputTokens and the total-token formula",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "usage = response[\"usage\"]\nprint(usage[\"cacheReadInputTokens\"], usage[\"cacheWriteInputTokens\"])\ntotal_input = usage[\"inputTokens\"] + usage[\"cacheReadInputTokens\"] + usage[\"cacheWriteInputTokens\"]"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "inputTokens isn't the total when caching is active",
+                  "content": "Verified against AWS's guide: with prompt caching enabled, `inputTokens` represents only the tokens that were neither read from nor written to cache. The real total input token count is `inputTokens + cacheReadInputTokens + cacheWriteInputTokens` — summing only `inputTokens` to measure cost or volume undercounts the full request."
+                },
+                {
+                  "type": "text",
+                  "content": "The response also includes `cacheDetails`, with the TTL actually used for the write — useful for confirming whether a breakpoint with `\"ttl\": \"1h\"` really got stored with that extended TTL instead of the 5-minute default."
                 }
               ]
             }

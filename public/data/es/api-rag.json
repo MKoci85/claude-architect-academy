@@ -62,8 +62,38 @@
                   "code": "def chunk_por_tamano(texto, tamano=800, solape=150):\n    chunks = []\n    inicio = 0\n    while inicio < len(texto):\n        fin = inicio + tamano\n        chunks.append(texto[inicio:fin])\n        inicio = fin - solape  # retrocede para mantener continuidad\n    return chunks"
                 },
                 {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "El riesgo no es solo estético",
+                  "content": "Un chunking pobre no solo corta oraciones a la mitad — puede hacer que el retrieval traiga el chunk equivocado. Ejemplo: un documento con una sección de investigación médica que describe un patógeno llamado \"bug\" (XDR-47) y una sección de ingeniería que describe \"vectores de infección\" en sistemas distribuidos. Ante la pregunta \"¿cuántos bugs arreglaron los ingenieros este año?\", un chunk que no respeta el límite entre ambas secciones puede rankear alto el fragmento médico: comparte la palabra \"bug\" con la consulta, aunque hable de algo completamente distinto."
+                },
+                {
                   "type": "text",
-                  "content": "Existe una tercera estrategia, semántica: en vez de cortar por cantidad de caracteres o por marcas estructurales, se mide la similitud de significado entre oraciones consecutivas (con embeddings) y se agrupan las que están temáticamente relacionadas, cortando donde el tema cambia. Produce los chunks más coherentes de las tres, pero es la más costosa de calcular (un embedding por oración, no por chunk) y la más compleja de implementar — para la mayoría de los casos, tamaño fijo con overlap o por estructura alcanza."
+                  "content": "Entre el corte por tamaño fijo y el corte semántico hay un punto intermedio barato: cortar respetando límites de oración. No necesita medir similitud de significado (no hay llamada a un modelo de embeddings de por medio), pero evita el problema de partir una oración a la mitad que sí tiene el corte por caracteres."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import re\n\ndef chunk_por_oracion(texto, oraciones_por_chunk=5, oraciones_de_solape=1):\n    oraciones = re.split(r\"(?<=[.!?])\\s+\", texto)\n    chunks = []\n    inicio = 0\n    while inicio < len(oraciones):\n        fin = min(inicio + oraciones_por_chunk, len(oraciones))\n        chunks.append(\" \".join(oraciones[inicio:fin]))\n        inicio += oraciones_por_chunk - oraciones_de_solape\n    return chunks"
+                },
+                {
+                  "type": "text",
+                  "content": "El corte por estructura, en su versión más simple, es un split por el marcador de encabezado del documento:"
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import re\n\ndef chunk_por_seccion(texto):\n    return re.split(r\"\\n## \", texto)"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El split naive pierde el marcador de encabezado",
+                  "content": "re.split descarta el delimitador (\"\\n## \") del resultado — el chunk conserva el texto del título como primera línea pero pierde el \"##\" que lo identificaba como encabezado. Si ese título es información valiosa para el retrieval (indica de qué sección viene el chunk), conviene reinyectarlo explícitamente en el chunk en vez de depender de que sobreviva el corte — la misma idea que aplica contextual retrieval, ver más abajo."
+                },
+                {
+                  "type": "text",
+                  "content": "Existe una cuarta estrategia, semántica: en vez de cortar por cantidad de caracteres o por marcas estructurales, se mide la similitud de significado entre oraciones consecutivas (con embeddings) y se agrupan las que están temáticamente relacionadas, cortando donde el tema cambia. Produce los chunks más coherentes de todas, pero es la más costosa de calcular (un embedding por oración, no por chunk) y la más compleja de implementar — para la mayoría de los casos, tamaño fijo con overlap, por oración o por estructura alcanza."
                 },
                 {
                   "type": "table",
@@ -203,6 +233,32 @@
                   "type": "code",
                   "language": "python",
                   "code": "from rank_bm25 import BM25Okapi\n\n# búsqueda léxica con BM25\ncorpus_tokenizado = [chunk.lower().split() for chunk in todos_los_chunks]\nbm25 = BM25Okapi(corpus_tokenizado)\nquery_tokens = \"código de error E04 fallo de pago\".lower().split()\nscores = bm25.get_scores(query_tokens)\ntop_k_bm25 = sorted(zip(todos_los_chunks, scores), key=lambda x: x[1], reverse=True)[:5]\n\n# fusión de rankings: vectorial + BM25\ndef reciprocal_rank_fusion(ranking_vectorial, ranking_bm25, k=60):\n    scores = {}\n    for rank, (chunk_id, _) in enumerate(ranking_vectorial):\n        scores[chunk_id] = scores.get(chunk_id, 0) + 1 / (k + rank)\n    for rank, (chunk_id, _) in enumerate(ranking_bm25):\n        scores[chunk_id] = scores.get(chunk_id, 0) + 1 / (k + rank)\n    return sorted(scores.items(), key=lambda x: x[1], reverse=True)\n\n# re-ranking con Claude (para corpus moderados)\ntool_relevancia = {\n    \"name\": \"puntuar_relevancia\",\n    \"description\": \"Puntúa qué tan relevante es un fragmento para la pregunta\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\"puntaje\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1}},\n        \"required\": [\"puntaje\"],\n    },\n}\n\ndef puntuar(pregunta, chunk):\n    r = client.messages.create(\n        model=\"claude-haiku-4-5-20251001\", max_tokens=50,\n        tools=[tool_relevancia], tool_choice={\"type\": \"tool\", \"name\": \"puntuar_relevancia\"},\n        messages=[{\"role\": \"user\", \"content\": f\"Pregunta: {pregunta}\\nFragmento: {chunk}\"}],\n    )\n    return r.content[0].input[\"puntaje\"]\n\ncandidatos_reordenados = sorted(candidatos_top_20, key=lambda c: puntuar(pregunta, c), reverse=True)[:5]"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "BM25 no hace preprocesamiento por vos",
+                  "content": "`rank_bm25` no aplica ningún preprocesamiento de texto — la librería en sí misma lo documenta: si querés lowercasing, stopword removal o stemming, es responsabilidad del caller. El `chunk.lower().split()` del código de arriba tokeniza por espacios en blanco nada más, así que la puntuación queda pegada al token (\"E04\" y \"E04,\" son tokens distintos). Esto pega especialmente fuerte en BM25, porque su ventaja frente a los embeddings es justamente el matching exacto de códigos y acrónimos — el mismo caso que usa el ejemplo de arriba. En producción conviene al menos sacar puntuación antes de tokenizar, o pasar un tokenizer propio: `BM25Okapi(corpus, tokenizer=mi_tokenizer)`."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Parámetro de BM25Okapi", "Qué controla", "Default"],
+                  "rows": [
+                    ["k1", "Saturación de term frequency: cuánto sigue sumando que un término se repita muchas veces en el documento. Más alto = las repeticiones siguen pesando; más bajo = repetir un término más de una o dos veces deja de sumar casi nada.", "1.5"],
+                    ["b", "Normalización por longitud del documento: 0 la desactiva (un documento largo no es penalizado), 1 la aplica completa (un documento largo necesita mayor densidad del término para rankear igual que uno corto).", "0.75"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "tip",
+                  "title": "Si el corpus tiene documentos muy desparejos en longitud",
+                  "content": "`rank_bm25` también expone `BM25L` y `BM25Plus`, pensadas para corpus donde `BM25Okapi` tiende a subvalorar documentos largos (o a darle score 0 a un documento relevante que no contiene ningún término exacto de la query). Ambas suman un parámetro `delta` (default 0.5 y 1 respectivamente) que evita que el score colapse a cero. Se usan con la misma interfaz — `BM25L(corpus_tokenizado)`, `.get_scores(query_tokens)` — así que cambiar de una a otra no toca el resto del pipeline de fusión y re-ranking."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Qué hace el parámetro k de RRF",
+                  "content": "`k` no es un id de ranking, es una constante de suavizado: cuanto más chico, más peso relativo se lleva el primer puesto sobre el segundo (con k=1, posición 1 aporta 1/2=0.5 y posición 2 aporta 1/3≈0.33 — una diferencia grande). Cuanto más grande, más se aplanan las diferencias entre posiciones cercanas (con k=60, 1/61≈0.0164 contra 1/62≈0.0161 — casi lo mismo) y el resultado se parece más a un promedio entre ambos rankings. El valor 60 no es arbitrario: viene del paper original de RRF (Cormack, Clarke y Büttcher, SIGIR 2009), elegido empíricamente y todavía vigente casi dos décadas después — no hace falta reinventarlo salvo evidencia concreta de que otro valor rinde mejor para el corpus propio."
                 },
                 {
                   "type": "callout",

@@ -15,7 +15,7 @@
                 },
                 {
                   "type": "table",
-                  "head": ["Parameter", "Type", "Description"],
+                  "columns": ["Parameter", "Type", "Description"],
                   "rows": [
                     ["model", "string", "The model identifier, e.g. claude-sonnet-4-6. Determines cost per token, speed, and reasoning capability."],
                     ["messages", "array of objects", "The full conversation up to this point. Each object has role (user or assistant) and content. The API is stateless: you have to resend the entire history on every call."],
@@ -29,7 +29,7 @@
               "blocks": [
                 {
                   "type": "table",
-                  "head": ["Parameter", "Type", "Description"],
+                  "columns": ["Parameter", "Type", "Description"],
                   "rows": [
                     ["system", "string", "Context, role, and rule instructions that apply from the first turn. Sent as a separate field, not inside messages."],
                     ["temperature", "number · 0.0–1.0", "Controls randomness. Low values = predictable, focused responses. High values = more variation. As of Opus 4.7 (including Opus 4.8): sending a non-default value returns a 400 error."],
@@ -47,7 +47,7 @@
               "blocks": [
                 {
                   "type": "table",
-                  "head": ["Parameter", "Type", "Description"],
+                  "columns": ["Parameter", "Type", "Description"],
                   "rows": [
                     ["tools", "array of objects", "Defines external functions Claude can invoke: name, description, and an input_schema in JSON Schema. Claude decides when and how to use them."],
                     ["tool_choice", "object", "Controls whether Claude should use a tool: auto (decides on its own), any (must use one), tool (forces a specific one), or none."],
@@ -84,7 +84,7 @@
                 },
                 {
                   "type": "table",
-                  "head": ["Value", "Description", "What to do"],
+                  "columns": ["Value", "Description", "What to do"],
                   "rows": [
                     ["end_turn", "The model finished its response naturally.", "Normal case. Process the response."],
                     ["max_tokens", "The max_tokens limit was reached. The response may be incomplete.", "Consider continuing generation or raising the limit depending on the case."],
@@ -127,7 +127,7 @@
                 },
                 {
                   "type": "table",
-                  "head": ["Code", "Type", "Description"],
+                  "columns": ["Code", "Type", "Description"],
                   "rows": [
                     ["400", "invalid_request_error", "Problem with the format or content of the request: a misspelled parameter, a nonexistent model, or prefill on a model that no longer supports it."],
                     ["401", "authentication_error", "There's a problem with the API key: missing, malformed, or invalid."],
@@ -171,7 +171,7 @@
                 },
                 {
                   "type": "table",
-                  "head": ["Event", "Description"],
+                  "columns": ["Event", "Description"],
                   "rows": [
                     ["message_start", "Arrives first, with an empty Message object that marks the start of the response."],
                     ["content_block_start", "Marks the start of a new content block (text, tool_use, etc.)."],

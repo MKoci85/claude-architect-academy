@@ -122,7 +122,7 @@
               "blocks": [
                 {
                   "type": "table",
-                  "head": [
+                  "columns": [
                     "Transport",
                     "How it works",
                     "When it's the right fit"

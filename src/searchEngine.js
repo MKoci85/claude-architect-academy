@@ -100,7 +100,10 @@ function search(query, searchIndex) {
           score += 20;
           matches.inSubsection = true;
         }
-        const text = subsectionText(sub);
+        // El índice liviano (generado en build) ya trae `text` precalculado;
+        // si llega un subsection con blocks completos (p. ej. datos aún no
+        // migrados), lo calculamos al vuelo como antes.
+        const text = sub.text !== undefined ? sub.text : subsectionText(sub);
         if (text.toLowerCase().includes(q)) {
           score += 10;
           matches.inContent = true;
@@ -138,4 +141,4 @@ function search(query, searchIndex) {
   return results.sort((a, b) => b.score - a.score);
 }
 
-export { buildSearchIndex, search };
+export { buildSearchIndex, search, subsectionText };
