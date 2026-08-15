@@ -107,6 +107,30 @@ Disponible en `/practice`. Replica la logística y distribución por dominios de
 | Tool Design & MCP Integration | 18% |
 | Context Management & Reliability | 15% |
 
+### Formato real del examen: 6 escenarios, 4 al azar
+
+El examen real de Anthropic no agrupa las preguntas por dominio — las organiza en **6 escenarios de producción**, cada uno con ~10 preguntas integradas que comparten un mismo hilo narrativo y tocan varios dominios a la vez. Cada candidato recibe **4 de los 6 escenarios, elegidos al azar**: cualquier escenario que no se haya repasado carga el riesgo de costar el 25% del examen.
+
+| # | Escenario | Qué cubre |
+|---|---|---|
+| 1 | Customer Support Resolution Agent | Cuándo escalar vs. resolver, loops agénticos |
+| 2 | Code Generation with Claude Code | CLAUDE.md, comandos personalizados, plan mode |
+| 3 | Multi-Agent Research System | Coordinador-subagentes, orquestación paralela/secuencial |
+| 4 | Developer Productivity with Claude | MCP, herramientas integradas, automatización |
+| 5 | Claude Code for CI/CD | Revisiones automatizadas, generación de tests, feedback en PRs |
+| 6 | Structured Data Extraction | Procesamiento de documentos con validación JSON |
+
+Por esto el pool de 265 preguntas de este simulador está etiquetado internamente por escenario (campo `scenario` en cada pregunta) además de por dominio — para permitir, a futuro, auditar cobertura por escenario incluso si el simulador arma cada intento por peso de dominio.
+
+### Logística del examen real
+
+- **60 preguntas**, opción múltiple y multi-respuesta, **120 minutos** (2 min/pregunta)
+- **Puntaje de aprobación**: 720 sobre una escala de 100–1.000
+- **Costo**: USD 125 por intento
+- **Plataforma**: Pearson VUE (online supervisado o centro de examen), inscripción vía Anthropic Partner Academy
+- **Vigencia**: 12 meses desde que se otorga la credencial, con renovación gratuita no supervisada si se hace a tiempo
+- **Períodos de espera tras un intento fallido**: 14 días (1er intento), 30 días (2do), 90 días (3ro) — máximo 4 intentos por período móvil de 12 meses
+
 ### Ejemplos de preguntas
 
 El banco de preguntas está en inglés (formato del examen real) y evalúa criterio de decisión, no memorización. Dos ejemplos representativos:

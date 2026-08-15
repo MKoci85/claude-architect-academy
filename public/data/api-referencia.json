@@ -94,6 +94,12 @@
                     ["refusal", "Claude declinó generar una respuesta por motivos de seguridad.", "La respuesta puede contener contenido parcial. No reintentar con el mismo input."],
                     ["model_context_window_exceeded", "Se alcanzó el límite de la ventana de contexto del modelo.", "Reducir el historial de mensajes o usar compactación de contexto."]
                   ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "refusal trae stop_details con más contexto",
+                  "content": "Cuando stop_reason es \"refusal\", la respuesta incluye un campo stop_details con type (\"refusal\"), category y explanation. category y explanation pueden venir en null si la negativa no mapea a ninguna categoría de política nombrada — no asumir que siempre están poblados. Conviene ramificar sobre stop_reason o stop_details.type, no sobre category."
                 }
               ]
             },
