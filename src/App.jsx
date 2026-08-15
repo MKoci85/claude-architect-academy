@@ -1080,18 +1080,20 @@ export default function App() {
     setActiveArticle(null);
     setActiveCollection('Todos');
     setSearch('');
+    setExercisesData(null);
     toggleLang();
   }, [toggleLang]);
 
   const goExercises = useCallback(() => {
     setView('ejercicios');
     if (!exercisesData) {
-      fetch('/data/es/ejercicios.json')
-        .then(r => r.json())
+      const file = lang === 'en' ? '/data/en/exercises.json' : '/data/es/ejercicios.json';
+      fetch(file)
+        .then(r => (r.ok ? r.json() : lang === 'en' ? fetch('/data/es/ejercicios.json').then(r2 => r2.json()) : Promise.reject()))
         .then(setExercisesData)
         .catch(() => {});
     }
-  }, [exercisesData]);
+  }, [exercisesData, lang]);
 
   const goHomeToCollection = useCallback((collectionTitle) => {
     setView('home');

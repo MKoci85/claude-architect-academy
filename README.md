@@ -1,11 +1,13 @@
 # Claude Architect Academy
 
-> Preparación completa, en español, para la certificación **Claude Certified Architect – Foundations (CCAR-F)**: documentación curada de Claude Code y la API de Claude, ejercicios de arquitectura resueltos paso a paso, y un examen de práctica fiel al formato de preguntas y la distribución por dominios publicados por Anthropic.
+> Preparación completa para la certificación **Claude Certified Architect – Foundations (CCAR-F)**: documentación curada de Claude Code y la API de Claude, ejercicios de arquitectura resueltos paso a paso, y un examen de práctica fiel al formato de preguntas y la distribución por dominios publicados por Anthropic.
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
 [![Idioma](https://img.shields.io/badge/idioma-espa%C3%B1ol%20%2B%20ingl%C3%A9s%20parcial-red)](#)
+
+🇬🇧 [Read this in English](README.en.md)
 
 ---
 
@@ -30,7 +32,7 @@ Un hub editorial estático — sin backend, sin base de datos — que centraliza
 
 No es una traducción automática de la documentación oficial: es contenido curado, verificado activamente contra la documentación viva de Anthropic (CLI, Agent SDK, API, MCP), pensado específicamente para cerrar la brecha entre "conozco la teoría" y "puedo tomar la decisión de arquitectura correcta bajo presión de examen".
 
-El sitio tiene un selector de idioma (ES/EN) en la barra superior. La traducción al inglés está en curso: solo las colecciones ya traducidas aparecen en modo inglés, el resto queda oculto hasta traducirse — ver [Estructura del proyecto](#estructura-del-proyecto).
+El sitio tiene un selector de idioma (ES/EN) en la barra superior. La traducción al inglés ya cubre la totalidad de las colecciones registradas y los ejercicios prácticos — ver [Estructura del proyecto](#estructura-del-proyecto).
 
 ---
 
@@ -160,13 +162,14 @@ public/
   data/
     es/                   → Contenido completo en español (fuente de verdad)
       content.json        → Índice maestro de colecciones (ES)
-      ejercicios.json     → Los 4 ejercicios prácticos resueltos (solo en español, por ahora)
+      ejercicios.json     → Los 4 ejercicios prácticos resueltos, en español
       *.json               → Una colección por archivo
-    en/                   → Traducción al inglés — solo lo ya traducido
-      content.json        → Índice maestro (EN) — lista únicamente colecciones/items traducidos
+    en/                   → Traducción al inglés
+      content.json        → Índice maestro (EN) — lista las colecciones/items traducidos
+      exercises.json      → Los 4 ejercicios prácticos, en inglés (no registrado en content.json, igual que su par en es/)
       *.json               → Un archivo por cada colección traducida, con nombre en inglés (ej. introduccion.json → introduction.json)
   practice/
-    index.html            → Página standalone del examen (sin dependencia del bundle principal, ya en inglés)
+    index.html            → Página standalone del examen (sin dependencia del bundle principal, interfaz en inglés)
     examen_cca_f_en.json  → Pool de 265 preguntas del examen, agrupadas por dominio
 
 src/

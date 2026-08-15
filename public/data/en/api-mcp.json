@@ -1,0 +1,473 @@
+{
+  "sections": [
+    {
+      "title": "MCP in Depth",
+      "articles": [
+        {
+          "title": "What MCP Solves",
+          "subsections": [
+            {
+              "title": "The N×M problem",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Without a common standard, connecting N AI applications to M different tools and data sources requires, in the worst case, N×M custom integrations: each application-service combination needs its own connection code. MCP turns that into an N+M problem: each service is integrated once, as an MCP server, and any compatible client can use it without writing anything specific to that service."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Without MCP",
+                    "rows": [
+                      {
+                        "key": "Complexity",
+                        "value": "N×M integrations. Each application needs its own connection code with each service."
+                      },
+                      {
+                        "key": "Reuse",
+                        "value": "None. What works in one app doesn't work in another."
+                      },
+                      {
+                        "key": "Maintenance",
+                        "value": "Multiplied: a change in the service breaks N integrations."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "With MCP",
+                    "rows": [
+                      {
+                        "key": "Complexity",
+                        "value": "N+M. Each service is integrated once as an MCP server."
+                      },
+                      {
+                        "key": "Reuse",
+                        "value": "Total. Any compatible MCP client can use any MCP server."
+                      },
+                      {
+                        "key": "Maintenance",
+                        "value": "Centralized: updating the MCP server benefits all of its clients."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "text",
+                  "content": "Communication between client and server uses JSON-RPC 2.0. An MCP server can expose three types of capabilities: tools (functions the model can invoke), resources (read-only data, like files or records), and prompts (reusable templates). The client, in turn, can expose its own capabilities to the server."
+                }
+              ]
+            },
+            {
+              "title": "Architecture: host, client, and server",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Host",
+                      "body": "The application the user directly interacts with: Claude Code, Claude Desktop, or your own app. The host contains or launches the MCP client."
+                    },
+                    {
+                      "title": "MCP Client",
+                      "body": "Speaks the protocol, discovers what capabilities the server has, and translates them into concrete calls."
+                    },
+                    {
+                      "title": "MCP Server",
+                      "body": "Exposes tools, resources, and prompts. Can be local (a subprocess on the same machine) or remote (a web service)."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Lifecycle of a Session",
+          "subsections": [
+            {
+              "title": "Capability negotiation",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "MCP is a stateful protocol: before anything can be listed or invoked, client and server negotiate what each is capable of. An important rule: neither party should use a capability the other didn't declare in the initialize step."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Initialize",
+                      "body": "The client sends its protocol version and its capabilities (roots, sampling, elicitation)."
+                    },
+                    {
+                      "title": "Server response",
+                      "body": "The server responds with its compatible version plus its own capabilities (tools, resources, prompts)."
+                    },
+                    {
+                      "title": "Initialized",
+                      "body": "The client notifies that it's ready. Only then do real operations begin."
+                    },
+                    {
+                      "title": "Operation",
+                      "body": "Requests (tools/call, resources/read, prompts/get) and notifications (list_changed, progress) in both directions."
+                    },
+                    {
+                      "title": "Shutdown",
+                      "body": "No special message: the transport is simply closed."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Transports: stdio vs. HTTP",
+              "blocks": [
+                {
+                  "type": "table",
+                  "head": [
+                    "Transport",
+                    "How it works",
+                    "When it's the right fit"
+                  ],
+                  "rows": [
+                    [
+                      "stdio",
+                      "The client launches the server as a local subprocess. They communicate over stdin/stdout.",
+                      "Local development tools: access to project files, Claude Code, Claude Desktop."
+                    ],
+                    [
+                      "HTTP (SSE / streaming)",
+                      "The server runs remotely, like any web service.",
+                      "Services shared by multiple clients or users at once. Requires authentication, typically OAuth."
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Server Primitives",
+          "subsections": [
+            {
+              "title": "Tools: defining tools with FastMCP",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The official Python SDK makes it easy to write a server with decorators: every function decorated with @mcp.tool() is automatically exposed, with its schema inferred from type hints and its description taken from the docstring. The same tool-use best practices apply: a prescriptive description improves when and how Claude ends up using the tool."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from mcp.server.fastmcp import FastMCP\n\nmcp = FastMCP(\"inventory-server\")\n\n@mcp.tool()\ndef check_stock(sku: str) -> str:\n    \"\"\"Returns the available stock for a given SKU. Use it when\n    asked about the availability of a specific product.\"\"\"\n    stock = database.get(sku, 0)\n    return f\"SKU {sku} has {stock} units available\"\n\nif __name__ == \"__main__\":\n    mcp.run()"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Automatic errors",
+                  "content": "If the decorated function raises an exception, the SDK automatically translates it into an error result for the client, similar to the is_error: true from the tool use module."
+                },
+                {
+                  "type": "text",
+                  "content": "The docstring describes the whole tool, but when a tool has several parameters each one needs its own description — that's where Pydantic's `Field` comes in as the parameter's default value, instead of a plain type hint."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from pydantic import Field\n\n@mcp.tool(description=\"Replaces a portion of text in an existing document.\")\ndef edit_document(\n    doc_id: str = Field(description=\"Id of the document to edit\"),\n    old_text: str = Field(description=\"Text to replace. Must match exactly, including whitespace.\"),\n    new_text: str = Field(description=\"Text that replaces the previous one\"),\n):\n    if doc_id not in docs:\n        raise ValueError(f\"Document {doc_id} does not exist\")\n    docs[doc_id] = docs[doc_id].replace(old_text, new_text)"
+                }
+              ]
+            },
+            {
+              "title": "Resources: read-only data",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Resources expose read-only data identified by a URI. They can be static (a fixed URI) or parameterized templates, where part of the URI is filled in dynamically. A server can also notify the client when the list of available resources changes, via a list_changed notification."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "@mcp.resource(\"config://return-policy\")\ndef return_policy() -> str:\n    return open(\"policy.md\").read()\n\n# resource template: the {customer_id} part is filled in when read\n@mcp.resource(\"invoices://{customer_id}\")\ndef customer_invoices(customer_id: str) -> str:\n    return get_pending_invoices(customer_id)\n\n# On the client:\n# result = await session.read_resource(\"invoices://C-4521\")"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Resource vs. tool: who decides when the data is fetched",
+                  "content": "A tool is invoked by Claude, mid-conversation, when it decides it needs it — model control. A resource is read by your application, typically before calling Claude, and injected directly into the message context — your control. Typical example: an \"@document\" picker in a chat uses a direct resource to list the available documents (autocomplete) and a resource template to fetch the chosen one's content, without spending a tool-use turn asking the model to decide to look it up."
+                }
+              ]
+            },
+            {
+              "title": "Prompts: reusable templates",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Prompts are parameterized templates that the server suggests to the client for common tasks, keeping every application from reinventing the same prompt. They can take arguments with default values, just like a function."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "@mcp.prompt()\ndef reply_to_complaint(complaint: str, tone: str = \"empathetic\") -> str:\n    return f\"Draft a reply in a {tone} tone to this complaint:\\n\\n{complaint}\"\n\n# On the client:\n# session.list_prompts()       → lists the available ones\n# session.get_prompt(name, arguments)  → returns the assembled text"
+                },
+                {
+                  "type": "text",
+                  "content": "Returning a string, as above, is enough for the simple case. But a prompt can return a list of messages (`list[base.Message]`) instead of a plain string — that enables, for example, including example turns (few-shot) as part of the template, not just an instruction."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from mcp.server.fastmcp.prompts import base\n\n@mcp.prompt()\ndef format_document(doc_id: str = Field(description=\"Id of the document to format\")) -> list[base.Message]:\n    prompt = f\"\"\"Reformat document {doc_id} into Markdown syntax: add\nheaders, bullets, and tables where appropriate. Use the 'edit_document' tool to\napply the changes.\"\"\"\n    return [base.UserMessage(prompt)]"
+                },
+                {
+                  "type": "table",
+                  "columns": ["Primitive", "Who controls it", "When it fires"],
+                  "rows": [
+                    ["Tools", "The model", "Claude decides mid-conversation that it needs to execute something"],
+                    ["Resources", "Your application", "Your code decides when to fetch the data — autocomplete, or context injected before the request"],
+                    ["Prompts", "The user", "The user deliberately triggers the template — a button, a slash command"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Three layers, three owners",
+                  "content": "This is the same control distinction as resource-vs-tool above, but completing the picture with prompts: tools serve the model (give it capabilities), resources serve the application (give it data), prompts serve the user (give them shortcuts to already-tested workflows). When in doubt about which primitive to use, the right question is \"who needs to decide this should happen — the model, my code, or the user?\", not \"how complex is the logic?\"."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Client Primitives and Security",
+          "subsections": [
+            {
+              "title": "Roots, sampling, and elicitation",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "MCP isn't one-directional: the client can also expose capabilities to the server."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Roots",
+                      "body": "The client tells the server which directories or paths it can touch (file:// URIs). It's a coordination mechanism, not a real technical boundary: real security has to be enforced at the operating system or sandboxing level."
+                    },
+                    {
+                      "title": "Sampling",
+                      "body": "The server can ask the client to generate a response using the client's model, without needing its own API key. Anthropic recommends that this capability require human approval on each use, to prevent a server from triggering generations without oversight."
+                    },
+                    {
+                      "title": "Elicitation",
+                      "body": "The server can ask the user, mid-operation, for an additional piece of data it needs to continue (for example, \"which branch should I commit to?\"), using a structured schema to validate the response."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Implementing a client",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "An MCP client connects to the server, discovers what tools it offers, and invokes them. For a local server over stdio, the client launches it as a subprocess."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from mcp import ClientSession, StdioServerParameters\nfrom mcp.client.stdio import stdio_client\n\nparams = StdioServerParameters(command=\"python\", args=[\"mcp_server.py\"])\n\nasync def main():\n    async with stdio_client(params) as (read, write):\n        async with ClientSession(read, write) as session:\n            await session.initialize()  # capability handshake\n\n            tools = await session.list_tools()\n            result = await session.call_tool(\"check_stock\", {\"sku\": \"ABC-123\"})"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The inspector: test before integrating",
+                  "content": "Before connecting a server to a real application, mcp dev mcp_server.py opens the MCP Inspector: it lists the exposed tools, resources, and prompts, and lets you invoke them by hand to verify the server responds as expected."
+                }
+              ]
+            },
+            {
+              "title": "The complete flow: your server in the middle",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When mcp_servers isn't used (see below), there are two distinct protocols in play, and your application server is what mediates between them: the Messages API's tool-use loop with Claude, and MCP's client-server protocol with the MCP client. Claude never talks to the MCP server directly — it only sees tool schemas and tool results, without knowing where they came from."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Discover tools",
+                      "body": "Your server asks the MCP client for the list of tools (`list_tools()` → internally a `ListToolsRequest` to the MCP server, which responds with `ListToolsResult`)."
+                    },
+                    {
+                      "title": "First request to Claude",
+                      "body": "Your server assembles the user message + those tools (translated to the Messages API's `tools` format) and calls `client.messages.create()`."
+                    },
+                    {
+                      "title": "Claude asks to use a tool",
+                      "body": "The response includes a `tool_use` block. Your server detects it and knows it has to execute that tool before it can respond to the user."
+                    },
+                    {
+                      "title": "Execute via the MCP client",
+                      "body": "Your server passes the name and arguments to the MCP client (`call_tool()` → `CallToolRequest` to the MCP server), which makes the actual call to the external service and returns a `CallToolResult`."
+                    },
+                    {
+                      "title": "Second request to Claude",
+                      "body": "Your server packages that result as a `tool_result` and sends it back to Claude in a new turn, along with the entire previous history. Only then does Claude generate the final response for the user."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "It's the same old tool-use loop",
+                  "content": "This sequence isn't a new mechanism: it's the standard tool-use loop (see Claude API → Tool Use → The full loop) with one extra detail — instead of executing the function yourself inside your process, you delegate that execution to the MCP client, which in turn talks to the MCP server. MCP resolves who writes and maintains the tools; the conversation loop with Claude doesn't change."
+                }
+              ]
+            },
+            {
+              "title": "Connecting MCP directly to the Messages API",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Besides the pure client/server flow, the Messages API supports declaring remote MCP servers directly in the request, via the mcp_servers parameter, delegating to Anthropic the task of invoking the server's tools during the conversation."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.beta.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=800,\n    messages=[{\"role\": \"user\", \"content\": \"How much stock is left for SKU ABC-123?\"}],\n    mcp_servers=[{\n        \"type\": \"url\",\n        \"url\": \"https://my-mcp-server.mycompany.com/sse\",\n        \"name\": \"inventory\",\n        \"authorization_token\": \"TOKEN_OBTAINED_VIA_OAUTH\",\n        \"tool_configuration\": {\n            \"enabled\": True,\n            \"allowed_tools\": [\"check_stock\"],  # tool whitelist\n        },\n    }],\n)"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "mcp_toolset for granular control",
+                  "content": "For scenarios with many tools spread across several servers, mcp_toolset lets you enable or disable individual tools and defer loading them until they're actually needed, instead of exposing all of them from the first turn."
+                }
+              ]
+            },
+            {
+              "title": "Security when connecting third-party servers",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "An MCP server is, in practice, third-party code being given permission to read data and take actions on a user's behalf. Before connecting one, especially if you didn't write it yourself:"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Actually review the tools",
+                      "body": "Don't just trust names and descriptions. Read what each function actually does before connecting the server."
+                    },
+                    {
+                      "title": "Least privilege",
+                      "body": "Roots scoped to strictly what's needed. Server-side credentials with minimal permissions. Over HTTP, serious authentication, typically via OAuth."
+                    },
+                    {
+                      "title": "Treat content as untrusted data",
+                      "body": "The content of a resource or a tool's result can include text that tries to covertly instruct the model. Always treat it as data, never as an instruction with the authority of the system prompt."
+                    },
+                    {
+                      "title": "Sampling under human approval",
+                      "body": "The sampling capability delegates to the server the ability to trigger model generations. It should require human confirmation on each use to prevent a server from abusing it."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "OAuth and Token Lifecycle in MCP",
+          "subsections": [
+            {
+              "title": "Why OAuth in MCP and which scopes to request",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When an MCP server accesses third-party resources (payments, CRM, external APIs), the agent needs to authenticate on the user's behalf. OAuth 2.0 is the standard mechanism. The critical design decision is which scopes to request: asking for more than needed violates least-privilege; asking for less breaks operations."
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Scope",
+                    "Access it grants",
+                    "When to request it"
+                  ],
+                  "rows": [
+                    [
+                      "read_only",
+                      "Read-only access to payment data",
+                      "Query and reporting agents. Most cases."
+                    ],
+                    [
+                      "read_write",
+                      "Read and write (create, modify transactions)",
+                      "Only if the agent needs to create or modify, not just query."
+                    ],
+                    [
+                      "admin",
+                      "Full access including configuration and permissions",
+                      "Rarely justified for agents. Requires explicit user approval."
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Requesting the broadest available scope is a design mistake",
+                  "content": "Requesting admin or read_write when the agent only queries data violates the principle of least-privilege. If the OAuth token is compromised, the attacker will have write or admin access. The scope should reflect exactly what the agent needs to do, not what it might eventually need."
+                }
+              ]
+            },
+            {
+              "title": "Token expiration and refresh",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "OAuth access tokens have a short TTL (typically 1 hour). In long agent sessions, the token can expire mid-session. Handling it incorrectly produces an HTTP 401 error the agent doesn't know how to resolve. The correct pattern is to intercept the 401 and run the refresh before retrying."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Valid token",
+                      "description": "The agent calls the MCP server with the access token. The operation succeeds."
+                    },
+                    {
+                      "title": "Expired token",
+                      "description": "The MCP server returns HTTP 401 Unauthorized."
+                    },
+                    {
+                      "title": "401 interception",
+                      "description": "The MCP client intercepts the 401 before returning it to the agent as a tool error."
+                    },
+                    {
+                      "title": "Automatic refresh",
+                      "description": "The client uses the refresh_token to get a new access_token from the authorization server."
+                    },
+                    {
+                      "title": "Transparent retry",
+                      "description": "The client retries the original operation with the new token. The agent never sees the 401 — the tool simply succeeds with a minimal delay."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "async def call_with_token_refresh(mcp_client, operation, *args):\n    try:\n        return await mcp_client.call_tool(operation, *args)\n    except AuthorizationError as e:\n        if e.status_code == 401:\n            # Refresh before retrying\n            new_token = await refresh_oauth_token(mcp_client.refresh_token)\n            mcp_client.access_token = new_token\n            return await mcp_client.call_tool(operation, *args)  # retry\n        raise  # other authorization errors: propagate"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The refresh must be transparent to the agent",
+                  "content": "If the 401 reaches the agent as a tool error, the model doesn't know how to perform an OAuth refresh. Handling the token lifecycle is the MCP client layer's responsibility, not the agent's. The agent should only see success or a semantic error (e.g. \"access denied\" if the refresh also fails)."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -24,7 +24,7 @@ Content is split into two parallel folders under `public/data/`:
 
 Both folders share the exact same per-file schema (see below), but **filenames are independent per language and written in that language** — `es/introduccion.json` is `en/introduction.json`, `es/api-vertex.json` stays `api-vertex.json` (already an English-looking name). Never carry a Spanish filename into `en/`. Each `content.json`'s `file` field points to whatever that language's file is actually called — `es/content.json` and `en/content.json` are independent indexes, not the same file with fewer entries.
 
-`ejercicios.json` (the practice exercises) currently only exists in `es/` — it is not yet translated, and the "Ejercicios" button always fetches `public/data/es/ejercicios.json` regardless of the active language toggle.
+`ejercicios.json` (the practice exercises) is not registered in either `content.json` — the "Ejercicios"/"Exercises" button (`goExercises` in `App.jsx`) fetches it directly by path rather than going through the collection index. In English mode it requests `public/data/en/exercises.json` first and falls back to `public/data/es/ejercicios.json` if that 404s (translation is optional, same partial-by-design rule as everything else in `en/`); in Spanish mode it always reads `es/ejercicios.json`. Changing the language toggle clears any already-loaded exercises data so the next open re-fetches in the new language.
 
 ### Data flow
 
@@ -172,6 +172,7 @@ When writing new questions:
 5. **Target the decision layer** — questions should require production intuition: architecture choices, failure handling, tradeoff resolution.
 6. **Cover scenario types** — balance across the 6 exam scenarios, not just domain tags.
 7. **Explanation field** — must state *why* the correct answer is best and implicitly why the main distractor fails.
+8. **Name the trap, not just the answer** — the shared `explanation` field should call out the specific misconception the strongest distractor is designed to exploit (e.g. "mistaking conversational text for the completion signal when stop_reason says otherwise"), not just restate why the correct option is right. This single-field format is intentional for this bank (`buildPoolsFromJson` only reads `explanation`, not a per-option breakdown) — write one sentence (or two, if needed) that does double duty: justify the answer AND defuse the trap, rather than adding new per-option fields to the schema. **Length is not a target.** This is study material — optimize for whether a learner reading it actually understands *why* the trap is tempting and *why* it's wrong, not for hitting a character count. A short explanation that's already clear should stay short; a genuinely subtle trap may legitimately need three sentences. Never pad a clear explanation with restated content just to make it longer, and never truncate a genuinely complex trap just to make it shorter.
 
 ### Example questions by domain
 

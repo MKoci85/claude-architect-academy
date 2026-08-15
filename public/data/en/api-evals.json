@@ -1,0 +1,471 @@
+{
+  "sections": [
+    {
+      "title": "Prompt Evaluation",
+      "articles": [
+        {
+          "title": "Why Evaluate",
+          "subsections": [
+            {
+              "title": "The problem with eyeballing validation",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Without an eval, every prompt change is validated manually on two or three cases, which doesn't scale and hides regressions: an improvement in one case can silently break ten others. An eval turns that intuition into a number comparable across prompt versions, across models, or over time."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Evals as automated tests",
+                  "content": "It's worth thinking of an eval with the same seriousness as an automated software test: it's not an optional step at the end of the project, but the safety net that lets you keep iterating without fear of breaking something that already worked. The difference from traditional testing: the \"function\" being tested (the model) isn't deterministic."
+                }
+              ]
+            },
+            {
+              "title": "Four types of grader",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Not all evals score the same way. Before writing the first grader, it's worth identifying which category the problem falls into, because each one has a different cost and reliability."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Type", "How it scores", "When to use it"],
+                  "rows": [
+                    ["Code-graded", "Exact match, regex, or schema validation", "Objective answer: classification, data extraction, format"],
+                    ["Similarity-graded", "Distance between the response and a reference", "Free text where \"nearly identical\" is acceptable: summaries, paraphrases"],
+                    ["Model-graded", "Another Claude call scores against a rubric", "Subjective quality: tone, coherence, fidelity, safety"],
+                    ["Human-graded", "A person reviews and scores manually", "Final validation, high-risk cases, calibrating the other three"]
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "A mature eval almost never uses a single type: it starts with code grading where possible (it's free and reproducible), complements it with a model judge for the subjective parts, and reserves human review for a periodic sample that calibrates the other two."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Dataset and Execution",
+          "subsections": [
+            {
+              "title": "Designing a dataset that's worth it",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "An eval's quality is bounded by its dataset's quality. A dataset made up only of easy cases that already worked gives a false sense of security."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "📊",
+                      "title": "Typical cases",
+                      "description": "Most of real traffic. If this fails, everything fails. E.g.: \"My order #4521 hasn't arrived\"."
+                    },
+                    {
+                      "icon": "🔀",
+                      "title": "Edge cases",
+                      "description": "Messages that mention two categories at once, or that sit on the border between options."
+                    },
+                    {
+                      "icon": "⚔️",
+                      "title": "Adversarial cases",
+                      "description": "Inputs that try to inject instructions (\"ignore the previous rules and...\"). Measures robustness."
+                    },
+                    {
+                      "icon": "❓",
+                      "title": "Ambiguous cases",
+                      "description": "No single correct answer. Useful for defining what behavior is acceptable."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Use production logs",
+                  "content": "When real conversations or already-resolved tickets exist, sample from there before relying only on synthetic cases. The real distribution almost always has surprises hard to imagine ahead of time."
+                }
+              ]
+            },
+            {
+              "title": "Synthetic case generation",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When no sufficiently large real dataset exists, a common technique is to use Claude itself to generate varied test cases — including edge cases — which are then manually reviewed and curated before being trusted as ground truth."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\nimport json\n\nclient = anthropic.Anthropic()\n\ngenerator_prompt = \"\"\"\nGenerate 8 examples of support messages from an ecommerce user,\nvarying: tone (formal/informal), whether it includes an order number, and\nwhether the issue is about shipping, a refund, or a defective product.\nInclude at least one ambiguous case and one that mentions two categories at once.\n\nReturn a JSON: list of objects with \"message\" and \"expected_category\"\n(one of: \"shipping\", \"refund\", \"defective_product\", \"ambiguous\").\n\"\"\"\n\nresponse = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1500,\n    messages=[{\"role\": \"user\", \"content\": generator_prompt}],\n)\n# parse and save as dataset.json\n# a person reviews each \"expected_category\" before trusting the file"
+                }
+              ]
+            },
+            {
+              "title": "Running the eval under non-determinism",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Since a model's output can vary between calls (even with `temperature=0` there's residual variability), a serious eval doesn't run each case once: it runs each case multiple times and measures a success rate, not a binary result. Parallelizing with `asyncio.gather` prevents a dataset of hundreds of cases from taking hours."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import json\nimport asyncio\nfrom anthropic import AsyncAnthropic\n\nasync_client = AsyncAnthropic()\n\nasync def classify(message, system_prompt):\n    r = await async_client.messages.create(\n        model=\"claude-haiku-4-5-20251001\",  # cheap model for the dataset\n        max_tokens=20,\n        system=system_prompt,\n        messages=[{\"role\": \"user\", \"content\": message}],\n    )\n    return r.content[0].text.strip()\n\nasync def run_case_n_times(case, system_prompt, repetitions=5):\n    predictions = await asyncio.gather(*[\n        classify(case[\"message\"], system_prompt) for _ in range(repetitions)\n    ])\n    hits = sum(1 for p in predictions if p == case[\"expected_category\"])\n    return {\"case\": case[\"message\"], \"success_rate\": hits / repetitions}\n\nasync def run_eval(dataset, system_prompt):\n    return await asyncio.gather(*[run_case_n_times(c, system_prompt) for c in dataset])\n\ndataset = json.load(open(\"dataset.json\"))\nresults = asyncio.run(run_eval(dataset, SYSTEM_PROMPT_V2))"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Advanced Grading",
+          "subsections": [
+            {
+              "title": "Code grading",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Code grading is exact, fast, and free. It's not limited to exact equality: depending on the task, it's worth choosing among different types of checks."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import re\nfrom jsonschema import validate, ValidationError\n\n# 1. exact match — classification, closed categories\ndef grader_exact_match(obtained, expected):\n    return obtained.strip().lower() == expected.strip().lower()\n\n# 2. regular expression — free format but with a required pattern\ndef grader_regex(text, pattern=r\"^\\[(shipping|refund|defective_product)\\]\"):\n    return bool(re.match(pattern, text))\n\n# 3. schema validation — structured outputs (JSON / tool use)\ndef grader_schema(json_data, schema):\n    try:\n        validate(instance=json_data, schema=schema)\n        return True\n    except ValidationError:\n        return False\n\nhits = sum(1 for r in results if grader_exact_match(r[\"obtained\"], r[\"expected\"]))\naccuracy = hits / len(results)\nprint(f\"Accuracy: {accuracy:.1%}\")"
+                },
+                {
+                  "type": "text",
+                  "content": "There's a fourth use case, different from the ones above: when what's being evaluated isn't whether the response matches an expected value, but whether **the code Claude generated is syntactically valid** — for example, when the prompt asks for a Python function, a JSON object, or a regex pattern as the sole output. The language's own parser serves as the grader: if it parses, the code is well-formed; if it throws an exception, it isn't."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import ast\nimport json\nimport re\n\n# 4. syntax validation — the output IS code, not data describing something\ndef validate_json(text):\n    try:\n        json.loads(text.strip())\n        return 10\n    except json.JSONDecodeError:\n        return 0\n\ndef validate_python(text):\n    try:\n        ast.parse(text.strip())\n        return 10\n    except SyntaxError:\n        return 0\n\ndef validate_regex(text):\n    try:\n        re.compile(text.strip())\n        return 10\n    except re.error:\n        return 0\n\ndef grade_syntax(output, test_case):\n    validator = {\"json\": validate_json, \"python\": validate_python, \"regex\": validate_regex}\n    return validator[test_case[\"format\"]](output)"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "All or nothing, and that's fine",
+                  "content": "Unlike an LLM-as-judge, this grader doesn't measure quality — only structural validity: 10 if it parses, 0 if it doesn't. It's intentionally binary. The usual way to use it is combined with a model grader (which does evaluate whether the code solves the task): averaging both scores gives a grade that penalizes both broken code and code that compiles but doesn't answer what was asked."
+                }
+              ]
+            },
+            {
+              "title": "LLM-as-judge",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When correctness is subjective (tone, quality of an explanation, fidelity of a summary), Claude can be used as an evaluator with an explicit rubric. Four practices improve the judge's reliability:"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🎯",
+                      "title": "Structured output",
+                      "description": "Force a tool with a schema instead of asking for the score in free text. Eliminates parsing work and avoids poorly formatted responses."
+                    },
+                    {
+                      "icon": "📎",
+                      "title": "Anchor with examples",
+                      "description": "Show the judge one example response scored 5 and another scored 1. Reduces variability across runs."
+                    },
+                    {
+                      "icon": "🧠",
+                      "title": "Capable model",
+                      "description": "The judge benefits from more reasoning capacity than the model that generated the response, even when that cheaper model is the one running in production."
+                    },
+                    {
+                      "icon": "💭",
+                      "title": "Require justification, not just the number",
+                      "description": "A judge asked only for a score tends to converge on middle values (~6 out of 10) to avoid committing. Asking it to first list strengths and weaknesses and only then give the score — as the justification field in the schema below does — forces it to ground the grade instead of throwing out a safe number."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "evaluation_tool = {\n    \"name\": \"record_evaluation\",\n    \"description\": \"Records the score and justification of an evaluation\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"score\": {\"type\": \"integer\", \"minimum\": 1, \"maximum\": 5},\n            \"justification\": {\"type\": \"string\"},\n        },\n        \"required\": [\"score\", \"justification\"],\n    },\n}\n\nrubric = \"\"\"\nEvaluate the support response against this rubric:\n5: solves the problem, professional tone, no invented information.\n3: partially solves it or the tone is inappropriate.\n1: doesn't solve the problem or invents false information.\n\n<score_5_example>\nMessage: \"my order #100 hasn't arrived\"\nResponse: \"Sorry for the delay. I've already started tracking order #100 and will\nfollow up within 24h with the exact location or a refund.\"\n</score_5_example>\n\nUser message: {message}\nResponse to evaluate: {response}\n\"\"\"\n\nevaluation = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=300,\n    tools=[evaluation_tool],\n    tool_choice={\"type\": \"tool\", \"name\": \"record_evaluation\"},\n    messages=[{\"role\": \"user\", \"content\": rubric.format(\n        message=case[\"message\"], response=case[\"response\"]\n    )}],\n)\nresult = evaluation.content[0].input  # {\"score\": 5, \"justification\": \"...\"}"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Model judge biases",
+                  "content": "An LLM-as-judge tends to prefer longer responses (verbosity bias) and, in comparisons between two responses, to favor the one that appears first (position bias). In comparisons, run the judgment twice while swapping the order: if the winner is the same, the result is reliable; if they don't match, the case is treated as a tie."
+                }
+              ]
+            },
+            {
+              "title": "Avoiding overfitting to the eval set",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "If a prompt is tuned over and over while looking at the same evaluation dataset, it ends up memorizing that dataset's quirks instead of generalizing. It's the same problem as overfitting in machine learning."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Holdout set",
+                      "body": "Keep a set that's never looked at during iteration, reserved only for final validation of a candidate version."
+                    },
+                    {
+                      "title": "Refresh the dataset",
+                      "body": "Periodically add new cases, especially ones coming from real failures detected in production."
+                    },
+                    {
+                      "title": "Validate manually",
+                      "body": "Be suspicious of an improvement that only shows up in the eval but not in spot manual reviews of real responses."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Multi-Pass Review and Independent Instances",
+      "articles": [
+        {
+          "title": "Why self-review is unreliable",
+          "subsections": [
+            {
+              "title": "The bias of the session that generated the code",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Asking the same session that generated a piece of code to later review it has a structural limitation: that session retains the reasoning behind each decision it made, and that same reasoning tends to retrospectively justify the choices made instead of questioning them. If the model decided not to handle an edge case because \"it didn't seem relevant\", that same session reviewing itself is less likely to flag that omission as a problem — it already \"decided\" it wasn't one."
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "This isn't a problem of missing instructions (\"critically review your own code\") or of extended thinking. It's a context problem: the session that generated the code still has its generation reasoning present, and that context biases the review even when explicitly asked to be critical."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "title": "❌ Self-review (same session)",
+                    "rows": [
+                      { "key": "Context", "value": "Retains the full generation reasoning" },
+                      { "key": "Bias", "value": "Tends to justify decisions already made instead of questioning them" },
+                      { "key": "Good at detecting", "value": "Syntax errors, typos — surface-level problems" },
+                      { "key": "Bad at detecting", "value": "Design omissions, unconsidered edge cases, questionable decisions" }
+                    ]
+                  },
+                  "right": {
+                    "title": "✅ Independent review (new instance)",
+                    "rows": [
+                      { "key": "Context", "value": "Only sees the final code, without the reasoning for why it was written that way" },
+                      { "key": "Bias", "value": "None toward the previous decisions — evaluates the result on its own merits" },
+                      { "key": "Good at detecting", "value": "Omitted edge cases, contradictions, design problems" },
+                      { "key": "Bad at detecting", "value": "Nothing structurally different — it's the reference review" }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "icon": "💡",
+                  "content": "The correct pattern in CI/CD: the session that generated the PR and the session that reviews it must be separate instances, with no shared context. In practice, this means launching the review as a new process (a new invocation of Claude Code with -p, or a subagent with isolated context) that only receives the final diff — not the history of how it got there."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Splitting large reviews: per-file passes + integration",
+          "subsections": [
+            {
+              "title": "The problem with reviewing 14 files in a single pass",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When a PR modifies many files and they're all analyzed together in a single pass, an attention-dilution problem shows up: the model gives detailed feedback to some files and superficial feedback to others, within the same review. Worse, it can give contradictory feedback — flagging a pattern as problematic in one file and approving the same pattern in another file of the same PR — because attention isn't uniform across a large context."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Pass 1: local per-file analysis",
+                      "body": "Each file is reviewed in its own pass, isolated from the rest. This guarantees consistent depth — file #14 gets the same attention as file #1."
+                    },
+                    {
+                      "title": "Pass 2: cross-file integration",
+                      "body": "A separate pass, with all 14 files together but focused exclusively on relationships between files: data flow between modules, broken API contracts between caller and callee, logic duplication introduced in more than one place."
+                    },
+                    {
+                      "title": "Consolidation",
+                      "body": "Findings from both passes are combined into a single report, distinguishing local problems from integration problems."
+                    }
+                  ]
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "title": "❌ A single pass with 14 files",
+                    "rows": [
+                      { "key": "Depth", "value": "Inconsistent across files — attention dilution" },
+                      { "key": "Consistency", "value": "Can contradict itself within the same review" },
+                      { "key": "Obvious bugs", "value": "Missed in files that got less attention" }
+                    ]
+                  },
+                  "right": {
+                    "title": "✅ Per-file passes + integration pass",
+                    "rows": [
+                      { "key": "Depth", "value": "Uniform — each file has its own dedicated pass" },
+                      { "key": "Consistency", "value": "The same pattern is evaluated the same way in every file" },
+                      { "key": "Cross-file", "value": "Explicitly captured in a dedicated pass, not as a side effect" }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "Alternatives that don't fix the root problem: asking the developer to split the PR into smaller submits (shifts the problem, doesn't solve it), using a model with a larger context window (the problem is attention quality, not available space), or running 3 independent passes and keeping only findings that agree in at least 2 (this suppresses real bugs that only one pass detects, instead of improving coverage)."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Human Review and Confidence Calibration",
+      "articles": [
+        {
+          "title": "Why aggregate accuracy is misleading",
+          "subsections": [
+            {
+              "title": "The problem with the average",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "An extraction or classification pipeline reporting 97% overall accuracy can be hiding a serious problem: that figure is an average, and an average can hide the fact that 99.5% accuracy on type-A documents coexists with 60% accuracy on type-B documents, simply because type B is a minority in the dataset. Automating without human review based solely on the aggregate metric means blindly trusting the minority segment that actually fails half the time."
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "Before reducing human review based on a high global accuracy, it needs to be broken down by document type and by field. Only then do you know whether the 97% is 97% everywhere, or 99% in most cases and 55% in a segment nobody looked at closely."
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "content": "import pandas as pd\n\ndef accuracy_by_segment(results: pd.DataFrame) -> pd.DataFrame:\n    # results has columns: document_type, field_name, correct (bool)\n    return (\n        results\n        .groupby([\"document_type\", \"field_name\"])[\"correct\"]\n        .agg([\"mean\", \"count\"])\n        .rename(columns={\"mean\": \"accuracy\", \"count\": \"n\"})\n        .reset_index()\n    )\n\n# detect problematic segments even with few samples\nsegments = accuracy_by_segment(results)\nrisk_segments = segments[(segments[\"accuracy\"] < 0.90) | (segments[\"n\"] < 20)]\nprint(risk_segments)  # candidates for more human review, not less"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Stratified sampling to measure real error",
+          "subsections": [
+            {
+              "title": "Simple random sampling isn't enough",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Manually reviewing a simple random sample of the total extractions tends to under-represent minority document types — exactly the ones that need the most attention. Stratified sampling solves this: each stratum is defined (document type, model confidence range, extracted field) and a guaranteed minimum quantity is sampled from each, instead of letting the original dataset's proportions determine how much of each segment gets reviewed."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Define the strata",
+                      "body": "Cross document type × model confidence range (high / medium / low) × critical field. Each combination is an independent stratum."
+                    },
+                    {
+                      "title": "Guarantee a minimum per stratum",
+                      "body": "Sample at least N cases from each stratum, even if that stratum represents less than 1% of total volume. This is what prevents a rare document type from going unnoticed."
+                    },
+                    {
+                      "title": "Calculate the error rate per stratum",
+                      "body": "With the reviewed sample, calculate real accuracy per stratum — don't assume it behaves like the overall average."
+                    },
+                    {
+                      "title": "Detect novel error patterns",
+                      "body": "Stratified sampling also helps find error types that the automated validation system didn't anticipate — cases that pass schema validation but are semantically incorrect."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "content": "import random\n\ndef stratified_sampling(extractions: list[dict], min_per_stratum: int = 15) -> list[dict]:\n    strata: dict[tuple, list[dict]] = {}\n    for ext in extractions:\n        key = (ext[\"document_type\"], ext[\"confidence_bucket\"])  # e.g.: (\"invoice\", \"low\")\n        strata.setdefault(key, []).append(ext)\n\n    sample = []\n    for key, items in strata.items():\n        n = min(min_per_stratum, len(items))\n        sample.extend(random.sample(items, n))\n    return sample  # every stratum is represented, regardless of its original size"
+                },
+                {
+                  "type": "callout",
+                  "icon": "💡",
+                  "content": "Stratified sampling doesn't replace confidence-driven review (see below) — it complements it. It specifically serves to measure the real error rate of segments that would otherwise remain invisible behind the overall average."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Confidence calibration and review routing",
+          "subsections": [
+            {
+              "title": "Field-level confidence, not just global",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Asking the model for a single confidence score for an entire extraction isn't very actionable: if a document has 8 fields and one of them is doubtful, a single score doesn't say which one. The correct design is for the model to emit a confidence score per field, so human review can focus exactly on the doubtful fields of each document, not the whole document."
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "content": "extraction_schema = {\n    \"type\": \"object\",\n    \"properties\": {\n        \"invoice_number\": {\"type\": \"string\"},\n        \"invoice_number_confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"total_amount\": {\"type\": [\"number\", \"null\"]},\n        \"total_amount_confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n        \"due_date\": {\"type\": [\"string\", \"null\"]},\n        \"due_date_confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1},\n    },\n    \"required\": [\"invoice_number\", \"invoice_number_confidence\",\n                 \"total_amount_confidence\", \"due_date_confidence\"],\n}"
+                }
+              ]
+            },
+            {
+              "title": "Calibrating the threshold with a labeled validation set",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The confidence score the model reports isn't automatically trustworthy: a model can be systematically overconfident or underconfident. Before using a confidence threshold to decide what goes to human review, it needs to be calibrated against a validation set with human labels — verifying that, empirically, cases the model flags with 0.9+ confidence actually turn out correct ~90% of the time."
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "code": "def calibrate_threshold(validation_set: list[dict]) -> dict:\n    # validation_set: [{\"confidence\": 0.92, \"correct\": True}, ...] with human ground truth\n    buckets = {}\n    for item in validation_set:\n        bucket = round(item[\"confidence\"], 1)\n        buckets.setdefault(bucket, []).append(item[\"correct\"])\n\n    calibration = {\n        bucket: sum(hits) / len(hits)\n        for bucket, hits in buckets.items()\n    }\n    # if confidence=0.9 corresponds to a real accuracy of 0.65, the model is\n    # overconfident in that range: the auto-approval threshold should be raised\n    return calibration"
+                },
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "The routing threshold (\"below X, goes to human review\") is defined based on this empirical calibration, not on the nominal value reported by the model. A model can report 0.9 and only be correct 70% of the time in that range — the real threshold must be adjusted to that reality."
+                }
+              ]
+            },
+            {
+              "title": "Review routing: prioritizing limited capacity",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Human review capacity is always limited. The correct design doesn't send everything \"possibly doubtful\" to the review queue — it prioritizes by impact and real probability of error, calibrated with the previous step."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Signal", "Action"],
+                  "rows": [
+                    ["Low confidence on a critical field (calibrated)", "Priority human review"],
+                    ["Ambiguous or contradictory source document (e.g. two different totals in the same invoice)", "Human review, even with high reported confidence"],
+                    ["High confidence and non-critical field", "Auto-approve without review"],
+                    ["New or infrequent document type in the calibration set", "Human review until enough samples accumulate to calibrate that segment"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "Reducing human review is a decision made segment by segment, after validating accuracy by document type and field (see above) — not a global decision based on the whole system's average accuracy."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

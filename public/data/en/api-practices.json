@@ -1,0 +1,375 @@
+{
+  "sections": [
+    {
+      "title": "Practical Guides",
+      "articles": [
+        {
+          "title": "Response Streaming",
+          "subsections": [
+            {
+              "title": "What is streaming?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Instead of waiting for the complete response, you receive tokens one by one as they're generated. Allows for a more responsive UX."
+                }
+              ]
+            },
+            {
+              "title": "Streaming in Python",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nwith client.messages.stream(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": \"Tell me a joke\"}]\n) as stream:\n    for text in stream.text_stream:\n        print(text, end=\"\", flush=True)"
+                }
+              ]
+            },
+            {
+              "title": "Streaming in JavaScript",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "javascript",
+                  "code": "import Anthropic from \"@anthropic-ai/sdk\";\n\nconst client = new Anthropic();\n\nconst stream = await client.messages.stream({\n  model: \"claude-opus-4-8\",\n  max_tokens: 1024,\n  messages: [{role: \"user\", content: \"Tell me a joke\"}]\n});\n\nfor await (const chunk of stream) {\n  if (chunk.type === \"content_block_delta\") {\n    process.stdout.write(chunk.delta.text);\n  }\n}"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Error Handling",
+          "subsections": [
+            {
+              "title": "Common errors",
+              "blocks": [
+                {
+                  "type": "table",
+                  "columns": [
+                    "Error",
+                    "Code",
+                    "Solution"
+                  ],
+                  "rows": [
+                    [
+                      "Invalid API key",
+                      "401",
+                      "Verify the key is correct and active"
+                    ],
+                    [
+                      "Model not found",
+                      "404",
+                      "Use an available model (claude-opus-4-8, etc)"
+                    ],
+                    [
+                      "Rate limit exceeded",
+                      "429",
+                      "Wait a moment and try again"
+                    ],
+                    [
+                      "Context too long",
+                      "400",
+                      "Reduce the number of tokens in your message"
+                    ],
+                    [
+                      "Invalid parameter",
+                      "400",
+                      "Check the expected parameters"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Retries",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\nimport time\n\nclient = anthropic.Anthropic()\n\nmax_retries = 3\nfor attempt in range(max_retries):\n    try:\n        message = client.messages.create(\n            model=\"claude-opus-4-8\",\n            max_tokens=1024,\n            messages=[{\"role\": \"user\", \"content\": \"Hello\"}]\n        )\n        print(message.content[0].text)\n        break\n    except anthropic.RateLimitError:\n        if attempt < max_retries - 1:\n            wait_time = 2 ** attempt\n            print(f\"Rate limit, waiting {wait_time}s...\")\n            time.sleep(wait_time)\n        else:\n            raise"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Rate Limiting",
+          "subsections": [
+            {
+              "title": "Understanding rate limits",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The API has limits to prevent abuse: maximum requests per minute, tokens per minute, etc. Limits vary depending on your plan."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Rate limit headers",
+                  "content": "The response includes headers showing your current usage: rate-limit-limit-requests, rate-limit-remaining-requests, rate-limit-reset-requests"
+                }
+              ]
+            },
+            {
+              "title": "Exponential retry strategy",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "If you get a 429 error (too many requests), wait an exponentially increasing amount of time before retrying (1s, 2s, 4s, etc)."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Best Practices",
+          "subsections": [
+            {
+              "title": "Security",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "cards": [
+                    {
+                      "title": "Store keys in .env",
+                      "description": "Use environment variables, never hardcode them"
+                    },
+                    {
+                      "title": "Validate inputs",
+                      "description": "Sanitize user inputs before sending to the API"
+                    },
+                    {
+                      "title": "Handle tokens securely",
+                      "description": "Don't log full requests that contain sensitive data"
+                    },
+                    {
+                      "title": "Monitor costs",
+                      "description": "Use token counting for alerts if costs rise"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Performance",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "cards": [
+                    {
+                      "title": "Use streaming",
+                      "description": "For better UX in interactive applications"
+                    },
+                    {
+                      "title": "Batch API",
+                      "description": "For bulk processing without urgency"
+                    },
+                    {
+                      "title": "Cache responses",
+                      "description": "If the same question repeats frequently"
+                    },
+                    {
+                      "title": "Choose the right model",
+                      "description": "Use Haiku for speed, Opus for complexity"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Cost",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Monitor usage at console.anthropic.com. Consider using the Batch API (50% discount) for non-urgent work. Use Haiku for simple, cost-sensitive tasks."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "stop_reason, advanced streaming, and dead-letter queues",
+          "subsections": [
+            {
+              "title": "stop_reason as a diagnostic signal",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Every API response includes a stop_reason field indicating why generation ended. In production systems, stop_reason is the first diagnostic signal when behavior is unexpected. Ignoring it is a design mistake."
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "stop_reason",
+                    "What it indicates",
+                    "Correct action"
+                  ],
+                  "rows": [
+                    [
+                      "\"end_turn\"",
+                      "The model finished its response naturally.",
+                      "Normal. No action required."
+                    ],
+                    [
+                      "\"max_tokens\"",
+                      "The response was truncated because it hit the max_tokens limit.",
+                      "Increase max_tokens or redesign for shorter outputs. NEVER treat the output as complete."
+                    ],
+                    [
+                      "\"tool_use\"",
+                      "The model is invoking a tool. Wait for the result before continuing.",
+                      "Execute the tool, return the result, continue the multi-turn loop."
+                    ],
+                    [
+                      "\"stop_sequence\"",
+                      "Generation ended after hitting a configured stop sequence.",
+                      "Normal if intentional (structured-output delimiters)."
+                    ],
+                    [
+                      "\"pause_turn\"",
+                      "The model paused its turn (Extended Thinking enabled).",
+                      "Continue the loop with the same message history."
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Unchecked max_tokens produces silently incomplete outputs",
+                  "content": "If stop_reason is \"max_tokens\", the output is truncated. A pipeline that doesn't check this field can process incomplete JSON, partial analyses, or cut-off lists as if they were valid results. Checking stop_reason should be part of the contract for any call that produces structured output."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=4096,\n    messages=messages\n)\n\nif response.stop_reason == \"max_tokens\":\n    # Truncated output — don't continue as if it were valid\n    raise OutputTruncatedError(\n        f\"Response truncated at {response.usage.output_tokens} tokens. \"\n        \"Increase max_tokens or split the task.\"\n    )\nelif response.stop_reason == \"tool_use\":\n    # Process tool calls and continue the loop\n    tool_result = execute_tools(response.content)\n    messages.append({\"role\": \"assistant\", \"content\": response.content})\n    messages.append({\"role\": \"user\", \"content\": tool_result})"
+                }
+              ]
+            },
+            {
+              "title": "Streaming with mid-stream tool_use",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "In streaming, the model can emit a tool_use block in the middle of the response. The client must detect this event and pause processing until it executes the tool and returns its result. If the client simply keeps consuming the stream while ignoring the tool_use, the model doesn't have the tool result and the response ends up incomplete or incoherent."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "The model starts streaming",
+                      "description": "The client receives text chunks normally."
+                    },
+                    {
+                      "title": "tool_use event detected",
+                      "description": "The stream emits a block of type tool_use with the tool name and its arguments. This is the cutoff point."
+                    },
+                    {
+                      "title": "Pause stream consumption",
+                      "description": "The client stops consuming the stream and executes the tool locally."
+                    },
+                    {
+                      "title": "Return the result as tool_result",
+                      "description": "The client returns the tool's result in a new message of type tool_result."
+                    },
+                    {
+                      "title": "The model continues",
+                      "description": "With the result available, the model continues generating its response. Streaming can resume."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "2% mid-stream interruptions are normal under high latency",
+                  "content": "In production, ~2% of streams can be interrupted by network timeouts, instance restarts, or transient instability. The fix isn't to eliminate streaming but to implement retry with reconnection: on detecting an interruption, retry from the last known checkpoint (not from the start of the message). If the stream is interrupted after a tool_use but before the result, the retry must include the tool_result in the history."
+                }
+              ]
+            },
+            {
+              "title": "Dead-letter queues in agentic pipelines",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A dead-letter queue (DLQ) is a separate queue where requests that exhausted their retry budget without success get sent. In high-volume agentic pipelines (payments, document processing, data extraction), the DLQ is the mechanism that guarantees no request is silently lost: failed items remain available for human review or manual reprocessing."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Without a DLQ",
+                    "rows": [
+                      {
+                        "key": "Request fails 5 times",
+                        "value": "Discarded. The system has no record of the failure."
+                      },
+                      {
+                        "key": "In payments",
+                        "value": "The transaction disappears — neither approved nor rejected. The customer gets no confirmation."
+                      },
+                      {
+                        "key": "Visibility",
+                        "value": "The team discovers the problem days later from data inconsistencies."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "With a DLQ",
+                    "rows": [
+                      {
+                        "key": "Request fails 5 times",
+                        "value": "Moved to the DLQ with full context: original payload, number of attempts, last error."
+                      },
+                      {
+                        "key": "In payments",
+                        "value": "The transaction stays in review. The team can process it manually or requeue it."
+                      },
+                      {
+                        "key": "Visibility",
+                        "value": "Immediate alert. The DLQ is observable and has volume metrics."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "async def process_with_dlq(request: PaymentRequest, max_retries: int = 5):\n    for attempt in range(max_retries):\n        try:\n            result = await process_payment(request)\n            return result\n        except (RateLimitError, ServiceUnavailableError) as e:\n            if attempt == max_retries - 1:\n                # Retry budget exhausted → DLQ\n                await dead_letter_queue.push({\n                    \"request\": request.dict(),\n                    \"attempts\": max_retries,\n                    \"last_error\": str(e),\n                    \"timestamp\": datetime.utcnow().isoformat(),\n                    \"idempotency_key\": request.idempotency_key  # for safe reprocessing\n                })\n                raise MaxRetriesExhaustedError(f\"Request sent to DLQ: {request.id}\")\n            delay = (2 ** attempt) + random.uniform(0, 1)\n            await asyncio.sleep(delay)"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The DLQ must include the original idempotency_key",
+                  "content": "When DLQ items are reprocessed manually or in a second pipeline, they must use the same idempotency_key from the original request. This guarantees that if the original request partially executed before failing, reprocessing doesn't produce duplicates. Without the idempotency_key, the DLQ creates a new vector for duplicates."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "📦",
+                      "title": "Full payload",
+                      "description": "The DLQ must store the complete original request, not just the ID. The operations team needs the payload to diagnose and eventually reprocess."
+                    },
+                    {
+                      "icon": "🔑",
+                      "title": "Idempotency key",
+                      "description": "Always include the original idempotency_key so reprocessing is safe against duplicates."
+                    },
+                    {
+                      "icon": "📊",
+                      "title": "Metrics and alerts",
+                      "description": "A DLQ with no alert doesn't exist operationally. Configure an alarm when volume exceeds the expected threshold (e.g., >0.1% of requests)."
+                    },
+                    {
+                      "icon": "🔁",
+                      "title": "Requeue carefully",
+                      "description": "Before requeuing DLQ items, verify the error was transient and not structural (invalid schema, user doesn't exist). Requeuing a 422 error creates an infinite loop back to the DLQ."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

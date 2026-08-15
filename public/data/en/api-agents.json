@@ -1,0 +1,862 @@
+{
+  "sections": [
+    {
+      "title": "Agents and Workflows",
+      "articles": [
+        {
+          "title": "Workflows vs. Agents",
+          "subsections": [
+            {
+              "title": "The fundamental difference",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "With tool use and MCP as building blocks, the question remains of how to orchestrate them into a complete system. There are two broad families of patterns, and knowing the difference avoids both over-engineering and underestimating the necessary complexity."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Workflows",
+                    "rows": [
+                      {
+                        "key": "Who decides the path",
+                        "value": "The code. There are fixed steps, explicit conditions, and paths known in advance."
+                      },
+                      {
+                        "key": "The model decides",
+                        "value": "Only the content of each step, not the structure of the process."
+                      },
+                      {
+                        "key": "When to use",
+                        "value": "When the task is predictable and the correct path can be defined in advance."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Agents",
+                    "rows": [
+                      {
+                        "key": "Who decides the path",
+                        "value": "The model. It dynamically decides what to do next in an open loop."
+                      },
+                      {
+                        "key": "The model decides",
+                        "value": "Which tool to use, with what parameters, and when the task is complete."
+                      },
+                      {
+                        "key": "When to use",
+                        "value": "When the correct path can't be predicted in advance because it depends on the input."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Practical recommendation",
+                  "content": "Start with the simplest workflow that solves the problem, and move up in complexity — toward a more autonomous agent — only when the task genuinely requires it. Most use cases are solved with well-designed workflows."
+                },
+                {
+                  "type": "text",
+                  "content": "The tradeoff isn't just structural, it's also operational: a workflow is easy to evaluate because each step is known in advance — it can be tested step by step and compared against an expected result — while an agent is harder to instrument because the sequence of tools it will execute isn't fixed; evaluating it requires looking at the final result more than each intermediate step. This translates to a typically lower success rate for agents versus equivalent workflows, in exchange for the flexibility to handle inputs a workflow didn't anticipate."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The user wants it to work, not to be an agent",
+                  "content": "An agent is more technically interesting, but the engineering goal is to solve the problem reliably. Nobody values the system being 'a sophisticated agent' if it fails one out of ten times — they value it working. That's why the default recommendation is workflows, and agents only when the path can't be predefined."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Workflow Patterns",
+          "subsections": [
+            {
+              "title": "Parallelization",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When several subtasks are independent of each other, running them in parallel and combining the results at the end is much more efficient than chaining them sequentially."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import asyncio\nfrom anthropic import AsyncAnthropic\n\nasync_client = AsyncAnthropic()\n\nasync def analyze_review(text):\n    r = await async_client.messages.create(\n        model=\"claude-haiku-4-5-20251001\", max_tokens=100,\n        messages=[{\"role\": \"user\", \"content\": f\"Sentiment (positive/negative/neutral) of: {text}\"}],\n    )\n    return r.content[0].text\n\nasync def analyze_all(reviews):\n    tasks = [analyze_review(r) for r in reviews]\n    return await asyncio.gather(*tasks)  # all calls in parallel\n\n# 100 reviews in parallel vs. 100 sequential calls: difference of minutes"
+                },
+                {
+                  "type": "text",
+                  "content": "The example above is parallelization over **independent items**: the same prompt runs many times over different data. There's a second variant — **sectioning** — that parallelizes over **different aspects of the same input**: instead of a single giant prompt asking Claude to evaluate a part against six material criteria at once (metal, polymer, ceramic...), six specialized requests are launched in parallel — each with its own prompt focused on a single criterion — and a final aggregation request synthesizes the results into a recommendation."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "MATERIALS = [\"metal\", \"polymer\", \"ceramic\", \"composite\", \"elastomer\", \"wood\"]\n\nasync def evaluate_material(image, material):\n    r = await async_client.messages.create(\n        model=\"claude-sonnet-4-6\", max_tokens=300,\n        messages=[{\"role\": \"user\", \"content\": [\n            image,\n            {\"type\": \"text\", \"text\": f\"Evaluate this part specifically for {material}: strength, cost, manufacturability.\"}\n        ]}],\n    )\n    return {\"material\": material, \"analysis\": r.content[0].text}\n\nasync def recommend_material(image):\n    evaluations = await asyncio.gather(*[evaluate_material(image, m) for m in MATERIALS])\n    # aggregation step: a final request compares all evaluations\n    return ask_claude(f\"Given these per-material evaluations, recommend the best option:\\n{evaluations}\")"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Why not a single prompt with six criteria",
+                  "content": "Asking Claude to evaluate six different criteria in a single call forces it to split attention across analyses that aren't related to each other. Separating them into specialized requests — each with its own prompt focused on a single criterion — improves focus, allows each prompt to be optimized independently, and scales better: adding a seventh material doesn't complicate the existing prompts."
+                }
+              ]
+            },
+            {
+              "title": "Chaining",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A complex task is split into sequential steps, where the output of one step is the input of the next. It usually includes a \"gate\" — an intermediate check — to catch errors early instead of propagating them to the end."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Extract requirements",
+                      "body": "First step: identify what's needed from the user's input."
+                    },
+                    {
+                      "title": "Gate: are requirements complete?",
+                      "body": "Programmatic check before continuing. If data is missing, ask for more info instead of proceeding with an incomplete input."
+                    },
+                    {
+                      "title": "Generate draft",
+                      "body": "With validated requirements, generate the content."
+                    },
+                    {
+                      "title": "Review and polish",
+                      "body": "A final prompt focused solely on quality and formatting."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def generate_contract(client_brief):\n    requirements = ask_claude(f\"Extract the key requirements from: {client_brief}\")\n\n    if \"missing\" in requirements.lower():  # gate\n        return {\"error\": \"incomplete requirements, ask the client for more info\"}\n\n    draft = ask_claude(f\"Draft a contract with these requirements: {requirements}\")\n    final_version = ask_claude(f\"Review and polish the legal language of: {draft}\")\n    return {\"contract\": final_version}"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Error propagation in sequential pipelines",
+                  "content": "This is the other sense of the term 'error propagation' (the first is at the level of an individual tool's exceptions, see Tool Use → Error Handling). Here it refers to quality: without an intermediate gate, a weak output from the first step — a poorly built outline, badly extracted requirements — flows uncorrected through all the following steps and gets amplified, instead of being caught in time. Gates after high-leverage steps (like requirements extraction) are the mitigation; more sequential steps without checkpoints doesn't improve quality, it just gives an early error more chances to propagate."
+                },
+                {
+                  "type": "text",
+                  "content": "Chaining also solves a different problem: prompts that accumulate a long list of negative constraints (\"don't mention you're an AI\", \"don't use emojis\", \"don't write in a cringe tone\"...) that the model ends up violating intermittently despite each individual constraint being clear. Instead of continuing to add negatives to the same prompt, it's split into two steps: a first request that generates the content accepting it may be imperfect, and a second review request focused solely on detecting and fixing those specific violations."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "draft = ask_claude(original_prompt_with_constraints)\n\nreview_prompt = \"\"\"Review the article below. Follow these steps:\n1. Identify where the text reveals the author is an AI and remove it\n2. Find and remove all emojis\n3. Locate cringe tone and replace it with text a technical writer would produce\n\nArticle:\n{draft}\"\"\"\n\nfinal_version = ask_claude(review_prompt.format(draft=draft))"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Why it works better than stacking constraints",
+                  "content": "A prompt with many negative constraints forces the model to watch all of them simultaneously while generating new content — attention gets split. Separating generation and review gives the second step a bounded, verifiable task (looking for specific violations in already-written text), which is easier to fulfill consistently than avoiding all of them during generation."
+                }
+              ]
+            },
+            {
+              "title": "Routing",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A first step classifies the input and routes it to one of several specialized paths, each with its own prompt and even its own model. It's the natural pattern for combining a cheap model (that classifies) with more capable models depending on the complexity of each category."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "PROMPTS_BY_CATEGORY = {\n    \"technical\": (\"claude-opus-4-8\", \"You are level-2 technical support...\"),\n    \"billing\": (\"claude-sonnet-4-6\", \"You are billing support...\"),\n    \"faq\": (\"claude-haiku-4-5-20251001\", \"Answer frequently asked questions briefly...\"),\n}\n\ndef route_and_respond(message):\n    # cheap model for classification\n    category = ask_claude(\n        f\"Classify as technical/billing/faq (one word): {message}\",\n        model=\"claude-haiku-4-5-20251001\",\n    ).strip()\n\n    model, system_prompt = PROMPTS_BY_CATEGORY.get(category, PROMPTS_BY_CATEGORY[\"faq\"])\n    return ask_claude(message, model=model, system=system_prompt)"
+                }
+              ]
+            },
+            {
+              "title": "Evaluator-optimizer",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "One model generates a response; another (or the same one, in a different call) evaluates it against explicit criteria and returns specific feedback. If it doesn't pass, the generator retries incorporating that feedback, until it's approved or a maximum number of attempts is exhausted. Works well for translations, code with tests that must pass, or text against a style guide."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def generate_with_evaluation(task, criteria, max_attempts=3):\n    feedback = \"\"\n    for attempt in range(max_attempts):\n        draft = ask_claude(f\"{task}\\n\\nFeedback from previous iteration: {feedback}\")\n        evaluation = ask_claude(\n            f\"Evaluate whether this text meets these criteria: {criteria}\\n\\nText: {draft}\\n\\n\"\n            \"If it meets everything, respond exactly 'OK'. If not, return specific, actionable feedback.\"\n        )\n        if evaluation.strip() == \"OK\":\n            return draft\n        feedback = evaluation\n    return draft  # returns the last attempt even if it wasn't approved"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Autonomous Agents",
+          "subsections": [
+            {
+              "title": "Abstract, composable tools",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "For open-ended agents — where it's not known in advance what sequence of steps the task will need — it's better to give primitive, general-purpose tools instead of tools tied to a specific task. Claude Code is the clearest example: it doesn't have a `refactor` tool, nor `run_tests`, nor `install_dependencies`. It has `bash`, `glob`, `grep`, `read`, `write`, `edit`, `webfetch` — and it composes those primitives to solve tasks that were never explicitly anticipated when designing the tool set."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Task-specific tools",
+                    "rows": [
+                      {
+                        "key": "Example",
+                        "value": "`refactor_function`, `run_test_suite`, `install_dependencies`"
+                      },
+                      {
+                        "key": "Advantage",
+                        "value": "Each call is predictable and easy to audit/log."
+                      },
+                      {
+                        "key": "Limit",
+                        "value": "Only covers tasks the designer anticipated. A new task requires adding a new tool."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Composable primitives",
+                    "rows": [
+                      {
+                        "key": "Example",
+                        "value": "`bash`, `read`, `write`, `edit`, `grep`, `glob`"
+                      },
+                      {
+                        "key": "Advantage",
+                        "value": "The agent combines the same primitives for unanticipated tasks: installing dependencies is reading the config file and running the right command via `bash`."
+                      },
+                      {
+                        "key": "Limit",
+                        "value": "Requires the model to reason well about how to combine them; less predictable per individual call."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "This axis isn't the same as action granularity",
+                  "content": "It doesn't contradict the Tool Use guidance about splitting a generic tool into action-specific tools (see Tool Use → Granularity). That axis applies within an already known, closed domain (inventory, billing): there, splitting by action reduces malformed payloads. This axis applies to designing the full tool set of an open-ended agent: there, what matters is that the primitives are general and composable, not that each task has its own dedicated tool."
+                }
+              ]
+            },
+            {
+              "title": "Environment inspection",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude operates blind to the real effect of its actions: when it executes a tool, it doesn't automatically know what changed in the environment as a consequence. Without a mechanism to observe the result, it can't confirm whether the action worked or decide the next step well. That's why every agent action should be followed by some kind of inspection that confirms the obtained result, instead of just assuming it."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Computer use: screenshot after each action",
+                      "body": "Already covered in Tool Use → Computer Use: the tool automatically returns a screenshot after each click or keystroke, because it's the only way Claude has to know if the click navigated to another page, opened a menu, or had no effect."
+                    },
+                    {
+                      "title": "Read before writing",
+                      "body": "Before modifying a file, its current content must first be read. This isn't an optional step: without seeing the file's real state, an edit can overwrite existing code or assume a structure that already changed."
+                    },
+                    {
+                      "title": "System-prompt-guided verification",
+                      "body": "For tasks without a dedicated verification tool, the system prompt can instruct explicit inspection steps: run whisper.cpp to confirm subtitle timing, extract frames with FFmpeg to review visual quality, check a file's size and format before uploading it."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Not the same as a workflow gate",
+                  "content": "The gates in the Chaining section are programmatic checkpoints between fixed steps of a predefined pipeline. Environment inspection is more general: it applies to any action by any agent, even in an open loop with no predefined steps, because the problem isn't output quality but that Claude has no other way to perceive the effect of its own actions."
+                }
+              ]
+            },
+            {
+              "title": "Orchestrator-workers",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Parallelization assumes the subtasks are already defined in advance by the code. In the orchestrator-workers pattern, an orchestrator model dynamically decides which subtasks to split the work into, dispatches them to workers (in parallel), and synthesizes their results into a single response."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "define_subtasks_tool = {\n    \"name\": \"define_subtasks\",\n    \"description\": \"Defines which independent subtasks to split a research job into\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\"subtasks\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}}},\n        \"required\": [\"subtasks\"],\n    },\n}\n\ndef investigate(complex_question):\n    # orchestrator decides the split\n    plan = client.messages.create(\n        model=\"claude-opus-4-8\", max_tokens=400,\n        tools=[define_subtasks_tool],\n        tool_choice={\"type\": \"tool\", \"name\": \"define_subtasks\"},\n        messages=[{\"role\": \"user\", \"content\": f\"Split into 2 to 4 independent subtasks: {complex_question}\"}],\n    )\n    subtasks = plan.content[0].input[\"subtasks\"]\n\n    results = asyncio.run(solve_in_parallel(subtasks))  # workers in parallel\n\n    return ask_claude(f\"Synthesize these findings into a coherent response:\\n{results}\")"
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Antipattern: \"Swiss army knife\" agent",
+                    "rows": [
+                      {
+                        "key": "Design",
+                        "value": "A single monolithic agent with a mile-long system prompt and 20-30 tools assigned to cover the whole flow — tech support, billing, FAQ, escalation — at once"
+                      },
+                      {
+                        "key": "Technical impact",
+                        "value": "More tools competing for selection increases the rate of incorrect choices; a system prompt mixing instructions for cases that don't apply to the current turn dilutes the relevant signal and gets billed as input tokens on every call"
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Optimal solution: routing / orchestrator-workers",
+                    "rows": [
+                      {
+                        "key": "Design",
+                        "value": "A first step classifies or dynamically splits the task and routes it to specialized agents, each with a bounded system prompt and tool set"
+                      },
+                      {
+                        "key": "Technical impact",
+                        "value": "Reduces the decision space per call and improves selection accuracy, at the cost of more pieces to coordinate with each other"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "The agent loop with limits",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "An agent picks up the tool use loop, but with more autonomy: on each iteration it evaluates the state of the environment and decides the next step without a fixed path. Defining stopping conditions is essential to avoid infinite loops."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def agent(goal, tools, max_iterations=8):\n    messages = [{\"role\": \"user\", \"content\": goal}]\n\n    for i in range(max_iterations):\n        response = client.messages.create(\n            model=\"claude-sonnet-4-6\", max_tokens=1500, tools=tools, messages=messages\n        )\n        messages.append({\"role\": \"assistant\", \"content\": response.content})\n\n        if response.stop_reason != \"tool_use\":\n            return response  # the agent considers the task finished\n\n        results = execute_and_collect_tools(response.content)\n        messages.append({\"role\": \"user\", \"content\": results})\n\n    raise RuntimeError(\"the agent didn't converge within the iteration limit\")"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Always define a limit",
+                  "content": "Without `max_iterations` or another stopping mechanism, an agent can enter an infinite loop when facing a persistent error or a poorly defined task. The limit isn't an edge case: it's part of the design."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Antipattern: blind autonomous retry without validation",
+                    "rows": [
+                      {
+                        "key": "Design",
+                        "value": "The model blindly retries a failed tool call, relying only on `max_iterations` as a stopping mechanism, without validating the input before executing the tool"
+                      },
+                      {
+                        "key": "Technical impact",
+                        "value": "Can burn the entire iteration budget — and API token budget — on malformed calls before escalating; each failed attempt is a full billable call"
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Optimal solution: schema validation + escalation",
+                    "rows": [
+                      {
+                        "key": "Design",
+                        "value": "`strict: true` on the tool validates the input before executing it; after two or three consecutive failures of the same type, escalate to a human instead of continuing to retry"
+                      },
+                      {
+                        "key": "Technical impact",
+                        "value": "The error is detected before executing the tool, not after; the iteration limit remains a safety net, not the only stopping mechanism"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "Managing long context",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Each loop iteration adds messages to the history. In long tasks, that history can approach the context window limit, and each call gets more expensive because the whole history gets resent. Two techniques to control it:"
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Compact history",
+                    "rows": [
+                      {
+                        "key": "When",
+                        "value": "When the history exceeds a token threshold."
+                      },
+                      {
+                        "key": "How",
+                        "value": "Summarize the oldest turns into a condensed paragraph and replace them with that summary."
+                      },
+                      {
+                        "key": "Preserve",
+                        "value": "The recent turns intact (the last 4-6 messages)."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Truncate results",
+                    "rows": [
+                      {
+                        "key": "When",
+                        "value": "Before adding a tool's result to the history."
+                      },
+                      {
+                        "key": "How",
+                        "value": "Keep only the relevant part (e.g.: first N lines of a log, key fields of a JSON)."
+                      },
+                      {
+                        "key": "Preserve",
+                        "value": "Only what the agent needs for the next step."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def compact_if_needed(messages, token_threshold=50000, keep_last=4):\n    if estimate_tokens(messages) < token_threshold:\n        return messages\n\n    old_history = messages[:-keep_last]\n    summary = ask_claude(\n        f\"Summarize in a few paragraphs what's relevant from this to continue the task:\\n{old_history}\"\n    )\n    return [\n        {\"role\": \"user\", \"content\": f\"Summary of progress so far:\\n{summary}\"}\n    ] + messages[-keep_last:]"
+                }
+              ]
+            },
+            {
+              "title": "stop_reason as a control signal",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The `stop_reason` field in the API response is the authoritative signal for controlling the agent loop. It's not the text content or the presence of certain patterns in the response: it's this structured field that the orchestrator must evaluate to decide what to do next."
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "stop_reason",
+                    "Meaning",
+                    "Orchestrator action"
+                  ],
+                  "rows": [
+                    [
+                      "tool_use",
+                      "The model wants to execute one or more tools",
+                      "Execute the tools and return tool_result to the model"
+                    ],
+                    [
+                      "end_turn",
+                      "The model considers the task finished",
+                      "End the loop and return the response to the user"
+                    ],
+                    [
+                      "max_tokens",
+                      "The output token limit was reached",
+                      "Consider whether the work is complete or needs to continue"
+                    ],
+                    [
+                      "stop_sequence",
+                      "The model generated a defined stop sequence",
+                      "End according to the system's logic"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Never use text-matching to control the loop",
+                  "content": "Searching for words like 'completed', 'done', or 'finished' in the model's text is fragile: the model can use synonyms, rephrase the sentence, or include that word in a different context. The only reliable control is `stop_reason: end_turn`."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "# INCORRECT: control by text-matching (fragile)\nif 'refunded' in response.content[0].text:\n    return  # can fail if the model uses a different synonym\n\n# CORRECT: control by stop_reason (deterministic)\nif response.stop_reason == 'end_turn':\n    return response  # structured, reliable signal\nelif response.stop_reason == 'tool_use':\n    results = execute_tools(response.content)\n    # continue the loop with the results"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Simultaneous text + tool_use",
+                  "content": "A response can have `stop_reason: tool_use` and also include explanatory text. The text is for the user's context, but **it doesn't change the orchestrator's action**: if `stop_reason` is `tool_use`, the tools get executed. The text isn't a termination signal."
+                }
+              ]
+            },
+            {
+              "title": "tool_result: what to return to the model",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When the orchestrator executes a tool, it must return the result to the model with a `tool_result` block tied to the corresponding `tool_use_id`. The content of that result directly affects the quality of the model's response in the next turn."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Poorly structured tool_result",
+                    "rows": [
+                      {
+                        "key": "Content",
+                        "value": "'Refund processed successfully'"
+                      },
+                      {
+                        "key": "Problem",
+                        "value": "The model doesn't know the amount, the transaction ID, or whether it needs to take any additional action"
+                      },
+                      {
+                        "key": "Consequence",
+                        "value": "Generic response to the user, with no useful confirmation"
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Well-structured tool_result",
+                    "rows": [
+                      {
+                        "key": "Content",
+                        "value": "{ status: 'success', amount: 49.99, transaction_id: 'TXN-8821', credited_at: '2025-06-27T14:30Z' }"
+                      },
+                      {
+                        "key": "Advantage",
+                        "value": "The model can confirm the exact amount and ID to the user, and know it doesn't need additional steps"
+                      },
+                      {
+                        "key": "Result",
+                        "value": "Specific, verifiable response for the user"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "# well-structured tool_result for a refund action\ntool_result = {\n    \"type\": \"tool_result\",\n    \"tool_use_id\": tool_use_block.id,  # must match exactly\n    \"content\": json.dumps({\n        \"status\": \"success\",\n        \"amount\": 49.99,\n        \"transaction_id\": \"TXN-8821\",\n        \"credited_at\": \"2025-06-27T14:30Z\"\n    })\n}\n\n# When there are multiple tool_use in parallel: return ALL of them in the same turn\nmessages.append({\n    \"role\": \"user\",\n    \"content\": [flights_tool_result, hotels_tool_result]  # same message\n})"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Parallel calls: all tool_results in the same turn",
+                  "content": "If the model emitted two `tool_use` blocks in the same response (parallel calls), the orchestrator must return both `tool_result`s in the same user turn — with a separate `tool_result` for each `tool_use_id`. They aren't sent in separate turns."
+                }
+              ]
+            },
+            {
+              "title": "Escalating to the orchestrator: separation of responsibilities",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A fundamental principle in multi-agent systems: subagents shouldn't resolve ambiguities, conflicts, or decisions outside their assigned scope. When a subagent finds something it can't resolve within its defined task, it must escalate it to the orchestrator with all the relevant information."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "When to escalate?",
+                      "body": "When the subagent finds a conflict between sources, an out-of-policy situation, an error it can't resolve alone, or any decision that requires global context that only the orchestrator has."
+                    },
+                    {
+                      "title": "What to include when escalating?",
+                      "body": "All the relevant information: both conflicting values with their sources, the error type with its classification, the reason it can't be resolved locally. The orchestrator makes better-informed decisions."
+                    },
+                    {
+                      "title": "What NOT to do?",
+                      "body": "Silently resolving the conflict (picking a value without flagging it), expanding scope (launching unauthorized additional searches), or halting the pipeline entirely when the task can partially continue."
+                    },
+                    {
+                      "title": "Why not resolve it alone",
+                      "body": "The subagent has visibility limited to its task. The decision of how to resolve a conflict between data sources, or how to handle a policy exception, belongs to the level with global context — the orchestrator or the synthesizer."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Expanding scope without authorization breaks the system",
+                  "content": "If a subagent detects a conflict and decides to launch additional searches on its own to resolve it (without the orchestrator authorizing it), it's violating the separation of responsibilities. That decision step belongs to the orchestrator, which has the system's full context."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "# Pattern: structured output with a mandatory conflicts field\n# This guarantees the subagent ALWAYS reports conflicts, without relying\n# on the model 'choosing' to mention them in free text.\n\noutput_schema = {\n    \"type\": \"object\",\n    \"required\": [\"findings\", \"conflicts\", \"confidence\"],\n    \"properties\": {\n        \"findings\": {\"type\": \"string\"},\n        \"conflicts\": {\n            \"type\": \"array\",\n            \"items\": {\n                \"type\": \"object\",\n                \"required\": [\"field\", \"value_a\", \"source_a\", \"value_b\", \"source_b\"],\n                \"properties\": {\n                    \"field\": {\"type\": \"string\"},\n                    \"value_a\": {\"type\": \"string\"},\n                    \"source_a\": {\"type\": \"string\"},\n                    \"value_b\": {\"type\": \"string\"},\n                    \"source_b\": {\"type\": \"string\"}\n                }\n            }\n        },\n        \"confidence\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1}\n    }\n}\n\n# The 'conflicts' field is REQUIRED: the text instruction 'always report\n# conflicts' can be ignored; a required schema field cannot."
+                }
+              ]
+            },
+            {
+              "title": "Structured error handling in pipelines",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "In batch processing pipelines (documents, records, files), errors are expected and predictable. The correct design isn't to halt the pipeline on the first error, but to classify errors at the subagent level and apply the appropriate recovery before escalating."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Classify the error type in the subagent",
+                      "body": "Each subagent must identify the failure category: corrupted file, protected file, parser timeout, unsupported format. This classification determines the possible recovery without coordinator intervention."
+                    },
+                    {
+                      "title": "Apply local recovery when possible",
+                      "body": "Some errors have automatic recovery: a timeout is retried once with a more aggressive time limit; a file that's too large can be processed in sections. The subagent applies the recovery and only escalates if it fails."
+                    },
+                    {
+                      "title": "Escalate with classification, not a raw exception",
+                      "body": "If it can't recover locally, the subagent returns a structured result with the error type, the specific reason, and the recommended action (review manually, retry later, discard). It doesn't propagate the raw exception."
+                    },
+                    {
+                      "title": "The coordinator receives a categorized summary",
+                      "body": "At the end of the batch, the coordinator receives something like: 483 succeeded, 12 timed out (retried and resolved), 4 password-protected (for human review), 1 corrupted (discarded with a log). Real operational visibility, without inspecting every document."
+                    }
+                  ]
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Without structured handling",
+                    "rows": [
+                      {
+                        "key": "On a protected file",
+                        "value": "Propagates the exception → the coordinator receives a stack trace with no context"
+                      },
+                      {
+                        "key": "On a timeout",
+                        "value": "The pipeline stops and waits indefinitely or fails entirely"
+                      },
+                      {
+                        "key": "Result",
+                        "value": "The coordinator manually triages each individual error"
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "With structured handling",
+                    "rows": [
+                      {
+                        "key": "On a protected file",
+                        "value": "Subagent flags it as 'requires human review' with a reason, batch continues"
+                      },
+                      {
+                        "key": "On a timeout",
+                        "value": "Subagent applies a per-document timeout, flags the one that hung, continues with the rest"
+                      },
+                      {
+                        "key": "Result",
+                        "value": "The coordinator receives a categorized summary, not an error dump"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Per-document timeout, not per-batch",
+                  "content": "A document that hangs the parser shouldn't block the other 499. The correct timeout is at the individual document level, not the whole batch. If the document exceeds the time limit, it gets classified and processing continues."
+                }
+              ]
+            },
+            {
+              "title": "Human-in-the-loop and observability",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "For irreversible or high-impact actions (sending an email, charging a card, deleting records), insert a pause point requiring human approval before executing, instead of leaving the loop fully automatic end to end."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import logging\n\nACTIONS_REQUIRING_APPROVAL = {\"send_email\", \"charge_card\", \"delete_record\"}\n\ndef execute_with_approval(tool_use_block):\n    if tool_use_block.name in ACTIONS_REQUIRING_APPROVAL:\n        approved = input(f\"Approve executing {tool_use_block.name} with {tool_use_block.input}? (y/n) \")\n        if approved.lower() != \"y\":\n            return \"Action cancelled by the user\"\n    return execute_tool(tool_use_block.name, tool_use_block.input)\n\n# logging each step to debug why the agent took a given path\nlogging.basicConfig(level=logging.INFO)\n\ndef agent_with_logging(goal, tools, max_iterations=8):\n    messages = [{\"role\": \"user\", \"content\": goal}]\n    for i in range(max_iterations):\n        response = client.messages.create(\n            model=\"claude-sonnet-4-6\", max_tokens=1500, tools=tools, messages=messages\n        )\n        logging.info(\n            \"iteration=%d stop_reason=%s output_tokens=%d\",\n            i, response.stop_reason, response.usage.output_tokens,\n        )\n        for block in response.content:\n            if block.type == \"tool_use\":\n                logging.info(\"tool=%s input=%s\", block.name, block.input)\n        messages.append({\"role\": \"assistant\", \"content\": response.content})\n        if response.stop_reason != \"tool_use\":\n            return response\n        results = execute_and_collect_tools(response.content)\n        messages.append({\"role\": \"user\", \"content\": results})"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "No logging, no debugging",
+                  "content": "When an agent takes an unexpected path or gets stuck spinning without converging, the only practical way to understand why is to have a record of each step: which tool was called, with what parameters, what it returned, how long it took, and how many tokens it consumed. Without that record, debugging a multi-step agent comes down to guessing."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Context Management in Long-Running Agents",
+          "subsections": [
+            {
+              "title": "Lost-in-the-middle: silent degradation",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When an agent processes long documents or extensive sessions, context fills up progressively. As the window approaches its limit, the model starts ignoring content located at the beginning or middle of the context — a phenomenon known as \"lost-in-the-middle\". The characteristic signal is coherence degradation with no errors: the agent contradicts earlier findings, omits references it cited correctly before, or starts responding as if it hadn't processed already-analyzed sections. There's no exception or error stop_reason; the model simply \"forgets\" displaced content."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Lost-in-the-middle symptoms",
+                    "rows": [
+                      {
+                        "key": "Contradictions",
+                        "value": "The agent states something on page 80 that contradicts what it correctly established on page 20."
+                      },
+                      {
+                        "key": "Omitted references",
+                        "value": "Cites sources it processed recently but omits equally relevant sources processed earlier."
+                      },
+                      {
+                        "key": "No API errors",
+                        "value": "There's no exception, timeout, or anomalous stop_reason. The degradation is silent."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Root cause",
+                    "rows": [
+                      {
+                        "key": "Full window",
+                        "value": "Early tokens get displaced toward the center of the context, where the model's attention is weaker."
+                      },
+                      {
+                        "key": "Not the model",
+                        "value": "Switching to a larger model delays the problem but doesn't eliminate it. The solution is architectural."
+                      },
+                      {
+                        "key": "Not hallucination",
+                        "value": "The model doesn't invent; it simply stops \"seeing\" content that's technically still in its context."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Switching models doesn't fix the structural problem",
+                  "content": "Using a model with a larger context window (200K instead of 100K) delays the degradation point but doesn't eliminate the problem. In an agent processing sufficiently long documents, the same limit is eventually reached. The correct solution is proactive compaction or subagents with isolated contexts."
+                }
+              ]
+            },
+            {
+              "title": "Proactive context compaction",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Proactive compaction is the practice of summarizing and compressing accumulated context before the window fills up, preserving essential information and freeing up space to continue processing. The right time to compact is when context exceeds a threshold (typically 60–70% of the window), not when it's already full."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Monitor token usage",
+                      "description": "After each call, check usage.input_tokens against the model's limit. If it exceeds 65%, trigger compaction."
+                    },
+                    {
+                      "title": "Decide what to preserve",
+                      "description": "Preserve: decisions made, explicit findings, active constraints, current task state. Discard: intermediate reasoning already incorporated into findings, document chunks already processed with no pending conclusions."
+                    },
+                    {
+                      "title": "Generate the summary",
+                      "description": "Call the model to produce a structured summary of the analysis so far, prioritizing the parts that will be referenced in the remaining processing."
+                    },
+                    {
+                      "title": "Replace the context",
+                      "description": "Build a new conversation with the compacted summary as initial context. Continue processing from the next chunk."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "MAX_CONTEXT_RATIO = 0.65\n\ndef process_document_with_compaction(chunks: list[str], model: str = \"claude-sonnet-4-6\"):\n    messages = []\n    findings = []\n\n    for i, chunk in enumerate(chunks):\n        messages.append({\"role\": \"user\", \"content\": f\"Analyze chunk {i+1}:\\n{chunk}\"})\n        response = client.messages.create(model=model, max_tokens=4096, messages=messages)\n        assistant_msg = response.content[0].text\n        messages.append({\"role\": \"assistant\", \"content\": assistant_msg})\n\n        # Check context usage\n        ratio = response.usage.input_tokens / MODEL_CONTEXT_LIMITS[model]\n        if ratio > MAX_CONTEXT_RATIO:\n            # Compact before continuing\n            summary = compact_context(messages, findings)\n            messages = [{\"role\": \"user\", \"content\": f\"Compacted context up to chunk {i+1}:\\n{summary}\"}]\n            messages.append({\"role\": \"assistant\", \"content\": \"Understood. Continuing from the next chunk.\"})\n\n    return synthesize_findings(findings)"
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Element",
+                    "Preserve in compaction",
+                    "Discard in compaction"
+                  ],
+                  "rows": [
+                    [
+                      "Explicit findings",
+                      "✅ Always",
+                      "—"
+                    ],
+                    [
+                      "System constraints",
+                      "✅ Always (they're active instructions)",
+                      "—"
+                    ],
+                    [
+                      "Current task state",
+                      "✅ Always",
+                      "—"
+                    ],
+                    [
+                      "Intermediate reasoning",
+                      "Only if ambiguous",
+                      "✅ If already incorporated into a finding"
+                    ],
+                    [
+                      "Already-processed document chunks",
+                      "—",
+                      "✅ If there are no pending conclusions about them"
+                    ],
+                    [
+                      "Verbatim quotes",
+                      "Only those referenced in findings",
+                      "✅ The rest"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Subagents for context isolation",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The structural alternative to compaction is delegating each processing unit to a dedicated subagent with its own clean context. The coordinator only receives each subagent's synthesized output, not the full transcript. This pattern guarantees no subagent hits the context limit during its task and that the coordinator operates with a compact context of results, not reasoning."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Single agent with compaction",
+                    "rows": [
+                      {
+                        "key": "Advantage",
+                        "value": "Continuous context: the agent can reference previous analyses directly."
+                      },
+                      {
+                        "key": "Disadvantage",
+                        "value": "Requires periodic compaction with risk of losing information. More fragile."
+                      },
+                      {
+                        "key": "When to use",
+                        "value": "Documents where sections have strong interdependencies that must be analyzed in relation to each other."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Parallel subagents",
+                    "rows": [
+                      {
+                        "key": "Advantage",
+                        "value": "Isolated context per chunk: no risk of degradation from a full context. Parallelizable."
+                      },
+                      {
+                        "key": "Disadvantage",
+                        "value": "The coordinator only sees outputs, not the reasoning. Cross-referencing between chunks requires explicit design."
+                      },
+                      {
+                        "key": "When to use",
+                        "value": "Documents with independent sections or analyses that can be synthesized at the end."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The coordinator receives results, not transcripts",
+                  "content": "In the subagent architecture, the coordinator passes each subagent only the chunk it must analyze plus instructions on what to extract. The subagent returns a structured output (findings, key quotes, flags). The coordinator accumulates these compact outputs, not the intermediate messages, which keeps its context manageable even while coordinating 8 subagents in parallel."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "async def analyze_document_parallel(document: str, chunk_size: int = 20):\n    chunks = split_into_chunks(document, pages_per_chunk=chunk_size)\n\n    # Each subagent analyzes a chunk with isolated context\n    tasks = [analyze_chunk_subagent(chunk, i) for i, chunk in enumerate(chunks)]\n    chunk_results = await asyncio.gather(*tasks)\n\n    # The coordinator only sees the compact outputs, not the reasoning\n    return synthesize_results(chunk_results)\n\nasync def analyze_chunk_subagent(chunk: str, chunk_index: int) -> dict:\n    response = client.messages.create(\n        model=\"claude-sonnet-4-6\",\n        max_tokens=2048,\n        messages=[{\n            \"role\": \"user\",\n            \"content\": f\"Analyze this fragment (pages {chunk_index*20+1}-{(chunk_index+1)*20}). \"\n                       f\"Extract: key findings, regulatory references, ambiguity flags.\\n\\n{chunk}\"\n        }]\n    )\n    # Returns structured output, not the full conversation\n    return {\"chunk\": chunk_index, \"analysis\": response.content[0].text}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
