@@ -1,0 +1,872 @@
+{
+  "sections": [
+    {
+      "title": "Tool Use",
+      "articles": [
+        {
+          "title": "Concepts and schemas",
+          "subsections": [
+            {
+              "title": "How it works",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Tool use (also called function calling) lets Claude request the execution of external code — a function, a database query, an API — and use the result to continue the conversation. Claude never executes code directly: it decides that a tool should be used, describes with which parameters, and the application is responsible for executing the actual function and returning the result."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Client tools (your code executes)",
+                    "rows": [
+                      {
+                        "key": "What they are",
+                        "value": "Functions you define: get_weather, query_db, send_email, etc."
+                      },
+                      {
+                        "key": "Flow",
+                        "value": "Claude returns stop_reason: tool_use → your code executes → you return tool_result."
+                      },
+                      {
+                        "key": "Extra cost",
+                        "value": "None. Billed as normal tokens."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Server tools (Anthropic executes)",
+                    "rows": [
+                      {
+                        "key": "What they are",
+                        "value": "web_search, code_execution, bash, str_replace_based_edit_tool. Anthropic executes them."
+                      },
+                      {
+                        "key": "Flow",
+                        "value": "Claude calls them and the results arrive directly. No code needed on your part."
+                      },
+                      {
+                        "key": "Extra cost",
+                        "value": "Yes. For example, web_search charges per search performed."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "When tool use is worth it",
+                  "content": "Reserve tools for what the prompt alone can't solve: dynamic information that changes between requests (stock, prices, weather), actions with real-world effects (sending email, modifying records), or exact calculations. To reason about, draft, or summarize something already in the prompt, a good prompt is enough."
+                }
+              ]
+            },
+            {
+              "title": "Defining good schemas",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Each tool is declared with a name, a natural-language `description`, and an `input_schema` in JSON Schema format. The `description` isn't decorative documentation: it's the text Claude reads to decide when to use the tool and how to fill in its parameters. A poor description is the most common reason a well-implemented tool never gets used, or gets used at the wrong moment."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Weak description",
+                    "rows": [
+                      {
+                        "key": "Example",
+                        "value": "\"Search products.\""
+                      },
+                      {
+                        "key": "Problem",
+                        "value": "Doesn't say when to use it, what happens if there are no results, or what format to expect for each parameter."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Prescriptive description",
+                    "rows": [
+                      {
+                        "key": "Example",
+                        "value": "\"Search products in the catalog by name or category. Use it when the user asks about availability, price, or features. If there are no matches, return an empty list (don't invent products).\""
+                      },
+                      {
+                        "key": "Result",
+                        "value": "Claude knows exactly when and how to use it."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "weather_tool = {\n    \"name\": \"get_weather\",\n    \"description\": (\n        \"Returns the current weather for a given city. Use it when the \"\n        \"user explicitly asks about the weather or temperature of \"\n        \"a place. Do not use it for future forecasts: it only gives the current state.\"\n    ),\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"city\": {\"type\": \"string\", \"description\": \"City name, without state/province or country\"},\n            \"unit\": {\"type\": \"string\", \"enum\": [\"celsius\", \"fahrenheit\"]},\n        },\n        \"required\": [\"city\"],\n    },\n}"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🔒",
+                      "title": "Use enum",
+                      "description": "If a parameter only accepts known values, declaring it as an enum prevents Claude from inventing a variant that's valid text but invalid for your system."
+                    },
+                    {
+                      "icon": "🔗",
+                      "title": "Consolidate tools",
+                      "description": "Ten nearly identical tools tend to confuse more than a single one with an `action` parameter. Fewer, clearer tools."
+                    },
+                    {
+                      "icon": "📝",
+                      "title": "Describe parameters",
+                      "description": "Not just the tool as a whole. Especially for nested parameters or ones with a specific format (dates, IDs with a fixed pattern)."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Practical shortcut: ask Claude for the schema",
+                  "content": "Instead of writing the JSON Schema by hand, it works well to paste Claude the already-implemented function along with the tool use documentation and ask it to generate the `input_schema` following those best practices. You still need to review the result (parameter names, which ones are `required`, whether an `enum` makes sense), but it saves the mechanical part."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Type safety in Python: ToolParam",
+                  "content": "The Python SDK exposes `anthropic.types.ToolParam` to type the tool dictionary and catch shape errors (misspelled keys, invalid types) at development time instead of at request time. It doesn't change runtime behavior — it's a typing aid, not a functional requirement."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The multi-turn loop",
+          "subsections": [
+            {
+              "title": "tool_use and tool_result blocks",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When Claude decides to use a tool, the response has `stop_reason == \"tool_use\"` and the content includes a block of type `tool_use` with an `id`, the tool's `name`, and the chosen `input`. The application executes the actual function and returns the result in a new `user`-role message with a block of type `tool_result`, referencing the original `tool_use_id`."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# 1. first call: Claude decides to use the tool\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500, tools=[weather_tool],\n    messages=[{\"role\": \"user\", \"content\": \"What's the weather like in Rosario?\"}],\n)\n# response.stop_reason == \"tool_use\"\n# response.content[0].type == \"tool_use\"\n# response.content[0].name == \"get_weather\"\n# response.content[0].input == {\"city\": \"Rosario\"}\n\ntool_use_block = next(b for b in response.content if b.type == \"tool_use\")\nactual_result = \"18°C, partly cloudy\"  # actual function execution\n\nmessages = [\n    {\"role\": \"user\", \"content\": \"What's the weather like in Rosario?\"},\n    {\"role\": \"assistant\", \"content\": response.content},\n    {\n        \"role\": \"user\",\n        \"content\": [{\n            \"type\": \"tool_result\",\n            \"tool_use_id\": tool_use_block.id,\n            \"content\": actual_result,\n        }],\n    },\n]\n\n# 2. second call: Claude generates the final response\nfinal_response = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=300, tools=[weather_tool], messages=messages\n)"
+                }
+              ]
+            },
+            {
+              "title": "Error handling",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A function can fail: a downed external API, an out-of-range parameter, a timeout. Instead of breaking the flow, a `tool_result` is still returned, marked with `is_error: true` and a brief message. Claude reacts reasonably — retrying with a different approach, asking for clarification, or reporting the problem — instead of getting stuck."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def run_tool_safely(name, input_):\n    try:\n        return {\"result\": run_tool(name, input_), \"is_error\": False}\n    except Exception as e:\n        return {\"result\": f\"Error running {name}: {e}\", \"is_error\": True}\n\noutput = run_tool_safely(\"get_weather\", {\"city\": \"Atlantida\"})\n\ntool_result = {\n    \"type\": \"tool_result\",\n    \"tool_use_id\": tool_use_block.id,\n    \"content\": output[\"result\"],\n    \"is_error\": output[\"is_error\"],\n}"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Error propagation: what happens if it isn't caught",
+                  "content": "If the tool's function throws an uncaught exception, that exception propagates upward and completely breaks the agent loop — it doesn't even manage to return a tool_result. That's why the try/except above isn't an optional best practice: it's what prevents a one-off failure (a downed API, a timeout) from bringing down the entire conversation. The rule is always the same when facing a tool error: never let the exception propagate, and never swallow it silently by returning false success. Catch it and return it as a tool_result with is_error: true, so the model can decide how to react."
+                }
+              ]
+            },
+            {
+              "title": "The full loop",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "In practice, the exchange is wrapped in a loop: while the response asks to use a tool, it's executed and the result is sent back, until Claude produces a final text response."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def run_tool(name, input_):\n    if name == \"get_weather\":\n        return f\"18°C in {input_['city']}\"\n    raise ValueError(f\"unknown tool: {name}\")\n\ndef converse(messages, tools):\n    while True:\n        response = client.messages.create(\n            model=\"claude-sonnet-4-6\", max_tokens=800, tools=tools, messages=messages\n        )\n        messages.append({\"role\": \"assistant\", \"content\": response.content})\n\n        if response.stop_reason != \"tool_use\":\n            return response\n\n        tool_results = []\n        for block in response.content:\n            if block.type == \"tool_use\":\n                output = run_tool(block.name, block.input)\n                tool_results.append({\n                    \"type\": \"tool_result\", \"tool_use_id\": block.id, \"content\": output\n                })\n        messages.append({\"role\": \"user\", \"content\": tool_results})"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The follow-up request also needs `tools`",
+                  "content": "Even though Claude probably won't call a tool again on the next turn, you still need to keep passing `tools=tools` on every request in the conversation (as the loop above does), not just on the first one. Without the schema list, Claude has no way to interpret the `tool_use`/`tool_result` blocks already in the message history."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Fine control and security",
+          "subsections": [
+            {
+              "title": "tool_choice and parallelism",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "By default, Claude freely decides whether to use a tool and which one. The `tool_choice` parameter lets you adjust that behavior."
+                },
+                {
+                  "type": "table",
+                  "columns": [
+                    "Mode",
+                    "Behavior"
+                  ],
+                  "rows": [
+                    [
+                      "{\"type\": \"auto\"}",
+                      "Default. Claude freely decides whether to use any tool, none, or several in parallel."
+                    ],
+                    [
+                      "{\"type\": \"any\"}",
+                      "Claude must use some tool from the list, but chooses which one."
+                    ],
+                    [
+                      "{\"type\": \"tool\", \"name\": \"...\"}",
+                      "Forces a specific tool. Useful for structured outputs."
+                    ],
+                    [
+                      "{\"type\": \"none\"}",
+                      "Disables tool use for that turn, even if tools are declared."
+                    ]
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "When several tools are declared, Claude can request several calls in the same turn (for example, the weather for three cities at once). All `tool_result`s from the same turn must travel together, inside a single `user`-role message. Sending them in separate messages teaches the model to avoid parallelism in the future."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from concurrent.futures import ThreadPoolExecutor\n\n# force it to use exactly one tool, without parallelism\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=500,\n    tools=[weather_tool, calendar_tool],\n    tool_choice={\"type\": \"any\", \"disable_parallel_tool_use\": True},\n    messages=messages,\n)\n\n# parallel execution of multiple tool_use blocks in the same turn\ntool_use_blocks = [b for b in response.content if b.type == \"tool_use\"]\n\nwith ThreadPoolExecutor() as pool:\n    outputs = list(pool.map(lambda b: run_tool(b.name, b.input), tool_use_blocks))\n\ntool_results = [\n    {\"type\": \"tool_result\", \"tool_use_id\": b.id, \"content\": output}\n    for b, output in zip(tool_use_blocks, outputs)\n]\nmessages.append({\"role\": \"user\", \"content\": tool_results})  # a single message"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Claude 4 and later models already parallelize by default",
+                  "content": "When a task benefits from several independent calls (e.g. weather for three cities), Claude 4+ groups the `tool_use` blocks into a single turn without needing any extra trick. If it's still worth reinforcing that behavior, the recommended route is an explicit system prompt, not a redesign of the tools."
+                },
+                {
+                  "type": "code",
+                  "language": "text",
+                  "code": "For maximum efficiency, whenever you need to perform multiple independent\noperations, invoke all relevant tools simultaneously rather than sequentially."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The \"batch tool\" pattern is now obsolete",
+                  "content": "Before Claude 4, Sonnet 3.7 tended to spread independent calls across separate turns even with `tool_choice: auto`. The documented workaround at the time was to declare a meta tool (`batch_tool`) that received a list of invocations and dispatched them internally, to force Claude to group them into a single block. With current models this is no longer needed: it adds a tool and an extra layer of indirection with no real benefit. If natural parallelism isn't enough, adjusting the system prompt (above) is the current alternative."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "# The shape of the workaround (historical, pre-Claude 4): a meta tool that wraps\n# the others. Claude sends ALL calls together as a single batch_tool invocation,\n# instead of emitting several native tool_use blocks.\nbatch_tool_schema = {\n    \"name\": \"batch_tool\",\n    \"description\": \"Invoke multiple other tool calls simultaneously\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"invocations\": {\n                \"type\": \"array\",\n                \"description\": \"The tool calls to invoke\",\n                \"items\": {\n                    \"type\": \"object\",\n                    \"properties\": {\n                        \"name\": {\"type\": \"string\"},       # name of the actual tool to invoke\n                        \"arguments\": {\"type\": \"object\"},  # its arguments\n                    },\n                },\n            }\n        },\n    },\n}\n\n# Your own code dispatches each invocation in the list against the usual router (run_tool)\n# and returns a single combined result as the batch_tool's tool_result."
+                },
+                {
+                  "type": "text",
+                  "content": "If Claude isn't parallelizing when it should, the cause is almost always one of these three:"
+                },
+                {
+                  "type": "table",
+                  "columns": [
+                    "Cause",
+                    "How to detect / fix it"
+                  ],
+                  "rows": [
+                    [
+                      "`tool_result`s in separate messages",
+                      "Each `tool_result` from the same turn must go in a single `user` message. Sending them separately teaches the model, turn by turn, to stop parallelizing."
+                    ],
+                    [
+                      "Weak prompting",
+                      "The default system prompt may not be enough for tasks with many independent calls; use the explicit instruction above."
+                    ],
+                    [
+                      "Calls with a real dependency between them",
+                      "If one tool needs the result of another, grouping them forces artificial failures. Solve it with `is_error: true` on the one that couldn't run (Claude retries it) or clarify in the prompt: \"only group calls that are independent of each other\"."
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Tools provided by Anthropic",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Anthropic defines the schema for these tools so you don't have to write it by hand, but that doesn't say who executes the action. They're split into two groups based on that."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Server tools (Anthropic executes)",
+                    "rows": [
+                      { "key": "web_search", "value": "Web search managed by Anthropic. Claude decides when to search and cites it. You can limit the number of searches per request and filter domains." },
+                      { "key": "code_execution", "value": "Isolated Python environment (Anthropic sandbox) for computing, generating charts, processing files. State separate from the bash tool." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Client tools (your app executes)",
+                    "rows": [
+                      { "key": "bash", "value": "Claude only returns the command to run in a tool_use. Your application maintains the persistent shell session (state between commands) and executes each command on its own infrastructure." },
+                      { "key": "str_replace_based_edit_tool", "value": "Claude requests standardized commands (view, str_replace, create, insert) but you write the handler that actually reads and writes the files." },
+                      { "key": "computer (beta)", "value": "Claude requests mouse/keyboard/screenshot actions on a desktop; your app executes them in a real environment (see detail below)." }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "bash and the text editor do NOT run on Anthropic's servers",
+                  "content": "Unlike web_search and code_execution, Claude \"executes nothing\" with these two: it only emits the tool_use with the requested command or operation (e.g. `{\"command\": \"str_replace\", \"path\": \"primes.py\", ...}`). Your code is responsible for actually running it (reading/writing the real file, running the real shell command) and returning the tool_result — the same loop as any custom tool. The fact that the schema is provided by Anthropic doesn't exempt you from implementing the execution or from the usual security validations (sandboxing, allowed paths, resource limits)."
+                },
+                {
+                  "type": "text",
+                  "content": "The exact `type` of the tool changes depending on the model — for Claude 4 and later models it's `text_editor_20250728` (with support for `max_characters`, which truncates large files when viewing them); earlier versions used `text_editor_20250124` (Claude 3.7 Sonnet) or `text_editor_20241022` (Claude 3.5 Sonnet), with slightly different commands. It's best to resolve the version based on the model in use instead of hardcoding it."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "# web_search: Anthropic runs the search, no code needed on your part\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=800,\n    tools=[{\"type\": \"web_search_20250305\", \"name\": \"web_search\", \"max_uses\": 3}],\n    messages=[{\"role\": \"user\", \"content\": \"What happened with interest rates in Argentina this week?\"}],\n)\n\n# bash + text editor: it ONLY defines the schema, execution is still yours\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=1024,\n    tools=[\n        {\"type\": \"text_editor_20250728\", \"name\": \"str_replace_based_edit_tool\"},\n        {\"type\": \"bash_20250124\", \"name\": \"bash\"},\n    ],\n    messages=[{\"role\": \"user\", \"content\": \"Install 'requests' and run the tests in /tests\"}],\n)\n# response.content may bring tool_use with name=\"str_replace_based_edit_tool\" or \"bash\" —\n# your own handler dispatches them just like any custom tool, with the same tool_use / tool_result\n# loop seen in The multi-turn loop."
+                }
+              ]
+            },
+            {
+              "title": "web_search in detail",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "In addition to `max_uses`, the schema accepts `allowed_domains` or `blocked_domains` (mutually exclusive — declaring both returns a 400) and `user_location` to localize results by city/country/timezone."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "web_search_schema = {\n    \"type\": \"web_search_20250305\",\n    \"name\": \"web_search\",\n    \"max_uses\": 5,\n    \"allowed_domains\": [\"nih.gov\"],  # or blocked_domains, not both\n}"
+                },
+                {
+                  "type": "text",
+                  "content": "The response carries a sequence of chained blocks, not a single result: text where Claude announces it's going to search, a `server_tool_use` with the exact query it ran, a `web_search_tool_result` with the list of results (`url`, `title`, `page_age`, `encrypted_content`), and finally response text with a `citations` array for each claim backed by a result (`url`, `title`, `cited_text`, `encrypted_index`)."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "encrypted_content and encrypted_index travel as-is in the history",
+                  "content": "When resending the history on a following turn, the `web_search_tool_result` blocks (with their `encrypted_content`) and the `citations` (with their `encrypted_index`) must go exactly as received, unmodified. The API uses them to reconstruct the search results in Claude's context; if they're missing or altered, the request fails with a 400. It's the same principle as preserving `response.content` in full for normal tool use, but here with an extra field that's easy to accidentally trim if you try to \"clean up\" the response before saving it."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Cost: separate from tokens",
+                  "content": "Each search is billed at $10 per 1,000 uses, in addition to the token cost of the content it brings back. Relevant when deciding `max_uses` for comparative research tasks (multiple entities) where Claude can chain 10+ searches if not limited."
+                }
+              ]
+            },
+            {
+              "title": "Computer Use: controlling a desktop",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Computer use gives Claude screenshot capture and mouse/keyboard control over a desktop environment: it can see what's on screen, move the cursor, click, type, and use keyboard shortcuts. It's a beta tool and, like bash and the text editor, it's a client tool — Anthropic defines the actions, but your application has to actually run them on a real environment (typically a container with a virtual X11 display via Xvfb)."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.beta.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=1024,\n    betas=[\"computer-use-2025-11-24\"],\n    tools=[{\n        \"type\": \"computer_20251124\",\n        \"name\": \"computer\",\n        \"display_width_px\": 1024,\n        \"display_height_px\": 768,\n        \"display_number\": 1,\n    }],\n    messages=[{\"role\": \"user\", \"content\": \"Save a screenshot of the browser to the desktop\"}],\n)\n# the tool_use block carries actions like {\"action\": \"screenshot\"} or\n# {\"action\": \"left_click\", \"coordinate\": [412, 227]} — your app translates them\n# into real operations on the environment and returns the tool_result"
+                },
+                {
+                  "type": "text",
+                  "content": "The agent loop follows the same pattern as always (Claude requests an action, your code executes it, the result comes back as tool_result), with the twist that most of the tool_results are screenshots — Claude \"sees\" the effect of each action before deciding the next one."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Risks specific to this tool",
+                  "content": "Anthropic flags computer use as a different risk surface from the rest of the tools, especially if the environment has internet access: the content of a page (text, images) can contain hidden instructions attempting to override yours — the same prompt injection problem as with MCP resources, but here with the ability to execute real clicks and typing. Official recommendation: dedicated, minimal-privilege environment, explicit permissions for sensitive actions, strict limits on accessible sites, and human confirmation before actions with real consequences (payments, accepting terms, sending data)."
+                }
+              ]
+            },
+            {
+              "title": "Security in tool use",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The moment a model can execute real actions, security considerations stop being optional."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🔍",
+                      "title": "Validate inputs",
+                      "description": "The function that executes the tool must validate its parameters the same way it would validate input from a human user. Never blindly trust Claude's input."
+                    },
+                    {
+                      "icon": "🔒",
+                      "title": "Least privilege",
+                      "description": "A \"query orders\" tool shouldn't have, at the credential level, permission to delete orders."
+                    },
+                    {
+                      "icon": "✋",
+                      "title": "Human confirmation",
+                      "description": "Sending an email, charging a card, or deleting data: good candidates for an approval step before executing, not an automatic loop."
+                    },
+                    {
+                      "icon": "⚠️",
+                      "title": "Prompt injection",
+                      "description": "If a tool's result includes external content (scraped text, an email), it may include hidden instructions. Treat the result as data, never as a new instruction."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Tool granularity and descriptions",
+          "subsections": [
+            {
+              "title": "One tool or many?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The decision to consolidate actions into a generic tool or split them into specific tools has direct consequences for the agent's error rate. A tool with a free-text action field or a generic payload forces the model to guess the correct format; action-specific tools with typed schemas eliminate that ambiguity."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "One generic tool",
+                    "rows": [
+                      {
+                        "key": "Definition",
+                        "value": "`manage_inventory(action: string, payload: object)` — action can be \"add\", \"remove\", \"update\", \"query\"."
+                      },
+                      {
+                        "key": "Problem",
+                        "value": "The model has to infer which fields go in payload based on the value of action. The schema doesn't validate them. High rate of malformed payloads."
+                      },
+                      {
+                        "key": "When it's acceptable",
+                        "value": "Only if the backend can't be split and the schema includes detailed examples per action in the description."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Action-specific tools",
+                    "rows": [
+                      {
+                        "key": "Definition",
+                        "value": "`add_inventory(sku: string, qty: int)`, `remove_inventory(sku: string, qty: int)`, `query_inventory(sku: string)` — one tool per action type."
+                      },
+                      {
+                        "key": "Advantage",
+                        "value": "Each tool's schema validates exactly the fields it needs. The model doesn't need to infer the payload structure."
+                      },
+                      {
+                        "key": "When to split",
+                        "value": "When actions have structurally different inputs. Don't split if the use cases aren't genuinely different."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Splitting without cause creates selection confusion",
+                  "content": "If the use cases are similar and the inputs alike, adding more tools increases selection confusion. One well-described tool is better than two poorly differentiated ones. The criterion is whether the inputs are structurally different, not whether the actions are semantically different."
+                }
+              ]
+            },
+            {
+              "title": "The description is the real interface",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A tool's name and description are the primary signal the model uses to decide when to call it and how to build its arguments. A vague description produces two kinds of failures: selection errors (calling the wrong tool) and construction errors (malformed or incomplete arguments)."
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Element",
+                    "What to include",
+                    "What to avoid"
+                  ],
+                  "rows": [
+                    [
+                      "General description",
+                      "What the tool does, what kind of content it looks up/produces, when to prefer it over similar tools",
+                      "\"Searches the knowledge base\" (too generic)"
+                    ],
+                    [
+                      "Parameters",
+                      "Expected format, valid value range, effect of each field",
+                      "Only the parameter name with no context"
+                    ],
+                    [
+                      "Scope",
+                      "What data sources it covers, known limitations",
+                      "Omitting what it does NOT include"
+                    ],
+                    [
+                      "Relationship to other tools",
+                      "When to use this tool vs. a similar one",
+                      "Assuming the model will infer the difference"
+                    ]
+                  ]
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Vague description",
+                    "rows": [
+                      {
+                        "key": "Tool",
+                        "value": "`search_knowledge_base`"
+                      },
+                      {
+                        "key": "Description",
+                        "value": "\"Search the knowledge base.\""
+                      },
+                      {
+                        "key": "Result",
+                        "value": "The model calls it with malformed queries, at the wrong moments, or confuses it with `search_docs` or `search_tickets`."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Specific description",
+                    "rows": [
+                      {
+                        "key": "Tool",
+                        "value": "`search_knowledge_base`"
+                      },
+                      {
+                        "key": "Description",
+                        "value": "\"Searches internal support articles and resolved ticket history. Use for troubleshooting known issues or policy questions. Accepts natural language queries. Prefer over search_docs for customer-facing content. Do NOT use for real-time status or recent incidents.\""
+                      },
+                      {
+                        "key": "Result",
+                        "value": "The model selects correctly and builds relevant queries."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Examples in the description vs. few-shot in the prompt",
+                  "content": "For tools with non-obvious query formats, adding 1-2 examples directly in the parameter's description is more effective than adding examples in the system prompt. Inline examples in the schema reduce formatting errors without increasing the length of the conversation context."
+                }
+              ]
+            },
+            {
+              "title": "Enums vs. free text in parameters",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Typing a parameter as an enum instead of free text forces the model to choose among valid values, eliminating formatting errors. But enums are only appropriate when the set of values is finite, stable, and the model can semantically infer which one to pick. Using them incorrectly introduces different problems."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "✅",
+                      "title": "Correct enum: priority",
+                      "description": "`priority: [\"low\", \"medium\", \"high\", \"critical\"]` — small set, semantically clear, the model can infer the correct value from the conversation context."
+                    },
+                    {
+                      "icon": "❌",
+                      "title": "Incorrect enum: description",
+                      "description": "An enum of 50 predefined descriptions for a free-text field. The model has to guess which pre-loaded description applies to a new case. Free-text fields should remain strings with instructions in the description."
+                    },
+                    {
+                      "icon": "⚠️",
+                      "title": "Enum with out-of-range value",
+                      "description": "If the model sends \"urgent\" and the enum only accepts \"critical\", the call fails. Returning the error with the valid values lets the model correct itself on the next turn of the multi-turn loop."
+                    },
+                    {
+                      "icon": "📋",
+                      "title": "When to use a string with instructions",
+                      "description": "For fields with genuine variability (descriptions, comments, search queries). Include in the parameter's description the expected format and examples of valid values."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Idempotency, retry, and circuit breaker",
+          "subsections": [
+            {
+              "title": "Idempotency in tools with side effects",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "An operation is idempotent if running it multiple times with the same inputs produces the same result as running it once. In agents that can retry failed operations, non-idempotent tools produce duplicated effects: double charges, repeated orders, duplicate tickets."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Without idempotency",
+                    "rows": [
+                      {
+                        "key": "Flow",
+                        "value": "The agent calls `create_account(email=\"x@y.com\")`. The network fails before receiving the response."
+                      },
+                      {
+                        "key": "Retry",
+                        "value": "The agent calls `create_account(email=\"x@y.com\")` again."
+                      },
+                      {
+                        "key": "Result",
+                        "value": "Two accounts are created with the same email. The original error didn't cause the duplicate — the retry did."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "With idempotency key",
+                    "rows": [
+                      {
+                        "key": "Flow",
+                        "value": "The orchestrator generates a UUID before calling: `create_account(email=\"x@y.com\", idempotency_key=\"uuid-123\")`."
+                      },
+                      {
+                        "key": "Retry",
+                        "value": "The agent calls with the same `idempotency_key=\"uuid-123\"`."
+                      },
+                      {
+                        "key": "Result",
+                        "value": "The backend detects the key was already processed and returns the original result without creating a second account."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The key must be generated BEFORE the first call",
+                  "content": "The frequent design error is generating the idempotency key inside the tool at the moment of each call. If the retry generates a new key, the backend can't detect the duplicate. The key must be generated by the orchestrator before the first call and reused on every retry of the same intent."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import uuid\n\n# Correct: key generated BEFORE the first call\nidempotency_key = str(uuid.uuid4())\n\nfor attempt in range(MAX_RETRIES):\n    result = create_account(\n        email=email,\n        idempotency_key=idempotency_key,  # same key on every retry\n    )\n    if result.success:\n        break"
+                }
+              ]
+            },
+            {
+              "title": "Retry with exponential backoff and jitter",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Immediately retrying a failed request against an overloaded service (HTTP 429 or 503) makes the overload worse. Exponential backoff spaces out retries; jitter randomizes the wait time to prevent multiple agents from retrying simultaneously (thundering herd)."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import time, random\n\ndef retry_with_backoff(fn, max_retries=4, base_delay=1.0):\n    for attempt in range(max_retries):\n        try:\n            return fn()\n        except (RateLimitError, ServiceUnavailableError) as e:\n            if attempt == max_retries - 1:\n                raise\n            delay = base_delay * (2 ** attempt)  # 1s, 2s, 4s, 8s\n            jitter = random.uniform(0, delay * 0.1)  # random variation\n            time.sleep(delay + jitter)"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "📈",
+                      "title": "Exponential backoff",
+                      "description": "Each retry waits double the previous one: 1s -> 2s -> 4s -> 8s. Reduces load on the degraded service without abandoning the intent."
+                    },
+                    {
+                      "icon": "🎲",
+                      "title": "Jitter",
+                      "description": "Random variation applied to the delay. Prevents multiple agents from retrying at exactly the same second (thundering herd). Typically ±10-20% of the base delay."
+                    },
+                    {
+                      "icon": "🚫",
+                      "title": "Selective retry",
+                      "description": "Only retry transient errors (429, 503). Never retry 400 (bad request) or 422 (validation error): those are data errors, not availability errors."
+                    },
+                    {
+                      "icon": "🔑",
+                      "title": "Combine with idempotency",
+                      "description": "Retry without an idempotency key on operations with side effects produces duplicates. The two techniques are complementary: backoff controls frequency, the key prevents duplicates."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Circuit breaker: when retry no longer makes sense",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The circuit breaker is a resilience pattern for dependent services. After N consecutive failures, the circuit opens and subsequent calls fail immediately without attempting to contact the service. After a wait period, it allows a test request to check whether the service has recovered."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Closed (normal)",
+                      "description": "The service responds. Calls pass through normally. The failure counter resets on each success."
+                    },
+                    {
+                      "title": "Consecutive failures",
+                      "description": "After N consecutive errors (e.g. 5), the circuit opens."
+                    },
+                    {
+                      "title": "Open (circuit open)",
+                      "description": "Calls fail immediately with a local error, without touching the service. This avoids accumulating timeouts and blocked resources."
+                    },
+                    {
+                      "title": "Half-open (test)",
+                      "description": "After the configured wait period, one test request is allowed. If it succeeds, the circuit returns to Closed. If it fails, it goes back to Open."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Circuit breaker vs. retry: different roles",
+                  "content": "Retry handles individual transient failures (a momentary network blip, a one-off rate limit). The circuit breaker handles sustained service degradation. Use them together: first try with backoff/retry; if failures persist, the circuit breaker opens and halts the flow until the service recovers."
+                }
+              ]
+            },
+            {
+              "title": "Structured errors in tools",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When a tool fails, the error it returns is the input for the agent's next turn. If the error is a stack trace or an unstructured exception message, the model can't decide how to proceed. Structured errors with a typed code and a suggested action let the agent make informed decisions."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Unstructured error",
+                    "rows": [
+                      {
+                        "key": "Return value",
+                        "value": "\"ConnectionError: KYCProviderConnectionError at line 47 of kyc_client.py\""
+                      },
+                      {
+                        "key": "Problem",
+                        "value": "The model can't tell whether it's a transient error (retry) or a permanent one (escalate). It doesn't know what action to take."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Structured error",
+                    "rows": [
+                      {
+                        "key": "Return value",
+                        "value": "{\"error_code\": \"SERVICE_UNAVAILABLE\", \"retry_after_seconds\": 30, \"suggested_action\": \"retry\"}"
+                      },
+                      {
+                        "key": "Advantage",
+                        "value": "The agent reads `suggested_action` and `retry_after_seconds` to decide: retry after 30s, or if the code is PERMANENT_FAILURE, escalate to a human."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def run_kyc_check(applicant_id: str) -> dict:\n    try:\n        result = kyc_provider.verify(applicant_id)\n        return {\"status\": \"success\", \"verification_id\": result.id}\n    except ProviderTimeout:\n        return {\n            \"error_code\": \"SERVICE_UNAVAILABLE\",\n            \"retry_after_seconds\": 30,\n            \"suggested_action\": \"retry\",\n        }\n    except InvalidApplicantError:\n        return {\n            \"error_code\": \"INVALID_INPUT\",\n            \"suggested_action\": \"escalate_to_human\",\n            \"message\": \"Applicant data failed validation\",\n        }"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Toolset curation and least privilege",
+          "subsections": [
+            {
+              "title": "The problem with always exposing every tool",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "An agent connected to 6+ tools at all times faces two problems: selection confusion (the model may choose the wrong tool when there are many similar options) and security risk (tools with side effects available in contexts where they shouldn't be used). Curating the toolset by task context solves both."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Full toolset always",
+                    "rows": [
+                      {
+                        "key": "Context",
+                        "value": "The user makes a calendar query."
+                      },
+                      {
+                        "key": "Available tools",
+                        "value": "calendar, email, code_search, github, slack, database_write (6 tools)."
+                      },
+                      {
+                        "key": "Risk",
+                        "value": "The model can confuse similar tools or use database_write in a read-only context."
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Toolset curated per task",
+                    "rows": [
+                      {
+                        "key": "Context",
+                        "value": "The user makes a calendar query."
+                      },
+                      {
+                        "key": "Available tools",
+                        "value": "Only calendar (1 tool)."
+                      },
+                      {
+                        "key": "Advantage",
+                        "value": "No selection confusion. No risk of non-calendar operations. The task determines the exposed subset of tools."
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Toolset curation is an implementation of least privilege",
+                  "content": "The least-privilege principle applied to tools: the agent only has access to the tools it needs for the current task. Exposing extra tools just in case violates this principle and creates risk with no benefit. Curation is preferable to trying to control behavior with system prompt instructions alone."
+                }
+              ]
+            },
+            {
+              "title": "How to implement curation",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Classify the task",
+                      "description": "Before sending the request to the model, classify the task type: calendar, email, code, database. It can be a custom classifier or inferred from context."
+                    },
+                    {
+                      "title": "Select the tool subset",
+                      "description": "Each task class has a mapped toolset. Only those tools are included in the request."
+                    },
+                    {
+                      "title": "Include cross-cutting tools if needed",
+                      "description": "Some tools are useful in multiple contexts (e.g. a user lookup). Include them in the subsets that need them, not in all of them."
+                    },
+                    {
+                      "title": "Update the subset if the task changes mid-session",
+                      "description": "If the user pivots from a calendar query to sending an email, update the toolset on the next request."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "TOOLSETS = {\n    \"calendar\": [get_calendar_tool(), list_events_tool()],\n    \"email\": [read_email_tool(), send_email_tool()],\n    \"code\": [search_code_tool(), run_linter_tool(), create_pr_tool()],\n}\n\ndef handle_request(user_message: str, task_context: str):\n    tools = TOOLSETS.get(task_context, [])\n    return client.messages.create(\n        model=\"claude-sonnet-4-6\",\n        tools=tools,\n        messages=[{\"role\": \"user\", \"content\": user_message}],\n    )"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Curation doesn't replace validating side effects",
+                  "content": "Even with curated toolsets, tools with side effects (sending email, writing to a database, creating a PR) must require human confirmation or have their own guardrails. Curation reduces the risk of wrong selection; it doesn't replace authorization controls."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,232 @@
+{
+  "sections": [
+    {
+      "title": "Prefill and Modern Alternatives",
+      "articles": [
+        {
+          "title": "What Prefill Was and Why It Disappeared",
+          "subsections": [
+            {
+              "title": "The generation trick",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Prefill consisted of placing a message with role: \"assistant\" at the end of messages, as if Claude had already started responding. The model would continue exactly from there, instead of generating a response from scratch."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "# This no longer works on current models — returns 400\nmessage = client.messages.create(\n    model=\"claude-sonnet-4-5\",  # only worked on older versions\n    max_tokens=1,\n    messages=[\n        {\n            \"role\": \"user\",\n            \"content\": \"What is the Latin word for ant? (A) Apoidea (B) Formicidae\",\n        },\n        {\"role\": \"assistant\", \"content\": \"The answer is (\"},  # prefill\n    ],\n)\n# stop_reason: \"max_tokens\" — Claude would complete with \"B\" and stop at 1 token"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Removed in current models",
+                  "content": "Prefill isn't supported in claude-sonnet-4-6, claude-opus-4-8, or claude-haiku-4-5-20251001. Requests that use it return a 400 error. Anthropic removed it because it was a generation trick, not a real guarantee: it didn't ensure valid JSON, consumed context tokens with no clear attribution, and conflicts with extended thinking, where the model needs to control its own response flow."
+                }
+              ]
+            },
+            {
+              "title": "The same trick existed in AWS Bedrock",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Bedrock's Converse API supported exactly the same mechanism: adding a message with `role: \"assistant\"` at the end of `messages` so Claude would continue from there instead of generating from scratch (see Claude API → Claude on AWS Bedrock → Multi-turn conversations for the `add_user_message` / `add_assistant_message` helpers)."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "messages = []\nadd_user_message(messages, \"Is coffee or tea better for breakfast?\")\nadd_assistant_message(messages, \"Coffee is better because\")\n\nchat(messages)\n# used to return the continuation, e.g. \"it has more caffeine.\"\n# you had to concatenate the prefill + the continuation to get the full response"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "It wasn't a Bedrock feature, it was model behavior",
+                  "content": "Prefill was never a capability of the direct API or of Bedrock's Converse API itself — it depended on how the underlying model interpreted an assistant message at the end of the conversation. That's why its removal in current models (Claude 4.6 onward) has no documented per-platform exception: it applies the same regardless of whether you invoke the model via api.anthropic.com or via Bedrock. The modern alternatives carry over directly too: strict tool use via `toolConfig`, and moving tone or persona instructions into the Converse API's `system`."
+                }
+              ]
+            },
+            {
+              "title": "The three original use cases",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Prefill was mostly used for three situations. Each has a direct, more robust replacement in current models."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "With prefill (deprecated)",
+                    "rows": [
+                      { "key": "Multiple choice", "value": "Prefilling \"The answer is (\" and requesting 1 token." },
+                      { "key": "Specific JSON", "value": "Prefilling \"{\" so Claude starts directly with JSON." },
+                      { "key": "Maintaining a persona", "value": "Prefilling \"[Detective Morgan]\" at the start of every turn." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Modern alternative",
+                    "rows": [
+                      { "key": "Multiple choice", "value": "Strict tool use with enum: guarantees one of the exact values, no text parsing needed." },
+                      { "key": "Specific JSON", "value": "output_config.format with json_schema: a real API-level guarantee, not probabilistic." },
+                      { "key": "Maintaining a persona", "value": "Instruction in the system prompt: applies to the whole conversation without fake messages." }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "The Three Modern Alternatives",
+          "subsections": [
+            {
+              "title": "Case 1: Multiple choice → Strict tool use",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Instead of prefilling \"The answer is (\", you define a tool with strict: true and an enum with the valid options. Claude is required to call the tool with one of those exact values — there's no text to parse."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"What is the Latin word for ant? (A) Apoidea (B) Formicidae\",\n    }],\n    tool_choice={\"type\": \"tool\", \"name\": \"answer\"},\n    tools=[{\n        \"name\": \"answer\",\n        \"description\": \"Records the chosen option\",\n        \"strict\": True,\n        \"input_schema\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"choice\": {\"type\": \"string\", \"enum\": [\"A\", \"B\"]}\n            },\n            \"required\": [\"choice\"],\n            \"additionalProperties\": False,\n        },\n    }],\n)\n# response.content[0].input == {\"choice\": \"B\"} — guaranteed, no text parsing needed"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "strict: true vs. without strict",
+                  "content": "With strict: true and additionalProperties: False, Claude is required to produce exactly the schema's fields, with no extras or variations. Without strict, the schema is a strong guide but not an absolute guarantee."
+                }
+              ]
+            },
+            {
+              "title": "Case 2: JSON with a specific shape → output_config.format",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Previously, \"{\" was prefilled to force Claude to skip the preamble and start directly with JSON. Now output_config.format guarantees the full structure at the API level, without relying on a generation trick."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"Extract the name and email from: Juan Pérez, juan@email.com\",\n    }],\n    output_config={\n        \"format\": {\n            \"type\": \"json_schema\",\n            \"schema\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"name\": {\"type\": \"string\"},\n                    \"email\": {\"type\": \"string\"},\n                },\n                \"required\": [\"name\", \"email\"],\n                \"additionalProperties\": False,\n            },\n        }\n    },\n)\n# response.content[0].text is guaranteed valid JSON, ready for json.loads()\nimport json\ndata = json.loads(response.content[0].text)\nprint(data[\"name\"])   # \"Juan Pérez\"\nprint(data[\"email\"])  # \"juan@email.com\""
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "output_config.format is incompatible with prefill",
+                  "content": "There's no need to combine it with prefill: it already solves the same problem in a guaranteed way instead of a probabilistic one."
+                },
+                {
+                  "type": "text",
+                  "content": "There's an equivalent alternative, older than output_config.format and still widely used: forcing tool_choice on a tool that doesn't represent a real action, but only the schema of the data to extract. Claude \"calls\" that tool with the JSON in its input field instead of generating it as text."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "extraction_schema = {\n    \"name\": \"record_article_data\",\n    \"description\": \"Records the structured data extracted from the article\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"title\": {\"type\": \"string\"},\n            \"author\": {\"type\": \"string\"},\n            \"key_points\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        },\n        \"required\": [\"title\", \"author\", \"key_points\"],\n    },\n}\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": f\"Extract the data from this article:\\n\\n{article_text}\"}],\n    tools=[extraction_schema],\n    tool_choice={\"type\": \"tool\", \"name\": \"record_article_data\"},\n)\n\ndata = response.content[0].input  # already a dict, no need for json.loads()"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "No second request: this isn't real tool use",
+                  "content": "Since the tool doesn't actually execute anything, the flow ends as soon as `input` is read — there's no need to assemble a `tool_result` or send it back to Claude. This sets it apart from the normal tool-use loop (see The multi-turn loop), where the `tool_result` is required to close the turn."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Forced tool or output_config.format?",
+                  "content": "Both give a real structural guarantee. output_config.format is more direct when the only goal is JSON (without the conceptual noise of a \"tool\" that does nothing) and is the newer option. Forcing a tool with tool_choice is still preferable if the schema needs `strict: true` with validation logic you already have set up for real tools, or in SDKs/integrations where tools is already the established mechanism for all structured output."
+                }
+              ]
+            },
+            {
+              "title": "Extension of Case 2: prefill + stop_sequences to delimit any format",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Beyond JSON, the same trick of prefilling an opening delimiter was combined with a stop sequence on the closing delimiter to capture Python code, CSV, lists, or config files without the explanatory text Claude adds around them by default."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "messages = []\nadd_user_message(messages, \"Generate a very short EventBridge rule as JSON\")\nadd_assistant_message(messages, \"```json\")\n\ntext = chat(messages, stop_sequences=[\"```\"])\n# Claude \"believes\" it already opened the code block and continues straight into the JSON;\n# as soon as it tries to close with ``` again, the stop_sequence cuts it off there.\n# text ends up with only the content, without the opening or closing ```."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The prefill half of this combo is deprecated — stop_sequences isn't",
+                  "content": "add_assistant_message(messages, \"```json\") is prefill: it inherits the same removal in Claude 4.6+ as the rest of this page (see above, and its Bedrock equivalent). stop_sequences still works exactly the same — what stopped working is the half that opened the delimiter."
+                },
+                {
+                  "type": "text",
+                  "content": "The replacement depends on the format. For JSON, output_config.format (above) is still the most solid option. For formats without a formal schema — code, CSV, lists — the modern alternative is to directly ask Claude to wrap the content in its own XML tag and extract it with a string split; Claude respects a tag boundary much more consistently than a vague instruction like \"don't add extra text\" (see Claude API → Prompt Engineering → XML Tags)."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "add_user_message(messages, \"Generate a very short EventBridge rule as JSON. \"\n                            \"Wrap it in <output> tags with nothing else inside them.\")\nresponse = chat(messages)\n\ntext = response.split(\"<output>\")[1].split(\"</output>\")[0].strip()"
+                }
+              ]
+            },
+            {
+              "title": "Case 3: Maintaining tone or persona → System prompt",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When prefill was used to reinforce a role at the start of every turn, the replacement is to move that instruction into system, where it applies to the whole conversation without depending on a fake assistant message."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    system=\"Always respond in character as Detective Morgan: dry tone, \"\n           \"precise observations, no beating around the bush. Never break \"\n           \"character or add explanations outside their voice.\",\n    messages=[\n        {\"role\": \"user\", \"content\": \"What did you find at the scene?\"},\n    ],\n)\n# Claude responds directly as Detective Morgan,\n# with no preamble or breaking of character"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The system prompt also works to skip the preamble",
+                  "content": "If the problem was that Claude started with \"Sure, here you go...\", the fix is adding to the system: \"Respond directly, without introductory phrases.\" It's more reliable than prefill because it applies to the entire session."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "When to Prefer Each Alternative",
+          "subsections": [
+            {
+              "title": "Decision summary",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Prefill never guaranteed anything: it only influenced the probability of the continuation. The three alternatives are more explicit and, for the schema cases, give a real guarantee instead of a probabilistic suggestion."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "I want one of N exact options",
+                      "body": "Strict tool use with enum. Claude is required to return one of the listed values. Ideal for classifiers, multiple-choice answers, routing."
+                    },
+                    {
+                      "title": "I want JSON with a specific shape",
+                      "body": "output_config.format with json_schema. A real API-level guarantee. Ideal for data extraction, internal APIs that consume Claude's output."
+                    },
+                    {
+                      "title": "I want to control tone, style, or persona",
+                      "body": "System prompt. Applies to the whole conversation, no fake assistant messages, and can be cached with cache_control for long conversations."
+                    },
+                    {
+                      "title": "I want to skip the preamble",
+                      "body": "System prompt with an explicit instruction: \"Respond directly with no introduction.\" More reliable than prefill because it applies to the entire session."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

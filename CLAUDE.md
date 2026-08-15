@@ -14,19 +14,31 @@ No linting or test suite is configured.
 
 ## Architecture
 
-React 18 + Vite 7 SPA — fully static, no backend. All content lives in JSON files under `public/data/`. The app is a knowledge hub (in Spanish) for Claude Code and Claude API documentation.
+React 18 + Vite 7 SPA — fully static, no backend. All content lives in JSON files under `public/data/`. The app is a knowledge hub, primarily in Spanish, for Claude Code and Claude API documentation, with an in-progress English translation.
+
+### Language folders
+
+Content is split into two parallel folders under `public/data/`:
+- **`public/data/es/`** — the complete, canonical content (28 files as of this writing). This is the source of truth; new content is written here first.
+- **`public/data/en/`** — English translations. **Partial by design**: only files that have actually been translated exist here, plus an `en/content.json` that lists only those translated collections/items. There is no placeholder or fallback-to-Spanish — a collection with no English file simply doesn't appear when the site is in English mode.
+
+Both folders share the exact same per-file schema (see below), but **filenames are independent per language and written in that language** — `es/introduccion.json` is `en/introduction.json`, `es/api-vertex.json` stays `api-vertex.json` (already an English-looking name). Never carry a Spanish filename into `en/`. Each `content.json`'s `file` field points to whatever that language's file is actually called — `es/content.json` and `en/content.json` are independent indexes, not the same file with fewer entries.
+
+`ejercicios.json` (the practice exercises) is not registered in either `content.json` — the "Ejercicios"/"Exercises" button (`goExercises` in `App.jsx`) fetches it directly by path rather than going through the collection index. In English mode it requests `public/data/en/exercises.json` first and falls back to `public/data/es/ejercicios.json` if that 404s (translation is optional, same partial-by-design rule as everything else in `en/`); in Spanish mode it always reads `es/ejercicios.json`. Changing the language toggle clears any already-loaded exercises data so the next open re-fetches in the new language.
 
 ### Data flow
 
 ```
-public/data/content.json   ← master index of all collections
-         ↓ (fetched at startup)
-public/data/*.json         ← one JSON file per collection/sub-collection
+public/data/{lang}/content.json   ← master index of all collections, per language
+         ↓ (fetched at startup, `lang` from useLanguage() / localStorage 'wiki-lang')
+public/data/{lang}/*.json         ← one JSON file per collection/sub-collection, per language
          ↓
-src/searchEngine.js        ← builds flat article index, scores full-text queries
+src/searchEngine.js               ← builds flat article index, scores full-text queries
          ↓
-src/App.jsx                ← all UI, routing, and state (single file, ~1060 lines)
+src/App.jsx                       ← all UI, routing, and state (single file, ~1060 lines)
 ```
+
+`fetchLocalized(file, lang)` in `App.jsx` does the `/data/${lang}/${file}` fetch and returns `null` on a non-OK response; the loading `useEffect` filters out any `null` collection/item, which is what makes untranslated content disappear in English mode instead of erroring.
 
 ### Content schema
 
@@ -62,27 +74,33 @@ src/App.jsx                ← all UI, routing, and state (single file, ~1060 li
 | `src/App.jsx` | Entire app: all components, state, routing, block renderers (~1060 lines) |
 | `src/searchEngine.js` | Full-text search with scoring (title 30pt, section 30pt, subsection 20pt, content 10pt, summary 20pt) |
 | `src/styles.css` | Tailwind directives + CSS custom properties for light/dark theme |
-| `public/data/content.json` | Master collection index |
-| `public/practice/index.html` | Standalone practice exam (separate HTML page) |
+| `public/data/es/content.json` | Master collection index, Spanish (complete) |
+| `public/data/en/content.json` | Master collection index, English (only translated collections) |
+| `public/practice/index.html` | Standalone practice exam (separate HTML page, English only, no `es`/`en` split) |
 | `vite.config.js` | Includes `practiceRoutePlugin` to serve `/practice` from `public/practice/index.html` |
 
 ### App state (all in App.jsx via React hooks)
 
-`theme`, `collections`, `searchIndex`, `allArticles`, `activeCollection`, `search`, `debouncedSearch` (280ms), `searchResults`, `view` (`'home' | 'article'`), `activeArticle`
+`theme`, `lang` (`'es' | 'en'`, from `useLanguage()`), `collections`, `searchIndex`, `allArticles`, `activeCollection`, `search`, `debouncedSearch` (280ms), `searchResults`, `view` (`'home' | 'article'`), `activeArticle`
 
 ### Block types (rendered in ArticleView)
 
 `text`, `code` (highlight.js), `callout`, `cards`, `table`, `steps`, `stats`, `compare`
 
+### Fixed UI strings (chrome, not content)
+
+Fixed interface text (search placeholder, "Ejercicios"/"Exercises" button, breadcrumb "Inicio"/"Home", empty-state messages, hero copy, etc. — everything that isn't fetched JSON content) lives in the `UI_STRINGS` dictionary near the top of `App.jsx`, keyed by `es`/`en`. Components that render any of this text receive `lang` as a prop and call `useUI(lang)` to get the resolved strings object (`t`). When adding a new piece of fixed UI copy, add both the `es` and `en` entries to `UI_STRINGS` rather than hardcoding a string in JSX — a hardcoded string won't flip when the user toggles the language switch. Switching languages (`handleToggleLang` in `App`) also resets the view to home first, since the currently open article/collection may not exist in the other language's (partial) content tree.
+
 ### Adding content
 
-1. Create or update a JSON file in `public/data/` following the collection schema above.
-2. Register it in `public/data/content.json` (either as a new `collections` entry or as an item inside an existing `isSuper` collection).
+1. Create or update a JSON file in `public/data/es/` following the collection schema above — Spanish is the source of truth, write here first.
+2. Register it in `public/data/es/content.json` (either as a new `collections` entry or as an item inside an existing `isSuper` collection).
 3. No build step needed — files are fetched at runtime.
+4. **Optional — English translation**: create the file at `public/data/en/<english-filename>.json` — give it an English filename (translate the filename too, don't carry over the Spanish one) — with the identical schema and structure (same `id`s, same block types, same order), translating only the text fields — never translate code, model IDs, or CLI flags. Then register it in `public/data/en/content.json`, mirroring the entry from `es/content.json` but pointing at the English filename. If you skip this step, the content simply won't appear when the site is in English mode — that's expected, not a bug to route around.
 
 **Before writing anything new:**
 
-- **Check for overlap first.** Grep the existing `api-*.json` / `permisos.json` / `mcp.json` / `ejercicios.json` collections for the same ground. If a topic is already covered, extend it — a new subsection or block inside the existing article — instead of writing a parallel one, even a well-written duplicate. A new top-level card in `content.json` is warranted only when the topic genuinely doesn't fit inside any existing `isSuper` collection; the default is to distribute new material across the existing files that already own each sub-topic (e.g. an "antipatrón" that touches agent architecture, prompt caching, Claude Code CI/CD, and MCP gets split across `api-agentes.json`, `api-avanzado.json`, `permisos.json`, and `mcp.json` respectively, not written as one new standalone file).
+- **Check for overlap first.** Grep the existing `es/api-*.json` / `es/permisos.json` / `es/mcp.json` / `es/ejercicios.json` collections for the same ground. If a topic is already covered, extend it — a new subsection or block inside the existing article — instead of writing a parallel one, even a well-written duplicate. A new top-level card in `content.json` is warranted only when the topic genuinely doesn't fit inside any existing `isSuper` collection; the default is to distribute new material across the existing files that already own each sub-topic (e.g. an "antipatrón" that touches agent architecture, prompt caching, Claude Code CI/CD, and MCP gets split across `api-agentes.json`, `api-avanzado.json`, `permisos.json`, and `mcp.json` respectively, not written as one new standalone file). If the topic has an English translation, apply the same extend-don't-duplicate check there too and keep both versions structurally in sync.
 - **"Antipatrón vs. óptimo" content uses the `compare` block**, not a callout — it's the native format for that framing. Two schema variants exist in this codebase and both render: `{"left": {"head", "rows": [{"key","value"}]}}` (used in `api-*.json`; `title` also works as a synonym for `head` in this variant — `renderCol` reads `col.head || col.label || col.title`) and `{"left": {"label", "items": [...]}}` (used in `permisos.json`, `mcp.json`). Match whichever variant the surrounding file already uses — don't mix them within one file, and never use a bare `{"title", "content"}` shape (no `rows`/`items`) — the renderer silently drops that content with nothing shown on screen.
 - **Callout field names differ by file — check a nearby callout before writing one.** `api-agentes.json` / `api-avanzado.json` / `api-mcp.json` use `"style"`; `permisos.json` / `ejercicios.json` use `"variant"`; `mcp.json` uses `"kind"` (sometimes paired with an `"icon"` emoji); several files (`sistema-de-memoria.json`, parts of `hooks.json`) skip variant/style entirely and use only `"icon"` + `"content"`. All of these render fine (`BlockCallout` reads `block.variant || block.style`) — don't guess the field name from another file, match the nearest example.
 - **`stats` blocks use `{"value", "label"}`**, not `{"number", "label"}` — `BlockStats` only reads `item.value`. A `"number"` field renders as blank.
@@ -96,7 +114,7 @@ Official credential: **Claude Certified Architect – Foundations**, exam code *
 
 ### Official Exam Guide (authoritative when available)
 
-Anthropic publishes an official PDF Exam Guide ("Claude Certified Architect – Foundations Exam Guide") with the full domain blueprint, per-domain Task Statements (each with "Knowledge of" / "Skills in" lists), ~12 sample questions with explanations, and — critically — **4 Preparation Exercises (its Section 8)** that `public/data/ejercicios.json`'s four exercises are meant to mirror step-for-step. If the user shares this PDF (or a newer version) in a session, treat it as authoritative over the condensed summary below — cross-check `ejercicios.json` and `examen_cca_f_en.json` against its exact Task Statements and Section 8 steps rather than reconstructing from memory, and update this file's summary if something here is stale. The guide isn't checked into this repo (shared ad hoc as an attachment when needed), so don't assume it's on disk — ask the user to paste it again if a session needs it and doesn't have it.
+Anthropic publishes an official PDF Exam Guide ("Claude Certified Architect – Foundations Exam Guide") with the full domain blueprint, per-domain Task Statements (each with "Knowledge of" / "Skills in" lists), ~12 sample questions with explanations, and — critically — **4 Preparation Exercises (its Section 8)** that `public/data/es/ejercicios.json`'s four exercises are meant to mirror step-for-step. If the user shares this PDF (or a newer version) in a session, treat it as authoritative over the condensed summary below — cross-check `ejercicios.json` and `examen_cca_f_en.json` against its exact Task Statements and Section 8 steps rather than reconstructing from memory, and update this file's summary if something here is stale. The guide isn't checked into this repo (shared ad hoc as an attachment when needed), so don't assume it's on disk — ask the user to paste it again if a session needs it and doesn't have it.
 
 **Domain numbering gotcha (confirmed against Exam Guide v1.0, July 2026):** the guide's own Domain numbers do **not** match this repo's internal domain order. The guide numbers them Domain 1=Agentic Architecture & Orchestration, **Domain 2=Tool Design & MCP Integration**, **Domain 3=Claude Code Configuration & Workflows**, Domain 4=Prompt Engineering & Structured Output, Domain 5=Context Management & Reliability. This repo's internal domain `id` in `examen_cca_f_en.json` and the `DOMAINS` array in `public/practice/index.html` instead order them Agentic(1), **Claude Code Config(2)**, **Tool Design & MCP(3)**, Prompt Engineering(4), Context Mgmt(5) — domains 2 and 3 are swapped relative to the guide. The weights and question counts are identical either way (Tool Design & MCP is always 18%/11 questions, Claude Code Config is always 20%/12), only the *number* differs. This matters when tagging or referencing a `taskStatement` (e.g. "2.3") — always use the guide's numbering for that field, not this repo's internal domain `id`.
 
@@ -154,6 +172,7 @@ When writing new questions:
 5. **Target the decision layer** — questions should require production intuition: architecture choices, failure handling, tradeoff resolution.
 6. **Cover scenario types** — balance across the 6 exam scenarios, not just domain tags.
 7. **Explanation field** — must state *why* the correct answer is best and implicitly why the main distractor fails.
+8. **Name the trap, not just the answer** — the shared `explanation` field should call out the specific misconception the strongest distractor is designed to exploit (e.g. "mistaking conversational text for the completion signal when stop_reason says otherwise"), not just restate why the correct option is right. This single-field format is intentional for this bank (`buildPoolsFromJson` only reads `explanation`, not a per-option breakdown) — write one sentence (or two, if needed) that does double duty: justify the answer AND defuse the trap, rather than adding new per-option fields to the schema. **Length is not a target.** This is study material — optimize for whether a learner reading it actually understands *why* the trap is tempting and *why* it's wrong, not for hitting a character count. A short explanation that's already clear should stay short; a genuinely subtle trap may legitimately need three sentences. Never pad a clear explanation with restated content just to make it longer, and never truncate a genuinely complex trap just to make it shorter.
 
 ### Example questions by domain
 

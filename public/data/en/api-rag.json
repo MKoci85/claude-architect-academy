@@ -1,0 +1,458 @@
+{
+  "sections": [
+    {
+      "title": "RAG and Agentic Search",
+      "articles": [
+        {
+          "title": "What RAG Is and When to Use It",
+          "subsections": [
+            {
+              "title": "The core idea",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Retrieval-Augmented Generation (RAG) solves a concrete problem: Claude doesn't know your company's private content or anything that happened after its training cutoff. The idea is simple: instead of relying on what the model remembers, you retrieve a small set of relevant fragments from a knowledge base, insert them into the prompt (augment), and ask the model to generate the response based on those fragments."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Situation", "Recommended approach"],
+                  "rows": [
+                    ["A few documents that fit entirely in the context window", "Put them directly in the prompt: simpler, no search infrastructure"],
+                    ["Many documents, or ones that change often, that don't all fit in the context", "RAG: index once and retrieve only what's relevant per query"],
+                    ["You need to change the model's behavior or style, not add data to it", "Fine-tuning: RAG doesn't change how the model reasons, only what information it has available"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Common mistake",
+                  "content": "Using RAG when putting the whole document in the prompt would have been enough. If the corpus is small and stable, the chunking/embeddings/index infrastructure can be unnecessary complexity."
+                }
+              ]
+            },
+            {
+              "title": "Chunking strategies",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Before you can search, you need to split documents into manageable fragments (chunks). Chunk size and the splitting criterion directly affect search quality: chunks that are too large dilute relevance; chunks that are too small lose context."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "By fixed size",
+                    "rows": [
+                      { "key": "How", "value": "Cut every N characters or tokens, with an overlap between consecutive chunks so ideas aren't split in half." },
+                      { "key": "Advantage", "value": "Simple and fast." },
+                      { "key": "Risk", "value": "Ignores the document's structure." }
+                    ]
+                  },
+                  "right": {
+                    "head": "By structure",
+                    "rows": [
+                      { "key": "How", "value": "Cut respecting the document's headers, paragraphs, or sections." },
+                      { "key": "Advantage", "value": "Produces semantically more coherent chunks." },
+                      { "key": "Risk", "value": "Uneven sizes, more complex to implement." }
+                    ]
+                  }
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def chunk_by_size(text, size=800, overlap=150):\n    chunks = []\n    start = 0\n    while start < len(text):\n        end = start + size\n        chunks.append(text[start:end])\n        start = end - overlap  # step back to preserve continuity\n    return chunks"
+                },
+                {
+                  "type": "text",
+                  "content": "There's a third strategy, semantic chunking: instead of cutting by character count or structural markers, it measures the meaning similarity between consecutive sentences (with embeddings) and groups the ones that are thematically related, cutting where the topic changes. It produces the most coherent chunks of the three, but it's the most expensive to compute (one embedding per sentence, not per chunk) and the most complex to implement — for most cases, fixed size with overlap or by-structure is enough."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Document type", "Recommended strategy"],
+                  "rows": [
+                    ["Markdown, HTML, or another format with consistent structure (headers, sections)", "By structure — cuts at the document's natural boundaries"],
+                    ["Mixed documents or ones without reliable structure (plain text, varied PDFs)", "By sentence or fixed size with overlap — simpler and more predictable"],
+                    ["Source code", "Fixed size (or by function/syntactic block if the language allows it) — prose's semantic structure doesn't apply"],
+                    ["Corpus where thematic coherence is critical and compute cost isn't a problem", "Semantic — higher chunk quality in exchange for more preprocessing"]
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "High-Quality Retrieval",
+          "subsections": [
+            {
+              "title": "Contextual retrieval",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "An isolated chunk can become ambiguous outside its source document: the phrase \"the deadline was extended 90 days\" says nothing if you don't know which contract is being discussed. Contextual retrieval solves this by prepending each chunk with a brief description of where it came from, generated with Claude's help before indexing it, so that context travels along with the chunk."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\ndef generate_chunk_context(full_document, chunk):\n    prompt = f\"\"\"\n<document>\n{full_document}\n</document>\n\nHere is a fragment of that document:\n<fragment>\n{chunk}\n</fragment>\n\nWrite 1 or 2 short sentences that situate this fragment within the document\n(which contract/section it's about, which part/date it corresponds to), so\nit makes sense when read in isolation. Respond with only those sentences.\n\"\"\"\n    r = client.messages.create(\n        model=\"claude-haiku-4-5-20251001\", max_tokens=100,\n        messages=[{\"role\": \"user\", \"content\": prompt}],\n    )\n    return r.content[0].text\n\ncontext = generate_chunk_context(full_document, chunk)\nenriched_chunk = f\"{context}\\n\\n{chunk}\"  # this is what gets embedded and indexed"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Cost of this technique",
+                  "content": "Generating context per chunk means an extra call per fragment during indexing (an offline process, not on the critical path of each query). For large corpora, it's worth parallelizing these calls and using a cheap model like Haiku for this task."
+                },
+                {
+                  "type": "text",
+                  "content": "The code above assumes `full_document` fits in the context window. With long documents (hundreds of pages) that stops being true. The fix isn't to truncate arbitrarily: you build a reduced context with the document's first chunks (they usually hold the summary or overall structure) plus the chunks immediately preceding the one being contextualized — enough for Claude to understand where the fragment sits, without sending the entire document."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "num_initial_chunks = 2\nnum_previous_chunks = 2\n\nfor i, chunk in enumerate(chunks):\n    reduced_context = chunks[:num_initial_chunks]\n    start = max(0, i - num_previous_chunks)\n    reduced_context += chunks[start:i]\n\n    context = generate_chunk_context(\"\\n\".join(reduced_context), chunk)\n    enriched_chunk = f\"{context}\\n\\n{chunk}\"\n    retriever.add_document({\"content\": enriched_chunk})"
+                }
+              ]
+            },
+            {
+              "title": "Embeddings and vector search",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "An embedding is a numeric representation (a vector) of a piece of text, where texts with similar meaning end up close together in that vector space. The Claude API doesn't expose its own embeddings endpoint; in practice you combine it with an external provider (Voyage AI, for example) for that stage, and use Claude for the final generation. If the app runs on Google Cloud, Vertex AI offers its own embedding model as an alternative — see Claude API → Claude on Vertex AI → Embeddings."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Indexing (offline, once per document)",
+                      "body": "Each chunk goes through the embedding model and is stored in the vector database along with an id and the chunk's original text — the vector is only useful for comparison, the final answer needs the text."
+                    },
+                    {
+                      "title": "Query (on each request)",
+                      "body": "The user's question goes through the same embedding model, generating a query vector comparable to the ones already indexed."
+                    },
+                    {
+                      "title": "Retrieve",
+                      "body": "The vector database compares the query vector against all stored vectors (cosine similarity or distance) and returns the ids with the highest similarity, along with their score."
+                    },
+                    {
+                      "title": "Fetch the original text",
+                      "body": "With those ids, the actual text of each chunk is looked up (not the vector) — that's what actually gets assembled into the prompt along with the user's question."
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "columns": ["Field", "Contents"],
+                  "rows": [
+                    ["id", "Chunk identifier, to retrieve it after the search"],
+                    ["vector", "The normalized embedding, e.g. [0.12, -0.4, ...] — hundreds or thousands of dimensions"],
+                    ["text", "The chunk's original content. Never reconstructed from the vector: it's stored separately because the embedding isn't reversible"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Index and query with the same embedding model",
+                  "content": "The query vector is only comparable against the corpus vectors if both came from the same embedding model — each model defines its own vector space, not interchangeable with another's. Switching models (or versions) requires reindexing the whole corpus from scratch, not just the query."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import numpy as np\n\ndef cosine_similarity(a, b):\n    a, b = np.array(a), np.array(b)\n    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))\n\n# vectors already computed by the embeddings provider\nchunk_embeddings = [(chunk_id, vector) for chunk_id, vector in vector_db]\nquery_vector = get_embedding(\"what is the return policy?\")\n\nranking = sorted(\n    chunk_embeddings,\n    key=lambda pair: cosine_similarity(pair[1], query_vector),\n    reverse=True,\n)\ntop_k = ranking[:5]"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Vectors are normalized before being stored",
+                  "content": "Before indexing, embeddings are usually scaled to magnitude 1.0 (normalization) — the embeddings provider does this automatically. With normalized vectors, cosine similarity and dot product give the same ranking, which lets the vector database use the cheaper calculation (dot product) without losing precision."
+                },
+                {
+                  "type": "text",
+                  "content": "Many vector databases expose \"cosine distance\" instead of similarity: it's simply `1 - cosine_similarity`, so the scale is inverted (0 = identical, 2 = opposite) and `ORDER BY distance ASC` returns the most relevant first."
+                }
+              ]
+            },
+            {
+              "title": "Hybrid search and re-ranking",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Embeddings capture semantic similarity, but don't perform well with exact terms (product codes, proper names, acronyms). BM25 is a classic lexical search algorithm based on word frequency that complements them well. A mature pipeline combines both and adds a re-ranking step to improve final precision."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Initial retrieval (20 candidates)",
+                      "body": "Vector search and BM25 in parallel. Cheap but with broad recall."
+                    },
+                    {
+                      "title": "Ranking fusion (RRF)",
+                      "body": "Combine both rankings with reciprocal rank fusion to leverage the strengths of each."
+                    },
+                    {
+                      "title": "Re-ranking (top 5)",
+                      "body": "A second, more expensive but more precise pass reorders the 20 candidates. Can be a dedicated model or Claude itself scoring relevance."
+                    },
+                    {
+                      "title": "Generation with context",
+                      "body": "The 5 most relevant chunks are inserted into the prompt for the final generation."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from rank_bm25 import BM25Okapi\n\n# lexical search with BM25\ntokenized_corpus = [chunk.lower().split() for chunk in all_chunks]\nbm25 = BM25Okapi(tokenized_corpus)\nquery_tokens = \"error code E04 payment failure\".lower().split()\nscores = bm25.get_scores(query_tokens)\ntop_k_bm25 = sorted(zip(all_chunks, scores), key=lambda x: x[1], reverse=True)[:5]\n\n# ranking fusion: vector + BM25\ndef reciprocal_rank_fusion(vector_ranking, bm25_ranking, k=60):\n    scores = {}\n    for rank, (chunk_id, _) in enumerate(vector_ranking):\n        scores[chunk_id] = scores.get(chunk_id, 0) + 1 / (k + rank)\n    for rank, (chunk_id, _) in enumerate(bm25_ranking):\n        scores[chunk_id] = scores.get(chunk_id, 0) + 1 / (k + rank)\n    return sorted(scores.items(), key=lambda x: x[1], reverse=True)\n\n# re-ranking with Claude (for moderate corpora)\nrelevance_tool = {\n    \"name\": \"score_relevance\",\n    \"description\": \"Scores how relevant a fragment is to the question\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\"score\": {\"type\": \"number\", \"minimum\": 0, \"maximum\": 1}},\n        \"required\": [\"score\"],\n    },\n}\n\ndef score(question, chunk):\n    r = client.messages.create(\n        model=\"claude-haiku-4-5-20251001\", max_tokens=50,\n        tools=[relevance_tool], tool_choice={\"type\": \"tool\", \"name\": \"score_relevance\"},\n        messages=[{\"role\": \"user\", \"content\": f\"Question: {question}\\nFragment: {chunk}\"}],\n    )\n    return r.content[0].input[\"score\"]\n\nreranked_candidates = sorted(top_20_candidates, key=lambda c: score(question, c), reverse=True)[:5]"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Ties in the RRF score",
+                  "content": "The RRF algorithm itself doesn't define how to break ties: it only describes how to sum 1/(k+rank). With real floats, exact ties are rare, but they can happen (small corpus, or a chunk in the same position in both rankings). The code above resolves ties implicitly with `sorted()`'s stable ordering, favoring whichever appeared first in the dictionary — not a designed criterion. The two explicit ways to break ties are: (1) use the original score (raw cosine similarity or BM25 score) as a secondary criterion, or (2) leave it as-is, since in production the impact of an occasional tie in the top-k is marginal compared to the cost of adding extra logic."
+                },
+                {
+                  "type": "text",
+                  "content": "The `score()` above makes one call to Claude per candidate (N calls for N candidates). A more efficient alternative is a single call that receives all candidates with a short ID each and returns the list of IDs ordered by relevance — this avoids having Claude copy each chunk's full text into the response."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "def batch_reranking(question, candidates, k=5):\n    documents = \"\\n\".join(\n        f'<document><document_id>{c[\"id\"]}</document_id><document_content>{c[\"text\"]}</document_content></document>'\n        for c in candidates\n    )\n    prompt = f\"\"\"Select the {k} most relevant documents to answer the question.\n\n<question>{question}</question>\n<documents>{documents}</documents>\n\nRespond with only JSON: {{\"document_ids\": [...]}} with {k} ids, ordered from most to least relevant.\"\"\"\n\n    r = client.messages.create(\n        model=\"claude-haiku-4-5-20251001\", max_tokens=200,\n        messages=[{\"role\": \"user\", \"content\": prompt}],\n    )\n    ordered_ids = json.loads(r.content[0].text)[\"document_ids\"]\n    by_id = {c[\"id\"]: c for c in candidates}\n    return [by_id[i] for i in ordered_ids]"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "N calls vs. 1 call: not just a style choice",
+                  "content": "Scoring candidate by candidate scales badly: 20 candidates are 20 sequential requests (or parallel, but it's still 20x the cost). The single-call batch solves the same problem with 1 request, at the cost of a longer prompt — it almost always wins on latency and total cost, except with candidates so long they don't fit together in the context."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Full Pipeline and Evaluation",
+          "subsections": [
+            {
+              "title": "The complete RAG pipeline",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Indexing (offline)",
+                      "body": "Documents → chunking → contextual retrieval → embeddings → vector database + BM25 index. Done once, not on the critical path of each query."
+                    },
+                    {
+                      "title": "Query",
+                      "body": "User's question → query embedding."
+                    },
+                    {
+                      "title": "Retrieve",
+                      "body": "Vector search + BM25 → fusion → re-ranking → top-k relevant chunks."
+                    },
+                    {
+                      "title": "Augment + Generate",
+                      "body": "Chunks inserted into the prompt with an instruction to cite only what's in the context → Claude's response."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "context = \"\\n\\n---\\n\\n\".join(chunk_text for chunk_text, _ in top_k)\n\nprompt = f\"\"\"\n<context>\n{context}\n</context>\n\nAnswer the following question using only the information in the context.\nIf the answer isn't in the context, say you don't have that information.\n\nQuestion: what is the return policy?\n\"\"\"\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": prompt}],\n)"
+                }
+              ]
+            },
+            {
+              "title": "Agentic RAG",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The fixed pipeline always searches once, before generating. Agentic search inverts that control: instead of retrieving context in a fixed way, the search is exposed as a tool and Claude decides whether it needs to search, with what query, and whether one search is enough or it's worth refining it. Useful when the original question isn't enough for a good query, or when information from several successive searches needs to be combined."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Fixed RAG",
+                    "rows": [
+                      { "key": "Control", "value": "The code decides when and what to search for." },
+                      { "key": "Cost", "value": "Predictable: always one search per query." },
+                      { "key": "When", "value": "Simple questions with a clear single search dimension." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Agentic RAG",
+                    "rows": [
+                      { "key": "Control", "value": "Claude decides whether to search, how many times, and with what query." },
+                      { "key": "Cost", "value": "Variable: can do 0, 1, or several searches." },
+                      { "key": "When", "value": "Complex questions that need to combine several searches or refine the query." }
+                    ]
+                  }
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "search_tool = {\n    \"name\": \"search_documents\",\n    \"description\": (\n        \"Searches the internal knowledge base for relevant fragments. \"\n        \"Use it as many times as needed, refining the query, until you \"\n        \"have enough information to answer confidently.\"\n    ),\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\"query\": {\"type\": \"string\"}},\n        \"required\": [\"query\"],\n    },\n}\n\ndef run_search(query):\n    vector = get_embedding(query)\n    return \"\\n---\\n\".join(chunk for chunk, _ in search_top_k(vector, k=5))\n\n# same multi-turn tool-use loop, with \"search_documents\" as the only tool;\n# Claude can call it 0, 1, or several times before answering"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Set a limit",
+                  "content": "Agentic RAG is more flexible but less predictable in cost and latency, because the number of searches is left up to the model. It's worth reserving it for genuinely complex questions and setting an iteration limit to avoid endless search loops."
+                }
+              ]
+            },
+            {
+              "title": "Evaluating a RAG system",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A RAG system has two components worth evaluating separately: whether the retrieval finds the correct fragments, and whether the generation produces a good response given that context. Mixing both into a single metric makes it harder to know what to fix when something fails."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "# evaluate the retrieval: recall@k\n# dataset: list of (question, ids_of_relevant_chunks_per_a_human)\ndef recall_at_k(question, relevant_ids, k=5):\n    vector = get_embedding(question)\n    retrieved = [chunk_id for chunk_id, _ in search_top_k(vector, k=k)]\n    found = set(retrieved) & set(relevant_ids)\n    return len(found) / len(relevant_ids)\n\naverage_recall = sum(recall_at_k(q, ids) for q, ids in eval_dataset) / len(eval_dataset)\nprint(f\"Recall@5: {average_recall:.1%}\")\n\n# evaluate the generation: model-based grading (techniques from the evals module)\n# check whether the final answer uses and cites the retrieved information\n# without adding data that wasn't in the context"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "📊",
+                      "title": "Recall@k",
+                      "description": "What proportion of the truly relevant chunks appear among the top-k retrieved? A direct metric for diagnosing retrieval."
+                    },
+                    {
+                      "icon": "✅",
+                      "title": "Faithfulness",
+                      "description": "Does the answer use only information from the retrieved context? Detects hallucinations mixed in with real retrieval data."
+                    },
+                    {
+                      "icon": "🎯",
+                      "title": "Relevance",
+                      "description": "Does the answer effectively address the question? Can be evaluated with LLM-as-judge using an explicit rubric."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Provenance in Multi-Source Synthesis",
+      "articles": [
+        {
+          "title": "Preserving the Origin of Each Claim",
+          "subsections": [
+            {
+              "title": "Why traceability gets lost",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "In a research pipeline with multiple subagents (one searches the web, another analyzes documents, one synthesizes), every summarization step is a chance to lose track of where each piece of data came from. If a document-analysis subagent returns only free text (\"the study found a 23% improvement\"), the synthesis agent has no way to know which source backs that figure fifteen steps later. Traceability is lost exactly at the boundary between agents, unless it's explicitly preserved."
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "This problem is different from retrieval itself: even if the search finds the correct fragments, if the hand-off format between subagents doesn't include origin metadata, the final synthesis can't cite correctly or distinguish what's well-supported from what isn't."
+                }
+              ]
+            },
+            {
+              "title": "Claim-source mapping as an exchange format",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The structural solution is for every subagent that produces findings to return an explicit mapping between each claim and its source — not narrative prose that mixes content with provenance. The synthesis agent receives these mappings and must preserve them when combining findings from multiple subagents, instead of merging everything into a summary with no attribution."
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "content": "# Output format of a document-analysis subagent:\n# separates the content (claim) from its metadata (source, date, location)\n\nfinding_schema = {\n    \"type\": \"object\",\n    \"required\": [\"claim\", \"source\", \"published_date\", \"excerpt\"],\n    \"properties\": {\n        \"claim\": {\"type\": \"string\"},\n        \"source\": {\n            \"type\": \"object\",\n            \"required\": [\"name\", \"url_or_doc_id\"],\n            \"properties\": {\n                \"name\": {\"type\": \"string\"},\n                \"url_or_doc_id\": {\"type\": \"string\"},\n                \"page\": {\"type\": [\"integer\", \"null\"]},\n            },\n        },\n        \"published_date\": {\"type\": [\"string\", \"null\"]},\n        \"excerpt\": {\"type\": \"string\"},\n    },\n}\n\n# example of a well-formed finding\nfinding = {\n    \"claim\": \"The sector's GDP growth was 3.4% in the second quarter\",\n    \"source\": {\"name\": \"XYZ Industry Report\", \"url_or_doc_id\": \"industry-report-q2.pdf\", \"page\": 12},\n    \"published_date\": \"2025-08-01\",\n    \"excerpt\": \"...the reported growth was 3.4% year-over-year...\",\n}"
+                },
+                {
+                  "type": "callout",
+                  "icon": "💡",
+                  "content": "The synthesis agent must receive explicit instructions to preserve and merge these mappings, not rewrite them as prose. When the final report cites a figure, the citation should trace directly back to the original claim-source mapping, not to the synthesis model's memory of what it read."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Conflicts Between Sources: Annotate, Don't Resolve Arbitrarily",
+          "subsections": [
+            {
+              "title": "The antipattern: averaging or silently picking one",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When two credible sources report different values for the same data point (a government report says 2.1% growth, an industry dataset says 3.4%), the intuitive reaction is to \"resolve\" the conflict: average both values, or pick whichever source seems more authoritative. Both options destroy information: the average (2.75%) isn't the real value from either source, and silently picking one source hides the real uncertainty in the data from the final reader of the report."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "title": "❌ Silent resolution",
+                    "rows": [
+                      { "key": "Action", "value": "Average, or pick the \"more reliable\" source without saying so" },
+                      { "key": "Problem", "value": "The reader believes the figure is solid when there's actually a discrepancy between sources" },
+                      { "key": "Consequence", "value": "A business decision gets made on a number nobody actually reported" }
+                    ]
+                  },
+                  "right": {
+                    "title": "✅ Explicit conflict annotation",
+                    "rows": [
+                      { "key": "Action", "value": "Report both values with their source, marked as \"contested\"" },
+                      { "key": "Advantage", "value": "The reader decides with the full information; the report is honest about the uncertainty" },
+                      { "key": "Where it's decided", "value": "At the synthesis/orchestrator level, which has global context — not in the subagent that detected the conflict" }
+                    ]
+                  }
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "content": "conflict = {\n    \"metric\": \"gdp_growth_q2\",\n    \"status\": \"contested\",\n    \"values\": [\n        {\"value\": 2.1, \"unit\": \"%\", \"source\": \"Government Report\", \"published_date\": \"2025-07-15\"},\n        {\"value\": 3.4, \"unit\": \"%\", \"source\": \"XYZ Industry Dataset\", \"published_date\": \"2025-08-01\"},\n    ],\n    \"note\": \"Sources likely differ due to different measurement methodology; not resolved automatically.\",\n}\n\n# the final report structures separate sections:\n# \"Well-established findings\" (a single consistent source, or multiple that agree)\n# \"Disputed findings\" (like the one above, with both values and sources visible)"
+                }
+              ]
+            },
+            {
+              "title": "Publication dates: avoiding false temporal contradictions",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Not every discrepancy between sources is a real conflict: if a January source reports \"unemployment rate 5.2%\" and a June one reports \"4.8%\", they don't disagree — they're describing different points in time. Without the publication or collection date for each data point, the synthesis agent can't distinguish a normal time series from a genuine contradiction between sources. That's why the claim-source mapping schema includes `published_date` as a required field, not optional."
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "A common error is a synthesis subagent, lacking dates, marking as \"conflict\" what's actually the normal evolution of a metric over time. The date field is what lets the synthesis level tell the two cases apart before annotating anything as a contradiction."
+                }
+              ]
+            },
+            {
+              "title": "Output format based on content type",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A final synthesis report shouldn't force all content into the same format. Financial data communicates better in tables; narrative findings in prose; lists of technical findings in list structures. Converting everything to a single uniform format (all prose, for example) tends to lose precision — a table of figures converted to prose is harder to verify than the original table."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Content type", "Recommended format in the final report"],
+                  "rows": [
+                    ["Financial figures, comparable metrics", "Table"],
+                    ["Narrative findings, qualitative context", "Prose"],
+                    ["Discrete technical findings, recommendation checklist", "Structured list"],
+                    ["Conflicts between sources", "Explicit separate section, never mixed with consolidated findings"]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

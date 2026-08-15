@@ -1,0 +1,701 @@
+{
+  "id": "subagentes",
+  "title": "Subagents",
+  "summary": "How to create, configure, and invoke subagents to isolate context, parallelize tasks, and apply specialized instructions. Comparison with Skills and Hooks.",
+  "sections": [
+    {
+      "title": "Subagents in Claude Code",
+      "articles": [
+        {
+          "id": "sub-001",
+          "title": "What is a subagent and why does it matter?",
+          "summary": "Subagent concept, three key characteristics, and four main benefits: context isolation, parallelization, specialized instructions, and tool restriction.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "A subagent is a separate agent instance that the main agent can launch to handle specific subtasks. It has its own clean context, its own system prompt, and optionally its own set of tools and model."
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "Three key characteristics",
+              "content": "1. Context fully isolated from the parent\n2. Can run in parallel\n3. Only return their final message to the parent"
+            },
+            {
+              "type": "cards",
+              "items": [
+                {
+                  "title": "Context isolation",
+                  "body": "Each subagent starts with a fresh conversation. Tool calls, intermediate results, and reasoning stay encapsulated inside the subagent. The parent only receives the final message — without bloating the main context with exploration or debug logs."
+                },
+                {
+                  "title": "Real parallelization",
+                  "body": "Multiple subagents can run simultaneously. A code review that would take minutes sequentially can complete in seconds by launching style-checker, security-scanner, and test-coverage at once."
+                },
+                {
+                  "title": "Specialized instructions",
+                  "body": "Each subagent has its own system prompt with expertise, best practices, and domain restrictions. A subagent for DB migrations can have deep knowledge of SQL, rollback strategies, and integrity verification."
+                },
+                {
+                  "title": "Tool restriction",
+                  "body": "Subagents can be limited to a subset of tools, reducing the risk of unwanted actions. Example: a doc-reviewer with only Read and Grep can analyze documentation but never accidentally modify files."
+                }
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "The single channel between parent and child",
+              "content": "The main agent can only communicate with the subagent through the prompt string of the Agent tool. Everything the subagent needs to know — file paths, error messages, prior decisions — must be explicit in that prompt. The subagent cannot see the parent's conversation history."
+            }
+          ]
+        },
+        {
+          "id": "sub-002",
+          "title": "How subagents are created",
+          "summary": "Three ways to define subagents: programmatically via SDK, with Markdown files in .claude/agents/, or using the built-ins with no configuration.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "There are three ways to define subagents. The programmatic route (`agents` parameter in the SDK) is recommended for applications. The filesystem route (Markdown files) is native to Claude Code. The built-in route requires no configuration at all."
+            },
+            {
+              "type": "steps",
+              "items": [
+                {
+                  "title": "Programmatically — via SDK (Recommended)",
+                  "body": "Define subagents directly in code using the `agents` parameter of the `query()` method. It's the most flexible approach: allows dynamic configuration, factory functions, and full control. The Agent tool must be in `allowedTools` for subagents to work."
+                },
+                {
+                  "title": "Filesystem — Markdown in .claude/agents/",
+                  "body": "Create Markdown files with YAML frontmatter in `.claude/agents/` (project level) or `~/.claude/agents/` (personal level). This is Claude Code's native approach. The `/agents` command in the CLI opens a wizard to generate them."
+                },
+                {
+                  "title": "Built-in — no configuration",
+                  "body": "Claude automatically invokes the built-in subagents (general-purpose, Explore, Plan, etc.) when Agent is in allowedTools. No need to define anything. The simplest entry point for delegating tasks."
+                }
+              ]
+            },
+            {
+              "type": "code",
+              "lang": "bash",
+              "label": "Folder structure",
+              "content": "~/.claude/agents/      # personal agents (all projects)\n  code-reviewer.md\n  security-scanner.md\n\n.claude/agents/        # project agents (this repo)\n  db-migrator.md\n  doc-writer.md"
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": "Agent file: code-reviewer.md",
+              "content": "---\nname: code-reviewer\ndescription: Code review specialist. Invoke for quality, security, and maintainability analysis.\ntools:\n  - Read\n  - Grep\n  - Glob\nmodel: sonnet\nmemory: project\n---\n\nYou are a code review specialist with expertise in security,\nperformance, and best practices.\n\nWhen reviewing code:\n- Identify security vulnerabilities\n- Verify adherence to code standards\n- Suggest specific, actionable improvements\n- Be thorough but concise in your feedback"
+            },
+            {
+              "type": "code",
+              "lang": "python",
+              "label": "Programmatic definition (Python SDK)",
+              "content": "from claude_agent_sdk import query, ClaudeAgentOptions, AgentDefinition\n\nasync for message in query(\n    prompt=\"Review the authentication module for security issues\",\n    options=ClaudeAgentOptions(\n        allowed_tools=[\"Read\", \"Grep\", \"Glob\", \"Agent\"],\n        agents={\n            \"code-reviewer\": AgentDefinition(\n                description=\"Code review specialist. Use for quality, security, and maintainability.\",\n                prompt=\"\"\"You are a code review specialist. When reviewing code:\n- Identify security vulnerabilities\n- Verify adherence to standards\n- Suggest concrete improvements\"\"\",\n                tools=[\"Read\", \"Grep\", \"Glob\"],\n                model=\"sonnet\",\n            ),\n        },\n    ),\n):\n    if hasattr(message, \"result\"):\n        print(message.result)"
+            }
+          ]
+        },
+        {
+          "id": "sub-003",
+          "title": "AgentDefinition parameters",
+          "summary": "Complete reference for all parameters: description, prompt, tools, model, memory, skills, and mcpServers.",
+          "blocks": [
+            {
+              "type": "table",
+              "headers": ["Parameter", "Type", "Required", "Description"],
+              "rows": [
+                ["description", "string", "Yes", "Natural-language description of when to use this subagent. Claude reads it to decide whether to delegate. The most critical field: a vague description means Claude never invokes the agent."],
+                ["prompt", "string", "Yes", "The subagent's system prompt. Defines its role, expertise, restrictions, and behavior. Completely independent from the parent agent's system prompt."],
+                ["tools", "string[]", "No", "Array of allowed tool names. If omitted, the subagent inherits all of the parent's. If specified, it can only use those. Never include Agent — subagents cannot launch other subagents."],
+                ["model", "string", "No", "Model to use: sonnet, opus, haiku, or inherit. If omitted, inherits the parent agent's model. Using Haiku for search/exploration tasks saves significant cost."],
+                ["memory", "string", "No", "Memory source for the subagent: user (user memory), project (project's CLAUDE.md), local. Available in both SDKs (TypeScript and Python)."],
+                ["skills", "string[]", "No", "List of Skills to preload into the subagent's context on startup. Skills not listed here aren't preloaded, but remain invocable via the Skill tool if the subagent needs them."],
+                ["mcpServers", "array", "No", "MCP servers available to this subagent, by name or inline configuration. Allows granting access to specific external tools (Slack, Gmail, databases, etc.)."]
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "Golden rule: no Agent in the subagent's tools",
+              "content": "Subagents cannot launch their own subagents. The hierarchy is always flat: one parent, multiple children. Never include `Agent` in a subagent's tools array — if you do, the subagent will try to invoke subagents and fail."
+            }
+          ]
+        },
+        {
+          "id": "sub-004",
+          "title": "System prompt and memory",
+          "summary": "Four principles for designing the system prompt, what the subagent inherits and doesn't inherit, and the three memory types: project, user, and local.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "The system prompt is the heart of the subagent. It defines who it is, what it knows, how it acts, and what restrictions it has. A well-written prompt is the difference between a useful subagent and one that ignores its instructions or behaves unpredictably."
+            },
+            {
+              "type": "cards",
+              "items": [
+                {
+                  "title": "Establish a clear, concrete role",
+                  "body": "Start with an identity statement: \"You are a web application security specialist with 10 years of experience in OWASP.\" The more specific the role, the more consistent the behavior. Avoid generic roles like \"you are a helpful assistant.\""
+                },
+                {
+                  "title": "List the step-by-step process",
+                  "body": "Describe exactly how the subagent should approach its task: what steps to run, in what order, what to look for. A subagent that knows how to work produces more consistent results than one that only knows what to produce."
+                },
+                {
+                  "title": "Define the output format",
+                  "body": "Specify exactly how it should structure its final response: a list of findings? JSON? Markdown with sections? The parent receives the subagent's last message as-is, so a consistent format makes downstream processing easier."
+                },
+                {
+                  "title": "Define explicit boundaries",
+                  "body": "Tell the subagent what NOT to do: \"Don't modify any file.\" \"Don't run shell commands.\" \"Only report vulnerabilities, don't fix them.\" Reinforce tool restrictions with explicit instructions."
+                }
+              ]
+            },
+            {
+              "type": "compare",
+              "left": {
+                "label": "✅ The subagent DOES receive",
+                "items": [
+                  "Its own system prompt (AgentDefinition.prompt) and the prompt string from the Agent tool call",
+                  "The project's CLAUDE.md (loaded via settingSources)",
+                  "The tool definitions (inherited from the parent, or the subset in tools)",
+                  "The configured memory source (memory)"
+                ]
+              },
+              "right": {
+                "label": "❌ The subagent does NOT receive",
+                "items": [
+                  "The parent's conversation history or its tool results",
+                  "The parent agent's system prompt",
+                  "The parent's Skills preloaded in context (any not listed in AgentDefinition.skills aren't preloaded, though they remain invocable on demand via the Skill tool)",
+                  "The parent's MCP servers (unless configured in mcpServers)"
+                ]
+              }
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "Key implication",
+              "content": "If the subagent needs to know something — a file path, the result of a prior operation, problem context — it must be in the Agent tool's prompt string when the parent invokes it. It can't \"look back\" and see what the parent did. The parent must be explicit: \"I found these 3 vulnerabilities in auth.py — analyze them in depth.\""
+            },
+            {
+              "type": "steps",
+              "items": [
+                {
+                  "title": "memory: project — Project Memory",
+                  "body": "The subagent has access to the project's CLAUDE.md. Ideal for subagents that need to know conventions, architecture decisions, and project rules. The most common memory type for development subagents. Recommended for most use cases."
+                },
+                {
+                  "title": "memory: user — User Memory",
+                  "body": "Access to the user's memories and preferences. Useful for personal subagents that need to know the developer's working style, formatting preferences, and habitual patterns."
+                },
+                {
+                  "title": "memory: local — Local Memory",
+                  "body": "Installation-specific memory. Useful for environment configurations, local paths, and machine-specific settings."
+                }
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "tip",
+              "title": "Resuming subagents",
+              "content": "Subagents can be resumed. When a subagent completes, Claude receives its `session_id` and `agentId` in the tool result — both values are needed to resume it correctly. You can resume a subagent to continue where it left off, with its entire conversation history — all prior tool calls, results, and reasoning. Transcripts persist independently of the main conversation and are cleaned up automatically according to `cleanupPeriodDays` (30 days by default)."
+            }
+          ]
+        },
+        {
+          "id": "sub-005",
+          "title": "The built-in subagents",
+          "summary": "The five subagents Claude Code includes by default: Explore (Haiku), Plan, General Purpose, Claude Code Guide, and Statusline Setup.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Claude Code includes five built-in subagents that are invoked automatically. You don't need to configure them or call them explicitly — Claude decides when to use them."
+            },
+            {
+              "type": "table",
+              "headers": ["Agent", "Model", "Tools", "When it's invoked"],
+              "rows": [
+                ["🔍 Explore", "Haiku", "Read-only", "When Claude needs to search files, grep for symbols, or locate definitions without making changes. Fast and cheap for pure exploration."],
+                ["📋 Plan", "Inherited", "Read-only", "Inside the /plan command. Investigates the codebase before designing the strategy: reads files, explores code, and identifies critical pieces. Cannot make changes — only observes and reports."],
+                ["⚙️ General Purpose", "Inherited", "All", "Fallback subagent for tasks that need more than just reading. If something needs exploration AND modification, this is the one. Claude invokes it when no specific agent fits better."],
+                ["📚 Claude Code Guide", "Inherited", "Read + Web", "Specialized help agent. If you ask how to configure MCP servers or what a flag does, Claude delegates here instead of searching the web. Knows the CLI, the Agent SDK, and the API."],
+                ["🖥️ Statusline Setup", "Haiku", "Limited", "Internal agent that manages terminal statusline configuration. Rarely seen acting directly — works behind the scenes during initialization."]
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "tip",
+              "title": "Cost optimization with models",
+              "content": "Built-in read-only agents (like Explore) use Haiku by default, significantly cheaper than Sonnet or Opus. Apply this logic to your custom subagents: use Haiku for search and exploration, Sonnet for reasoning tasks, and Opus only when the complexity justifies it."
+            }
+          ]
+        },
+        {
+          "id": "sub-006",
+          "title": "How Claude invokes subagents",
+          "summary": "Two invocation modes (automatic and explicit), how to detect invocations in the SDK, and the rename from Task to Agent in v2.1.63.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Claude can invoke subagents automatically or explicitly. Understanding how each mode works is essential to controlling when and how they're used."
+            },
+            {
+              "type": "compare",
+              "left": {
+                "label": "Automatic invocation",
+                "items": [
+                  "Claude reads each subagent's description field and decides whether to delegate the current task",
+                  "When the user's prompt conceptually matches the description, Claude invokes the subagent without an explicit request",
+                  "This is why description is the most critical parameter — vague = Claude never delegates"
+                ]
+              },
+              "right": {
+                "label": "Explicit invocation",
+                "items": [
+                  "To guarantee Claude uses a specific subagent, mention it by name in the prompt",
+                  "Example: \"Use the code-reviewer agent to analyze the auth module\"",
+                  "Bypasses automatic matching and directly invokes the named agent"
+                ]
+              }
+            },
+            {
+              "type": "code",
+              "lang": "python",
+              "label": "Detecting subagent invocations in the SDK",
+              "content": "async for message in query(prompt=\"...\", options=options):\n    # Detect when a subagent is invoked\n    if hasattr(message, \"content\") and message.content:\n        for block in message.content:\n            # The tool is called \"Agent\" (older SDK versions used \"Task\")\n            if getattr(block, \"type\", None) == \"tool_use\" and block.name in (\"Task\", \"Agent\"):\n                print(f\"Subagent invoked: {block.input.get('subagent_type')}\")\n\n    # Detect messages originating FROM within a subagent\n    if hasattr(message, \"parent_tool_use_id\") and message.parent_tool_use_id:\n        print(\"  → (message originated inside the subagent)\")"
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "Rename in SDK v2.1.63",
+              "content": "The tool was renamed from \"Task\" to \"Agent\". Current versions emit \"Agent\" in tool_use blocks, but still use \"Task\" in the system:init list and in result.permission_denials[].tool_name. For compatibility across versions, check both values as shown in the example above."
+            }
+          ]
+        },
+        {
+          "id": "sub-007",
+          "title": "Examples of essential subagents",
+          "summary": "Three complete, ready-to-use implementations: code-reviewer (read-only, Sonnet), db-migrator (critical operations, Opus), and test-writer (generates tests with memory:project).",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "These three subagents cover universal needs in any software project. They're good starting points and also excellent examples for understanding how to design a subagent."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": "🔍 code-reviewer — static analysis, read-only",
+              "content": "---\nname: code-reviewer\ndescription: Code review specialist. Invoke for code quality analysis,\n             security vulnerabilities, performance issues, and\n             adherence to best practices. Ideal before opening a PR.\ntools: [Read, Grep, Glob]\nmodel: sonnet\n---\n\nYou are a code review specialist with 10+ years of experience in\napplication security, performance, and software architecture.\n\n## Your review process:\n1. Explore the code structure with Glob to understand scope\n2. Read the relevant files with Read\n3. Search for problematic patterns with Grep\n\n## What you review:\n- Security vulnerabilities (SQL injection, XSS, exposed secrets)\n- Performance issues (N+1 queries, inefficient loops, memory leaks)\n- Code smells and technical debt\n- Error case coverage\n\n## Your response format:\n### 🔴 Critical (blocks merge)\n### 🟡 Important (must be fixed)\n### 🟢 Suggestions (nice-to-have)\n\nIMPORTANT: You don't modify any file. You only analyze and report."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": "🗄️ db-migrator — database migrations, Opus",
+              "content": "---\nname: db-migrator\ndescription: Database migration specialist. Invoke when needing to\n             create, modify, or revert SQL migrations. Handles rollback\n             strategies, data integrity, and zero-downtime migrations.\ntools: [Read, Write, Edit, Grep, Glob, Bash]\nmodel: opus\n---\n\nYou are a senior DBA specialized in safe database migrations.\nYour expertise includes PostgreSQL, MySQL, zero-downtime migrations,\nand disaster recovery.\n\n## Principles you ALWAYS follow:\n1. Every migration has an UP and a DOWN (rollback)\n2. You validate data integrity before and after\n3. You warn about table-locking operations (ALTER TABLE, etc.)\n4. For large tables (+1M rows), you suggest an online migration strategy\n5. You never delete data without explicit confirmation\n\n## Process:\n1. Review the current schema with Grep/Read\n2. Understand the migration's impact\n3. Write the migration with UP/DOWN\n4. Include comments with purpose and risk\n5. Suggest how to test the migration before prod"
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": "🧪 test-writer — generates tests following project conventions",
+              "content": "---\nname: test-writer\ndescription: Testing specialist. Invoke to generate unit, integration,\n             or end-to-end tests. Analyzes existing code and produces\n             tests that follow project conventions.\ntools: [Read, Write, Grep, Glob, Bash]\nmodel: sonnet\nmemory: project\n---\n\nYou are a senior QA engineer specialized in software testing.\nYour goal is to generate tests that actually catch bugs, not just\ntests that pass coverage metrics.\n\n## Before writing tests:\n1. Explore existing tests to understand the style and framework used\n2. Review the code under test to understand the business logic\n3. Identify edge cases and error cases\n\n## What you include in each test:\n- Happy path (normal flow)\n- Edge cases (boundary values, empty, null)\n- Error cases (expected exceptions)\n- Necessary mocks and fixtures\n\n## Quality rules:\n- A test describes a behavior, not an implementation\n- Descriptive names: test_should_return_error_when_user_not_found\n- Tests independent from each other (no implicit execution order)\n- Start with the most business-critical cases"
+            }
+          ]
+        },
+        {
+          "id": "sub-008",
+          "title": "Tool combinations by use case",
+          "summary": "Four tool-restriction patterns: read-only, execution and analysis, code modification, and with external access.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Tool restriction is one of the most important security mechanisms. Each subagent should have exactly the tools it needs — no more, no less."
+            },
+            {
+              "type": "cards",
+              "items": [
+                {
+                  "title": "🔍 Read-only analysis",
+                  "body": "**Tools:** `Read`, `Grep`, `Glob`\n\nRead reads files, Grep searches for patterns, Glob finds files by pattern. Ideal for code reviewers, doc reviewers, and security auditors. Cannot modify anything."
+                },
+                {
+                  "title": "⚡ Execution and analysis",
+                  "body": "**Tools:** `Bash`, `Read`, `Grep`\n\nBash runs shell commands, Read reads output files, Grep filters results. Ideal for test runners, benchmarks, and log analysis. Can execute but not write files."
+                },
+                {
+                  "title": "✏️ Code modification",
+                  "body": "**Tools:** `Read`, `Edit`, `Write`, `Grep`\n\nRead reads existing files, Edit modifies files, Write creates new ones, Grep locates sections to change. Ideal for refactors, code generators, and scaffolding."
+                },
+                {
+                  "title": "🌐 With external access",
+                  "body": "**Tools:** `WebSearch`, `WebFetch`, MCP tools\n\nWebSearch searches the web, WebFetch downloads content from URLs, MCP tools connect to Slack, Gmail, Notion, etc. Ideal for researchers, documentation agents, and integrations."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sub-009",
+          "title": "Cautions and best practices",
+          "summary": "Six critical warnings to avoid common mistakes, plus a production checklist.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Subagents are powerful but have quirks that can surprise you. Knowing them beforehand avoids hard-to-diagnose bugs and unexpected behavior."
+            },
+            {
+              "type": "steps",
+              "items": [
+                {
+                  "title": "The description is the selector — it must be precise and differentiated",
+                  "body": "Claude uses the `description` field to decide which subagent to invoke. If descriptions are vague (\"analysis agent\") or overlap between subagents, Claude picks the wrong one or never delegates. Be specific about the type of task (\"static security analysis to detect OWASP Top 10\") and make sure each description is clearly distinct from the others."
+                },
+                {
+                  "title": "The system prompt shouldn't be excessively long",
+                  "body": "A long system prompt consumes the subagent's context tokens, leaving less room for actual work. Rule of thumb: describe the role in 1-2 sentences, list the process in 5-8 steps, and the output format in 3-5 bullet points. Total: under 500 tokens is ideal. If you need more, consider whether the subagent is doing too much — maybe it should be split into two."
+                },
+                {
+                  "title": "Never include Agent in a subagent's tools",
+                  "body": "Subagents cannot launch their own subagents. The hierarchy is always flat: main agent → subagents. If you include `Agent` in a subagent's tools, it will try to delegate and fail. For deeper hierarchies, the main agent must orchestrate multiple subagents manually in sequence."
+                },
+                {
+                  "title": "Watch out for subagent over-use in Claude Opus 4.6",
+                  "body": "According to official documentation, Claude Opus 4.6 has a strong preference for subagents and may launch them in situations where a direct tool call would be faster. For example, it might launch a subagent for code exploration when a direct grep would suffice. If you see excessive use, add explicit instructions to the main agent's system prompt about when to use and when not to use subagents."
+                },
+                {
+                  "title": "Context must be explicit in the invocation prompt",
+                  "body": "The subagent cannot see the parent's conversation history. Everything it needs to know — file paths, errors found, decisions made — must be in the Agent tool's prompt string. If the parent discovered a problem in `src/auth/jwt.py`, it must say so explicitly: \"Review the file src/auth/jwt.py where I found a potential vulnerability in the decode_token function.\""
+                },
+                {
+                  "title": "Filesystem agent files only load at startup",
+                  "body": "If you create or modify a subagent file in `.claude/agents/` while Claude Code is running, the new agent won't be available until you restart the session. Filesystem agents load once at startup. Programmatically defined agents (SDK) take precedence over filesystem ones with the same name."
+                }
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "tip",
+              "title": "Checklist before shipping to production",
+              "content": "✓ The description explains exactly when to use it\n✓ The prompt has a clear role, defined process, and output format\n✓ The tools are the minimum necessary — no excess or deficit\n✓ Agent isn't in the subagent's tools array\n✓ The chosen model fits the task's complexity\n✓ The system prompt is under 500 tokens\n✓ You tested invoking it explicitly by name before relying on automatic invocation\n✓ Your subagents' descriptions don't overlap with each other"
+            }
+          ]
+        },
+        {
+          "id": "sub-010",
+          "title": "Advanced techniques",
+          "summary": "Four advanced patterns: dynamic agent factory, parallelization with Promise.all, subagent resumption, and severity-scaled model selection.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Once you've mastered basic creation, these patterns let you build more sophisticated and efficient agent systems."
+            },
+            {
+              "type": "cards",
+              "items": [
+                {
+                  "title": "🏭 Dynamic agent factory",
+                  "body": "Create functions that generate `AgentDefinition` based on runtime conditions: required security level, environment (dev/prod), executing user. Lets you parameterize subagent behavior without duplicating definitions."
+                },
+                {
+                  "title": "⚡ Parallelization with multiple subagents",
+                  "body": "For complex code reviews, launch style-checker, security-scanner, and performance-analyzer simultaneously with `Promise.all`. The parent waits for all to finish and synthesizes the results. Total time is that of the slowest subagent, not the sum of all of them."
+                },
+                {
+                  "title": "🔄 Subagent resumption",
+                  "body": "Capture the `session_id` and `agentId` from the first invocation. In later calls, pass `resume: sessionId` to resume the subagent exactly where it left off — with its full conversation history and tools intact."
+                },
+                {
+                  "title": "🛡️ Severity-scaled model selection",
+                  "body": "Use Haiku for quick, low-risk analyses, Sonnet for standard tasks, and Opus exclusively for critical operations (DB migrations, security audits). The factory pattern makes this scaling easy based on parameters."
+                }
+              ]
+            },
+            {
+              "type": "code",
+              "lang": "python",
+              "label": "Factory with dynamic model based on severity",
+              "content": "def create_security_agent(level: str) -> AgentDefinition:\n    return AgentDefinition(\n        description=\"Specialized security reviewer\",\n        prompt=f\"You are a {'strict (OWASP Top 10 + SANS)' if level == 'strict' else 'balanced'} security reviewer...\",\n        tools=[\"Read\", \"Grep\", \"Glob\"],\n        # Opus for strict reviews, Sonnet for regular ones\n        model=\"opus\" if level == \"strict\" else \"sonnet\",\n    )\n\n# Usage:\nagents={\"security-reviewer\": create_security_agent(\"strict\")}"
+            }
+          ]
+        },
+        {
+          "id": "sub-016",
+          "title": "Session management: --resume and fork_session",
+          "summary": "How to resume a named session with --resume, when that's preferable to starting from scratch, and how fork_session lets you explore divergent approaches from the same starting point.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Beyond resuming a single subagent (by capturing its session_id), Claude Code allows resuming full named sessions and forking a session into independent exploration branches. These are two distinct mechanisms that solve different work-continuity problems."
+            },
+            {
+              "type": "code",
+              "lang": "bash",
+              "label": "--resume <session-name>: continuing a previous investigation",
+              "content": "# First session, explicitly named\nclaude --name auth-migration \"Investigate how to migrate the auth system from JWT to sessions\"\n\n# Days later, resume exactly that session with all its context\nclaude --resume auth-migration \"I already applied the change in the middleware, continue with the endpoints\""
+            },
+            {
+              "type": "callout",
+              "icon": "🔀",
+              "content": "**fork_session** creates an independent branch from an already-done analysis point, without modifying the original session — the concept is real and useful, though it doesn't appear documented under that exact name in the Agent SDK's current public documentation (which does confirm `--resume <sessionId>` as the mechanism for continuing a session). Treat the name `fork_session` as indicative of the concept, not a verified parameter; confirm the exact name in the SDK reference before using it in real code. Conceptually, it's the right mechanism when you need to compare two divergent approaches (two refactor strategies, two candidate libraries) that share the same initial codebase analysis but then take different paths — forking avoids repeating the initial exploration in each branch."
+            },
+            {
+              "type": "compare",
+              "left": {
+                "title": "--resume <session-name>",
+                "rows": [
+                  { "key": "What it does", "value": "Continues the same session, linearly, where it left off" },
+                  { "key": "When to use it", "value": "The prior context is still valid and you just need to keep going" },
+                  { "key": "Result", "value": "A single line of work moving forward" }
+                ]
+              },
+              "right": {
+                "title": "fork_session",
+                "rows": [
+                  { "key": "What it does", "value": "Creates an independent copy of the state at a given point; the original stays intact" },
+                  { "key": "When to use it", "value": "You need to explore 2+ different approaches from the same starting point, without one contaminating the other" },
+                  { "key": "Result", "value": "Multiple parallel branches, comparable to each other" }
+                ]
+              }
+            },
+            {
+              "title": "When to resume and when to start fresh",
+              "type": "callout",
+              "icon": "⚠️",
+              "content": "Resuming an old session isn't always the right call: if the code has changed substantially since last time, the tool call results Claude has in its history (file contents, grep results) can be stale. In that case, it's more reliable to start a fresh session and inject a structured summary of what was already investigated, rather than trust Claude to remember and also revalidate everything that changed. If you do resume an old session, explicitly tell it which files changed since last time, so it re-analyzes only what's necessary instead of assuming everything is still the same."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Subagents, Skills, and Hooks",
+      "articles": [
+        {
+          "id": "sub-011",
+          "title": "Which one do I need? Decision tree",
+          "summary": "Six questions to choose between Subagent, Skill, or Hook, with a description of what each tool does.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Subagents, Skills, and Hooks aren't mutually exclusive: they're three distinct tools for building systems with Claude. The following decision tree helps choose the right one based on the problem."
+            },
+            {
+              "type": "table",
+              "headers": ["Question", "If the answer is YES", "If the answer is NO"],
+              "rows": [
+                ["Can the task run at the same time as other things?", "Subagent (real parallelism)", "Skill or Hook"],
+                ["Does it need to make its own decisions or use tools during execution?", "Subagent (autonomy)", "Skill (instructions only)"],
+                ["Is it a process that must intercept or react to Claude's actions?", "Hook (pre/post tool calls)", "Skill or Subagent"],
+                ["Does the same type of task repeat across multiple contexts or projects?", "Skill (reusable logic)", "Subagent (complex one-off work)"],
+                ["Do I need something to always happen before a commit or disk write?", "Hook (automatic guardrails)", "Skill or nothing"],
+                ["Does the process require calls to costly external APIs, but no reasoning?", "Hook (no LLM tokens consumed)", "Subagent (if reasoning justifies the cost)"]
+              ]
+            },
+            {
+              "type": "cards",
+              "items": [
+                {
+                  "title": "🤖 Subagent — Autonomous work",
+                  "body": "A separate instance of Claude that executes tasks independently, can make its own decisions, and orchestrate other tools.\n\n**Characteristics:** Parallel · Autonomous · Long-running · Own tools"
+                },
+                {
+                  "title": "📚 Skill — Reusable instructions",
+                  "body": "Structured documentation that Claude reads to know how to perform a specific task. Has no autonomy: it's specialized context invoked when the user asks for it.\n\n**Characteristics:** Reusable · No extra cost · Contextual · Deterministic"
+                },
+                {
+                  "title": "⚡ Hook — Event control",
+                  "body": "Scripts that fire automatically before or after specific Claude actions. Intercept, validate, or react to the workflow without consuming LLM tokens.\n\n**Characteristics:** Automatic · Preventive · Reactive · No LLM"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sub-012",
+          "title": "Principles of each tool",
+          "summary": "When to use and when to avoid each tool, with clear rules for Subagents, Skills, and Hooks.",
+          "blocks": [
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "Subagents: when to and when not to",
+              "content": "**Use them when:**\n- Tasks are long and require multiple steps with intermediate decisions\n- You need parallelism: processing 10 repos at once, for example\n- The subagent needs its own isolated context (without polluting the orchestrator)\n- You're delegating a whole domain: \"take care of the frontend\"\n- The work can fail and retry independently\n\n**Avoid them when:**\n- The task is simple and single-step (wastes overhead)\n- Shared state is critical and hard to synchronize\n- The cost of multiple LLM contexts is a problem"
+            },
+            {
+              "type": "callout",
+              "variant": "tip",
+              "title": "Skills: when to and when not to",
+              "content": "**Use them when:**\n- Claude needs to know \"how\" to do something very specific (generate a .docx, use an internal library)\n- You have project conventions that must always be respected\n- You want to eliminate repetitive mistakes without adding code logic\n- The instruction is too long or complex for the system prompt\n- The skill gets reused across multiple projects or agents\n\n**Avoid them when:**\n- The logic requires dynamic reasoning (that's the LLM's job, not the skill's)\n- The \"skill\" is so simple it fits in one line of the prompt\n- You need it to run automatically (that's a hook)"
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "Hooks: when to and when not to",
+              "content": "**Use them when:**\n- You need validation before Claude writes files or runs commands\n- You want automatic logging, telemetry, or auditing of actions\n- There are non-negotiable security rules (no deploying to prod without approval)\n- You need to transform Claude's outputs before they reach the system\n- You want the process to run without consuming extra tokens\n\n**Avoid them when:**\n- You need reasoning: hooks are deterministic, they don't understand context\n- The business logic is complex (that belongs in the agent or the external system)\n- The hook becomes so complex that a subagent would be clearer"
+            }
+          ]
+        },
+        {
+          "id": "sub-013",
+          "title": "Head-to-head comparison",
+          "summary": "Table of key differences between Subagent, Skill, and Hook across nine dimensions.",
+          "blocks": [
+            {
+              "type": "table",
+              "headers": ["Dimension", "🤖 Subagent", "📚 Skill", "⚡ Hook"],
+              "rows": [
+                ["Uses LLM?", "✓ Always", "◐ The main one reads it", "✗ Never"],
+                ["Makes decisions?", "✓ Autonomously", "◐ Guides decisions", "✗ Fixed logic"],
+                ["Runs on its own?", "✓ Triggered by the orchestrator", "✗ Claude invokes it upon reading it", "✓ Automatically by event"],
+                ["Parallelism?", "✓ Multiple at once", "✗ Sequential", "✗ Per event"],
+                ["Can it block?", "◐ If it returns an error", "✗ No", "✓ Pre-hooks block (exit 2)"],
+                ["Cost", "High (own LLM context)", "Low (prompt tokens)", "Minimal (no LLM)"],
+                ["Reusable?", "◐ As a template", "✓ Across projects", "✓ In any project"],
+                ["Needs code?", "Minimal (calling Agent)", "✗ Just Markdown", "✓ bash/python script"],
+                ["Where it lives", "In the orchestrator / SDK", ".md file in .claude/skills/", "settings.json"]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sub-014",
+          "title": "Variables and arguments in Skills",
+          "summary": "How to pass $ARGUMENTS, positional arguments $N, named arguments, environment variables ${CLAUDE_SKILL_DIR} and ${CLAUDE_SESSION_ID}, and dynamic injection with !`command`.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "A skill isn't just fixed text: it accepts arguments at invocation time, just like a function. This is what makes a skill reusable instead of duplicated."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": "$ARGUMENTS — all arguments as a full string",
+              "content": "---\nname: fix-issue\ndescription: Fixes a GitHub issue following our standards\ndisable-model-invocation: true\n---\n\nFix GitHub issue $ARGUMENTS following our code standards.\n\n1. Read the issue description\n2. Understand the requirements\n3. Implement the fix\n4. Write tests\n5. Create a commit"
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "content": "Invoked as `/fix-issue 123` → Claude receives the text with `123` already inserted where `$ARGUMENTS` was."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": "$0, $1, $2 — positional arguments (0-indexed)",
+              "content": "---\nname: migrate-component\ndescription: Migrates a component from one framework to another\n---\n\nMigrate component $0 from $1 to $2.\nPreserve all behavior and existing tests."
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "content": "Invoked as `/migrate-component SearchBar React Vue` → `$0 = \"SearchBar\"`, `$1 = \"React\"`, `$2 = \"Vue\"`. Values with spaces are passed in quotes."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": "arguments: [name, ...] — readable named arguments",
+              "content": "---\nname: review-pr\ndescription: Reviews a PR against a severity checklist\nargument-hint: [pr-number] [severity-level]\narguments: [pr_number, severity]\n---\n\nReview PR #$pr_number with minimum severity level: $severity.\n\nReport each finding with file and line number.\nClassify as: CRITICAL (blocks merge), WARNING, INFO."
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "content": "Invoked as `/review-pr 482 high` → `$pr_number = \"482\"`, `$severity = \"high\"`. The `argument-hint` field is what you see in autocomplete — a visual aid, doesn't affect the logic."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": "${CLAUDE_SKILL_DIR} — path to the skill's directory",
+              "content": "---\nname: codebase-visualizer\ndescription: Generates an interactive tree of the repo\nallowed-tools: Bash(python3 *)\n---\n\nRun the visualization script from the project root:\n\n```bash\npython3 ${CLAUDE_SKILL_DIR}/scripts/visualize.py .\n```\n\nThis generates `codebase-map.html` in the current directory."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": "!`command` — dynamic context injection before Claude reads the skill",
+              "content": "---\nname: pr-summary\ndescription: Summarizes a pull request's changes\ncontext: fork\nagent: Explore\nallowed-tools: Bash(gh *)\n---\n\n## PR context\n- Diff: !`gh pr diff`\n- Comments: !`gh pr view --comments`\n- Changed files: !`gh pr diff --name-only`\n\n## Task\nSummarize this pull request highlighting the most important changes."
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "content": "`!` is only recognized at the start of a line or after a space. The substitution runs **only once**: the command's output isn't re-scanned for more placeholders."
+            },
+            {
+              "type": "table",
+              "headers": ["Syntax", "Source", "What it does"],
+              "rows": [
+                ["$ARGUMENTS", "No frontmatter required", "All text passed when invoking the skill, as a full string"],
+                ["$ARGUMENTS[N] / $N", "No frontmatter required", "Individual argument by 0-indexed position (use quotes for multi-word)"],
+                ["$name", "arguments: [a, b]", "Same as $N but with a readable name, mapped by order"],
+                ["${CLAUDE_SESSION_ID}", "Automatic", "ID of the active session — useful for per-session logs"],
+                ["${CLAUDE_SKILL_DIR}", "Automatic", "Folder where SKILL.md lives — for referencing bundled scripts"],
+                ["${CLAUDE_EFFORT}", "Automatic", "Active effort level: low / medium / high / xhigh / max"],
+                ["!`command`", "In the skill's body", "Runs shell before Claude reads the skill; inserts the output as plain text"]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sub-015",
+          "title": "Combination examples",
+          "summary": "Seven concrete use cases: each individual tool and the four possible combinations, including the full system with all three mechanisms together.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Each tool does what it's best at. Skills establish the \"how\" once. Subagents execute in parallel with autonomy. Hooks guarantee restrictions without consuming extra tokens. Combined, they form systems that scale without losing control."
+            },
+            {
+              "type": "steps",
+              "items": [
+                {
+                  "title": "Subagent alone: parallel Pull Request review",
+                  "body": "8 open PRs in a monorepo. The orchestrator launches 8 subagents in parallel — each analyzes one PR with Read, Bash, and WebFetch. Total time is that of the slowest PR, not the sum of all 8. **Why subagent and not skill:** each review requires reading files, running commands, and making decisions about bugs vs. style issues."
+                },
+                {
+                  "title": "Skill alone: generating corporate Word documents",
+                  "body": "Instead of explaining to Claude every time how to use python-docx, correct styles, and output paths, the `docx/SKILL.md` skill documents it once. **Why skill and not subagent:** Claude just needs to know \"how\" to generate the .docx — no parallelism or complex decisions. The skill provides that knowledge without the overhead of another LLM context."
+                },
+                {
+                  "title": "Hook alone: automatic audit of every executed command",
+                  "body": "For compliance, a PostToolUse hook logs every command Claude runs: who requested it, when, what output it produced. Without Claude knowing or controlling it. **Why hook and not subagent:** logging needs no reasoning. A hook is deterministic, consumes no tokens, and guarantees it always runs — Claude can't skip it."
+                },
+                {
+                  "title": "Subagent + Skill: onboarding agent with corporate documentation",
+                  "body": "The subagent accesses HR, Slack, and GitHub APIs for the new employee, decides what information to include, and personalizes the content by role. The `onboarding-doc.md` skill tells it exactly how to structure the Word doc, what styles to use, and how to call python-docx. **Result:** correct work with autonomy, no constant supervision."
+                },
+                {
+                  "title": "Subagent + Hook: deployment with security guardrails",
+                  "body": "A DevOps agent decides which services to restart, how to handle errors, and whether to roll back. A PreToolUse hook blocks any action during peak hours (9am-6pm). A PostToolUse hook logs every action and notifies Slack. **Result:** real autonomy with guaranteed safety — the agent works freely within unbreakable rules."
+                },
+                {
+                  "title": "Skill + Hook: code with automatic style validation",
+                  "body": "The `python-conventions.md` skill guides Claude on how to write the code. Every time Claude writes a .py file, a PostToolUse hook automatically runs `black` and `pylint`. No extra subagent needed — the skill improves Claude's output and the hook guarantees result quality without extra tokens."
+                },
+                {
+                  "title": "Subagent + Skill + Hook: complete intelligent CI/CD system",
+                  "body": "A PreToolUse hook verifies the PR has tests before starting. Three subagents review code, security, and performance in parallel. The `pr-report.md` skill defines how to structure the report (required sections, P0-P3 scale with colors). A PostToolUse hook publishes the report to GitHub and notifies Slack if there are P0 or P1 issues. **The complete pattern for workflows that can't fail.**"
+                }
+              ]
+            },
+            {
+              "type": "compare",
+              "left": {
+                "label": "Subagent + Skill",
+                "items": [
+                  "The skill gives the subagent the prior knowledge it needs",
+                  "The subagent applies that knowledge making autonomous decisions",
+                  "Result: correct work without constant supervision"
+                ]
+              },
+              "right": {
+                "label": "Subagent + Hook",
+                "items": [
+                  "The subagent works with complete freedom within its assigned domain",
+                  "Hooks act as guardrails it can't bypass",
+                  "Result: real autonomy with guaranteed safety"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

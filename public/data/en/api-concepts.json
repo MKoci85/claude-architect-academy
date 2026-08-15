@@ -1,0 +1,253 @@
+{
+  "sections": [
+    {
+      "title": "Key Concepts",
+      "articles": [
+        {
+          "title": "Tool Use",
+          "subsections": [
+            {
+              "title": "What is tool use?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Tool use lets Claude call functions you define. The model analyzes the problem, decides which function to use, and you execute that function in your code."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Client tools (your code executes)",
+                    "rows": [
+                      { "key": "What they are", "value": "Functions you define: get_weather, search_db, send_email, etc." },
+                      { "key": "Flow", "value": "Claude returns `stop_reason: tool_use` → you execute → you return `tool_result`." },
+                      { "key": "Extra cost", "value": "None. Charged as normal tokens." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Server tools (Anthropic executes)",
+                    "rows": [
+                      { "key": "What they are", "value": "`web_search`, `code_execution`, `web_fetch`. Anthropic executes them on its infrastructure." },
+                      { "key": "Flow", "value": "Claude calls them and the results arrive directly in the response. No code required on your side." },
+                      { "key": "Extra cost", "value": "Yes. For example, web_search charges per search performed." }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "Basic flow",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "steps": [
+                    {
+                      "step": 1,
+                      "title": "Define tools",
+                      "description": "Describe available functions (name, description, parameters)"
+                    },
+                    {
+                      "step": 2,
+                      "title": "Send message",
+                      "description": "Claude receives the message and the list of tools"
+                    },
+                    {
+                      "step": 3,
+                      "title": "Claude decides to use a tool",
+                      "description": "If needed, it returns stop_reason='tool_use'"
+                    },
+                    {
+                      "step": 4,
+                      "title": "Execute function",
+                      "description": "Your code executes the function with the parameters Claude suggested"
+                    },
+                    {
+                      "step": 5,
+                      "title": "Send result",
+                      "description": "You return the result to Claude in the same thread"
+                    },
+                    {
+                      "step": 6,
+                      "title": "Claude continues",
+                      "description": "Claude sees the result and generates the final response"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Example: Calculator",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\nimport json\n\nclient = anthropic.Anthropic()\n\ntools = [\n    {\n        \"name\": \"calculator\",\n        \"description\": \"Performs mathematical calculations\",\n        \"input_schema\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"expression\": {\n                    \"type\": \"string\",\n                    \"description\": \"Mathematical expression (e.g.: '2 + 2')\"\n                }\n            },\n            \"required\": [\"expression\"]\n        }\n    }\n]\n\nmessages = [\n    {\"role\": \"user\", \"content\": \"What is 15 * 8?\"}\n]\n\nresponse = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    tools=tools,\n    messages=messages\n)\n\nif response.stop_reason == \"tool_use\":\n    for content_block in response.content:\n        if content_block.type == \"tool_use\":\n            result = eval(content_block.input[\"expression\"])\n            messages.append({\"role\": \"assistant\", \"content\": response.content})\n            messages.append({\n                \"role\": \"user\",\n                \"content\": [\n                    {\n                        \"type\": \"tool_result\",\n                        \"tool_use_id\": content_block.id,\n                        \"content\": str(result)\n                    }\n                ]\n            })\n\nfinal_response = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    tools=tools,\n    messages=messages\n)\n\nprint(final_response.content[0].text)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Token Counting",
+          "subsections": [
+            {
+              "title": "What are tokens?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A token is a small unit of text. Roughly, 1 token = 4 characters or 1 word."
+                },
+                {
+                  "type": "text",
+                  "content": "The API charges by tokens: input (the ones you send) and output (the ones you receive). Counting tokens before sending lets you estimate costs."
+                }
+              ]
+            },
+            {
+              "title": "Counting tokens",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.messages.count_tokens(\n    model=\"claude-opus-4-8\",\n    messages=[\n        {\"role\": \"user\", \"content\": \"Hi, how many tokens does this message have?\"}\n    ]\n)\n\nprint(f\"Tokens: {response.input_tokens}\")"
+                }
+              ]
+            },
+            {
+              "title": "Context limits",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "200K token context",
+                  "content": "All current Claude models support 200K tokens of context (roughly 150 pages of text). You can send long conversations, large documents, or multiple files."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Vision (Images)",
+          "subsections": [
+            {
+              "title": "Processing images",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude can analyze images: describe content, read text, answer questions about them, etc."
+                },
+                {
+                  "type": "text",
+                  "content": "Images are sent as base64 or as URLs. Supports PNG, JPEG, GIF, WebP."
+                }
+              ]
+            },
+            {
+              "title": "Example: Analyzing an image",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\nimport base64\n\nclient = anthropic.Anthropic()\n\nwith open(\"image.jpg\", \"rb\") as f:\n    image_data = base64.standard_b64encode(f.read()).decode(\"utf-8\")\n\nmessage = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    messages=[\n        {\n            \"role\": \"user\",\n            \"content\": [\n                {\n                    \"type\": \"image\",\n                    \"source\": {\n                        \"type\": \"base64\",\n                        \"media_type\": \"image/jpeg\",\n                        \"data\": image_data,\n                    },\n                },\n                {\n                    \"type\": \"text\",\n                    \"text\": \"What do you see in this image?\"\n                }\n            ],\n        }\n    ],\n)\n\nprint(message.content[0].text)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Batch Processing",
+          "subsections": [
+            {
+              "title": "When to use the Batch API?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The Message Batches API lets you process multiple requests with a 50% discount over the standard price, in exchange for a processing window of up to 24 hours and no guaranteed latency SLA. The decision to use the Batch API or the synchronous API depends exclusively on whether the workflow can tolerate that wait."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Synchronous API",
+                    "rows": [
+                      { "key": "Latency", "value": "Seconds. Immediate response in the same request." },
+                      { "key": "Cost", "value": "Standard price, no discount." },
+                      { "key": "Typical cases", "value": "Blocking pre-merge checks, live chat, any flow where a human is waiting for the response." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Message Batches API",
+                    "rows": [
+                      { "key": "Latency", "value": "Up to 24 hours, no guaranteed SLA — it may finish earlier, but there's no time commitment." },
+                      { "key": "Cost", "value": "50% discount over the standard price." },
+                      { "key": "Typical cases", "value": "Nightly reports, weekly audits, bulk test generation, large dataset analysis." }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Not suitable for blocking workflows",
+                  "content": "Using the Batch API for a pre-merge check that a developer is actively waiting on is a design mistake: with no latency SLA, that wait can be minutes or many hours. The 50% savings doesn't compensate for blocking a human who needs the response now. Reserve the Batch API exclusively for work where nobody waits for the result in real time."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "No multi-turn tool calling",
+                  "content": "The Batch API doesn't support executing tools within the same request and returning the result in the same call — there's no way to run a tool_use → tool_result loop inside a batch. Each request in the batch must be self-contained: if the task requires multiple turns with intermediate tool execution, the Batch API isn't the right tool for that task, though it can still be used for the rest of the pipeline that doesn't need it."
+                }
+              ]
+            },
+            {
+              "title": "Basic flow",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "steps": [
+                    {
+                      "step": 1,
+                      "title": "Create JSONL file",
+                      "description": "One line per request, each with a unique custom_id that lets you correlate the response with the original request"
+                    },
+                    {
+                      "step": 2,
+                      "title": "Upload batch",
+                      "description": "Send the file to the batches API"
+                    },
+                    {
+                      "step": 3,
+                      "title": "Wait for processing",
+                      "description": "Up to 24 hours, with no guarantee of exact time — may finish earlier"
+                    },
+                    {
+                      "step": 4,
+                      "title": "Download results",
+                      "description": "When the batch is complete, you download the results and correlate them with the original requests using custom_id"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Handling failures by custom_id",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "In a batch of hundreds or thousands of requests, it's normal for some to fail (document too large, unexpected format) while most process fine. The custom_id is the key to resolving this without reprocessing the whole batch again: when downloading results, you filter out the ones that failed by their custom_id, fix them specifically (for example, chunking documents that exceeded the context limit), and resubmit only those — not the whole batch."
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "content": "results = download_batch_results(batch_id)\n\nfailed = [r for r in results if r[\"result\"][\"type\"] == \"errored\"]\nsucceeded = [r for r in results if r[\"result\"][\"type\"] == \"succeeded\"]\n\n# Reprocess only the failed ones, with the specific fix for their failure cause\nfixed_requests = []\nfor f in failed:\n    original_document = get_document_by_custom_id(f[\"custom_id\"])\n    if exceeds_context_limit(original_document):\n        # chunking the document that caused the problem, not the whole batch\n        for i, chunk in enumerate(chunk_document(original_document)):\n            fixed_requests.append(create_request(f\"{f['custom_id']}-chunk-{i}\", chunk))\n\nnew_batch_id = upload_batch(fixed_requests)"
+                },
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "Calculate batch submission frequency based on the required final SLA: if the business needs results within 30 hours and the batch takes up to 24, it's better to submit in ~4-6 hour windows instead of once a day, leaving room for a possible retry of failed items without breaking the time commitment."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

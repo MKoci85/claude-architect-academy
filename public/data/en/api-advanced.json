@@ -1,0 +1,639 @@
+{
+  "sections": [
+    {
+      "title": "Advanced Capabilities",
+      "articles": [
+        {
+          "title": "MCP Connector",
+          "subsections": [
+            {
+              "title": "What is the MCP Connector?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The MCP Connector lets you connect MCP (Model Context Protocol) servers directly from the Messages API, without implementing your own MCP client. Claude can use those servers' tools as if they were normal tools."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "MCP: the USB-C for AI",
+                  "content": "MCP is the open standard for connecting AI to external systems: databases, APIs, calendars, Notion, Jira, etc. The MCP Connector is direct access to that ecosystem from the API, without you managing the client."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "MCP Connector (API)",
+                    "rows": [
+                      { "key": "Use case", "value": "Remote servers with a public URL (HTTPS)." },
+                      { "key": "Advantage", "value": "No extra code. Anthropic handles the connection." },
+                      { "key": "Limitation", "value": "Only supports tools (no MCP resources or prompts)." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Your own MCP client",
+                    "rows": [
+                      { "key": "Use case", "value": "Local servers (stdio), MCP resources, MCP prompts." },
+                      { "key": "Advantage", "value": "Full control. Supports the entire MCP spec." },
+                      { "key": "Limitation", "value": "Requires implementing and managing the client." }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "How it works",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Define the server",
+                      "body": "You add the server to the `mcp_servers` array with its URL, name, and optional auth token."
+                    },
+                    {
+                      "title": "Configure tools",
+                      "body": "In the `tools` array you create an `mcp_toolset` that points to the server. You can enable/disable specific tools."
+                    },
+                    {
+                      "title": "Claude uses the tools",
+                      "body": "Claude calls the server's tools when the query requires it. Responses arrive as `mcp_tool_result` in the content."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.beta.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1000,\n    messages=[{\"role\": \"user\", \"content\": \"What events do I have today?\"}],\n    mcp_servers=[\n        {\n            \"type\": \"url\",\n            \"url\": \"https://my-mcp-server.example.com/sse\",\n            \"name\": \"google-calendar\",\n            \"authorization_token\": \"my-oauth-token\"\n        }\n    ],\n    tools=[\n        {\n            \"type\": \"mcp_toolset\",\n            \"mcp_server_name\": \"google-calendar\"\n        }\n    ],\n    betas=[\"mcp-client-2025-11-20\"]\n)"
+                }
+              ]
+            },
+            {
+              "title": "Tool configuration",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "✅",
+                      "title": "All tools",
+                      "description": "Without `default_config` or `configs`: Claude sees all of the server's tools."
+                    },
+                    {
+                      "icon": "🔒",
+                      "title": "Allowlist",
+                      "description": "`default_config.enabled: false` + enable specific tools in `configs`."
+                    },
+                    {
+                      "icon": "🚫",
+                      "title": "Denylist",
+                      "description": "Enable all by default and disable the dangerous ones (delete, share, etc.) in `configs`."
+                    },
+                    {
+                      "icon": "🔗",
+                      "title": "Multiple servers",
+                      "description": "You can connect several servers in the same request. Each one needs its own `mcp_toolset`."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Requirements",
+                  "content": "The MCP server must be publicly accessible over HTTPS. Local (stdio) servers can't be used with the MCP Connector. Requires the beta header `anthropic-beta: mcp-client-2025-11-20`."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Extended Thinking",
+          "subsections": [
+            {
+              "title": "What is Extended Thinking?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Extended Thinking lets Claude generate an internal reasoning block before the final response, useful for problems that require several logical steps (math, debugging, planning). It's controlled with a token budget (`budget_tokens`) dedicated exclusively to that reasoning."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Without Extended Thinking",
+                    "rows": [
+                      { "key": "Response", "value": "Direct, with no visible process." },
+                      { "key": "Cost", "value": "Only input and output tokens." },
+                      { "key": "Ideal for", "value": "Simple tasks, fast responses." }
+                    ]
+                  },
+                  "right": {
+                    "head": "With Extended Thinking",
+                    "rows": [
+                      { "key": "Response", "value": "Includes `thinking` blocks with the reasoning." },
+                      { "key": "Cost", "value": "Input + output tokens + thinking tokens." },
+                      { "key": "Ideal for", "value": "Math, debugging, deep analysis, complex logic." }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "How to enable it",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=16000,\n    thinking={\n        \"type\": \"enabled\",\n        \"budget_tokens\": 10000  # max tokens for reasoning\n    },\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"Are there infinitely many primes of the form 4n+3?\"\n    }]\n)\n\nfor block in response.content:\n    if block.type == \"thinking\":\n        print(f\"Reasoning: {block.thinking}\")\n    elif block.type == \"text\":\n        print(f\"Response: {block.text}\")"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Thinking with multi-turn tool use",
+                  "content": "`budget_tokens` has a minimum of 1024 tokens (the API rejects lower values) and must be less than `max_tokens`. Budgets above 32K generally don't improve quality. In multi-turn conversations with tools, the `thinking` block includes a `signature` that authenticates it and must be forwarded intact inside the `assistant` message. Modifying, truncating, or removing it invalidates the signature and produces an error."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "This mode (`type: \"enabled\"`) is being phased out",
+                  "content": "This manual form with `budget_tokens` works on Sonnet 4.6, but is already deprecated there, and outright rejected with a 400 error on Opus 4.7, Opus 4.8, and the entire Claude 5 family (Sonnet 5, Opus 5, Fable 5). The replacement is `thinking: {\"type\": \"adaptive\"}`, where Claude decides whether to think and how much based on the request's difficulty, controlling depth with `output_config: {\"effort\": \"low\"|\"medium\"|\"high\"}` instead of a fixed token budget. It's worth knowing `budget_tokens` because it's taught and tested that way in the CCAR-F exam, but on a new project on an Opus 4.7+ model you should use adaptive mode."
+                }
+              ]
+            },
+            {
+              "title": "Redacted thinking",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Sometimes Claude's internal reasoning triggers Anthropic's safety systems. Instead of a readable `thinking` block, the response includes a `redacted_thinking` block with the content encrypted in a `data` field — it can't be read, but Claude still needs it to avoid losing context for the rest of the conversation."
+                },
+                {
+                  "type": "code",
+                  "language": "json",
+                  "code": "{\n  \"type\": \"redacted_thinking\",\n  \"data\": \"...\"  // encrypted, opaque content\n}"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Forward it intact, just like a normal thinking block",
+                  "content": "If your code filters blocks by type before forwarding them in a multi-turn tool-use turn (for example `if block.type == \"thinking\"`), you also need to include `block.type == \"redacted_thinking\"` — filtering only on `\"thinking\"` silently drops these blocks and breaks the multi-turn conversation protocol."
+                }
+              ]
+            },
+            {
+              "title": "When to use it",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "✅",
+                      "title": "Use it for",
+                      "description": "Math problems, complex debugging, multi-step logical analysis, decisions with many variables."
+                    },
+                    {
+                      "icon": "❌",
+                      "title": "Avoid it for",
+                      "description": "Simple questions, FAQ chatbots, direct creative generation, when speed is critical."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Multimodal: Images and PDFs",
+          "subsections": [
+            {
+              "title": "Images",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude can receive images (base64-encoded or by URL) alongside text in the same message, and reason about their content: describe them, read text in them, compare charts, analyze UI screenshots. A single message can include several images for comparisons. Supports PNG, JPEG, GIF, WebP."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\nimport base64\n\nclient = anthropic.Anthropic()\n\ndef encode(path):\n    with open(path, \"rb\") as f:\n        return base64.b64encode(f.read()).decode(\"utf-8\")\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=400,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": encode(\"screen_before.png\")}},\n            {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": encode(\"screen_after.png\")}},\n            {\"type\": \"text\", \"text\": \"Comparing these two screenshots, what changed?\"},\n        ],\n    }],\n)"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Cost scales with resolution",
+                  "content": "An image's token consumption grows with its pixel size. For very large screenshots or high-resolution photos where fine detail isn't needed, resizing them before sending reduces cost without losing the relevant information."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Limit", "Value"],
+                  "rows": [
+                    ["Images per request", "100, across all messages"],
+                    ["Size per image", "5MB maximum"],
+                    ["Dimension with a single image", "8000px width/height maximum"],
+                    ["Dimension with multiple images", "2000px width/height maximum each"],
+                    ["Token cost", "(width_px × height_px) / 750"]
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "Vision isn't infallible by default: on counting or fine-detail tasks, a simple prompt (\"how many marbles are there?\") fails more often than expected even with a sharp image. The same prompt engineering techniques that work with text — breaking it into steps, asking for verification with a different method, giving a solved example (one-shot) — noticeably improve accuracy on complex visual tasks."
+                },
+                {
+                  "type": "code",
+                  "language": "text",
+                  "code": "Analyze this image and determine the exact count using this methodology:\n1. Identify each marble one by one, assigning it a number.\n2. Verify the result by counting with a different method: starting from\n   the bottom left, row by row.\n\nWhat is the exact, verified number of marbles?"
+                }
+              ]
+            },
+            {
+              "title": "PDFs",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "PDFs are sent as a `document` type block. Claude processes them both visually and textually at once: it can read the text, but also see tables, charts, and diagrams within the document, something a plain-text extractor would miss."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import base64\n\nwith open(\"annual_report.pdf\", \"rb\") as f:\n    pdf_b64 = base64.b64encode(f.read()).decode(\"utf-8\")\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=600,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\"type\": \"document\", \"source\": {\"type\": \"base64\", \"media_type\": \"application/pdf\", \"data\": pdf_b64}},\n            {\"type\": \"text\", \"text\": \"Summarize the risks mentioned in section 4\"},\n        ],\n    }],\n)"
+                }
+              ]
+            },
+            {
+              "title": "Citations",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "By enabling `citations` on a source document, Claude anchors each claim in its response to an exact fragment of the original document, returning verifiable references. It works on PDFs (citing by page) and on plain-text documents (citing by character range). It's especially valuable in RAG: passing each retrieved chunk as an independent document with citations enabled lets the UI show exactly which chunk each sentence came from."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The title field isn't cosmetic",
+                  "content": "Besides `citations: {\"enabled\": true}`, it's worth sending `title` in the `document` block — it's the name that will appear identifying the source in each returned citation. Without it, the UI has no way to show the user which document each reference came from when there are several."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Field", "PDF (page_location)", "Plain text (char_location)"],
+                  "rows": [
+                    ["Cited text", "cited_text", "cited_text"],
+                    ["Which document", "document_index / document_title", "document_index / document_title"],
+                    ["Location", "start_page_number / end_page_number (1-indexed)", "start_char_index / end_char_index (0-indexed, end exclusive)"]
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "# citations on a text document\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\n                \"type\": \"document\",\n                \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": policy_text},\n                \"citations\": {\"enabled\": True},\n            },\n            {\"type\": \"text\", \"text\": \"How long is user data retained?\"},\n        ],\n    }],\n)\n# each text block in the response can include a \"citations\" field\n# with the document and the exact range that backs that sentence\n\n# citations in RAG: each chunk as an independent document\ndocuments = [\n    {\n        \"type\": \"document\",\n        \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": chunk_text},\n        \"citations\": {\"enabled\": True},\n    }\n    for chunk_text, _ in top_k\n]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": documents + [{\"type\": \"text\", \"text\": \"what is the return policy?\"}]}],\n)"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Prompt Caching",
+          "subsections": [
+            {
+              "title": "How caching works",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Before generating a single word, Claude has to process the entire input: tokenize it, compute each token's internal context relative to the rest of the prompt (attention). Without caching, that work is discarded as soon as the response finishes — and on the next call, even if 90% of the prompt is identical to the previous one (same system prompt, same tools, the entire conversation history repeated word for word), Claude processes it all again from scratch. In a multi-turn conversation, that means reprocessing an ever-longer history on every new message, even though nothing old has changed."
+                },
+                {
+                  "type": "text",
+                  "content": "`cache_control: {\"type\": \"ephemeral\"}` tells the server: save the result of processing everything up to here. On the next call, if that same content appears again with the breakpoint in the same position, the saved result is read instead of recomputed — which is why a cache read costs a fraction of a normal input. The first write isn't free: it costs somewhat more than a request without caching, because besides processing the content it also has to be persisted. The savings appear starting with the second call that reuses that prefix."
+                },
+                {
+                  "type": "table",
+                  "columns": ["TTL", "Write cost", "When it's worth it"],
+                  "rows": [
+                    ["5 minutes (default)", "Cheaper", "Interactive sessions with frequent turns (each read renews the timer)"],
+                    ["1 hour (extended)", "More expensive", "Agents with long pauses, scheduled jobs, when the gap between requests exceeds 5 minutes"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Exact match, not \"similar\"",
+                  "content": "Caching isn't a semantic search and doesn't tolerate changes: if a single character changes anywhere before the breakpoint (or the model is switched), it's a complete cache miss — everything is reprocessed from that point, not just the modified part. That's why breakpoints go on what's literally identical between calls (system prompt, tool definitions), never on content that varies turn to turn."
+                }
+              ]
+            },
+            {
+              "title": "Cache rules",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🎯",
+                      "title": "Exact prefix",
+                      "description": "If a single token changes in the content before the breakpoint, or the model is switched, the result is a complete cache miss, not a partial one."
+                    },
+                    {
+                      "icon": "📏",
+                      "title": "Minimum token count",
+                      "description": "Below a certain threshold (on the order of thousands of tokens depending on the model), content doesn't get cached."
+                    },
+                    {
+                      "icon": "🔢",
+                      "title": "Up to 4 breakpoints",
+                      "description": "Common practice: one at the end of the tools, another at the end of the system prompt, leaving the conversation tail unmarked (since it changes every turn)."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "tools = [weather_tool, calendar_tool]\ntools[-1][\"cache_control\"] = {\"type\": \"ephemeral\"}  # breakpoint #1: caches all tools\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=500,\n    tools=tools,\n    system=[\n        {\n            \"type\": \"text\",\n            \"text\": full_internal_documentation,  # several thousand tokens, stable\n            \"cache_control\": {\"type\": \"ephemeral\", \"ttl\": \"1h\"},  # breakpoint #2: extended TTL\n        }\n    ],\n    messages=[{\"role\": \"user\", \"content\": \"How do I configure rate limiting?\"}],\n)\n\n# check whether the cache was used\nprint(response.usage.cache_creation_input_tokens, response.usage.cache_read_input_tokens)"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Don't mutate the original tools",
+                  "content": "The example above modifies `tools[-1]` directly, which is fine if that list is disposable. But if your tool schemas live in a variable shared across requests (a module-level constant, for example), mutating it in place permanently attaches the `cache_control` to it and can break things if you later reorder or filter the tools. Safer to clone before touching: `tools_clone = [t.copy() for t in tools]; tools_clone[-1] = {**tools_clone[-1], \"cache_control\": {\"type\": \"ephemeral\"}}`."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Order matters: tools → system → messages",
+                  "content": "Internally, Claude always concatenates the request in that order: tools first, then the system prompt, then the messages. A breakpoint caches everything that came before it in that order — not just the block where you placed it. That's why a breakpoint on the last tool caches the tools but not the system prompt, while a breakpoint at the end of the system prompt caches tools + system together. It's best to put breakpoints on the most stable content (tools, then system) and leave the conversation messages unmarked, since they change every turn."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Antipattern: dynamic content before the breakpoint",
+                    "rows": [
+                      {
+                        "key": "Design",
+                        "value": "The current time, the user ID, or the latest conversation turns are interpolated before the static block or before the cache_control breakpoint"
+                      },
+                      {
+                        "key": "Technical impact",
+                        "value": "Any change there invalidates the cache for everything that follows, including the thousands-of-tokens static block that was actually reusable — you pay the write cost (~1.25x-2x) on every request instead of the ~0.1x of a cache read"
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "Optimal solution: layer by change frequency",
+                    "rows": [
+                      {
+                        "key": "Design",
+                        "value": "The most stable content (tools, long system prompt) comes first with its breakpoint; the variables that change on every request go last, after the final breakpoint"
+                      },
+                      {
+                        "key": "Technical impact",
+                        "value": "A dynamic variable's change doesn't invalidate anything cached; `cache_read_input_tokens` > 0 consistently on repeated requests"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "cache_control requires the long form",
+                  "content": "`\"content\": \"text\"` (a plain string) doesn't support `cache_control`. To mark a breakpoint you need the block form: `\"content\": [{\"type\": \"text\", \"text\": \"text\", \"cache_control\": {...}}]`, just like it's done with `system` in the example above."
+                },
+                {
+                  "type": "text",
+                  "content": "Read and write aren't mutually exclusive within the same request: if you keep the same tools but change the system prompt, you'll see `cache_read_input_tokens` > 0 (for the tools, which did match) and `cache_creation_input_tokens` > 0 at the same time (for the new system prompt, written from scratch). This is the expected result of having several independent breakpoints, not a bug."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Files API",
+          "subsections": [
+            {
+              "title": "What is the Files API?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The Files API lets you upload files once and reuse them across multiple requests using a `file_id`. It avoids resending and re-encoding the same document or large image on every API call."
+                },
+                {
+                  "type": "stats",
+                  "stats": [
+                    {
+                      "label": "Maximum size",
+                      "value": "500 MB",
+                      "note": "Per file"
+                    },
+                    {
+                      "label": "Storage",
+                      "value": "500 GB",
+                      "note": "Per organization"
+                    },
+                    {
+                      "label": "Operations",
+                      "value": "Free",
+                      "note": "Upload, list, delete"
+                    },
+                    {
+                      "label": "Status",
+                      "value": "Beta",
+                      "note": "Header required"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Supported formats",
+              "blocks": [
+                {
+                  "type": "table",
+                  "columns": ["Type", "MIME type", "Content block", "Use"],
+                  "rows": [
+                    ["PDF", "`application/pdf`", "`document`", "Document analysis"],
+                    ["Plain text", "`text/plain`", "`document`", "Text processing"],
+                    ["Image", "`image/jpeg`, `image/png`, `image/gif`, `image/webp`", "`image`", "Visual analysis"],
+                    ["Datasets", "Various", "`container_upload`", "Code execution tool"]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Basic flow",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Upload the file",
+                      "body": "You use `POST /v1/files` with the file. The response includes a unique `file_id`."
+                    },
+                    {
+                      "title": "Save the file_id",
+                      "body": "The `file_id` persists until you delete it. You can reuse it in any future request."
+                    },
+                    {
+                      "title": "Reference it in messages",
+                      "body": "Instead of sending the full file, you include `{ \"type\": \"file\", \"file_id\": \"...\" }` in the block's source."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# 1. Upload the file once\nwith open(\"annual_balance.pdf\", \"rb\") as f:\n    file = client.beta.files.upload(\n        file=(\"annual_balance.pdf\", f, \"application/pdf\"),\n        betas=[\"files-api-2025-04-14\"],\n    )\n\n# 2. Reuse it across multiple requests, without re-encoding it\nfor question in [\"Summarize the document\", \"What's the conclusion?\", \"List the risks\"]:\n    response = client.beta.messages.create(\n        model=\"claude-opus-4-8\",\n        max_tokens=1024,\n        betas=[\"files-api-2025-04-14\"],\n        messages=[{\n            \"role\": \"user\",\n            \"content\": [\n                {\"type\": \"text\", \"text\": question},\n                {\n                    \"type\": \"document\",\n                    \"source\": {\"type\": \"file\", \"file_id\": file.id}\n                }\n            ]\n        }],\n    )\n    print(response.content[0].text)"
+                }
+              ]
+            },
+            {
+              "title": "File management",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "📋",
+                      "title": "List files",
+                      "description": "`client.beta.files.list()` — returns all files uploaded in your workspace."
+                    },
+                    {
+                      "icon": "🔍",
+                      "title": "View metadata",
+                      "description": "`client.beta.files.retrieve_metadata(file_id)` — name, type, size, and creation date."
+                    },
+                    {
+                      "icon": "🗑️",
+                      "title": "Delete",
+                      "description": "`client.beta.files.delete(file_id)` — deleted files can't be recovered."
+                    },
+                    {
+                      "icon": "⬇️",
+                      "title": "Download",
+                      "description": "Only files generated by code execution. Files you uploaded yourself aren't downloadable via the API."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Requirements",
+                  "content": "Requires the beta header `anthropic-beta: files-api-2025-04-14`. Files are shared across all API keys in the same workspace."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Code Execution",
+          "subsections": [
+            {
+              "title": "Python in an Anthropic sandbox",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The `code_execution` tool gives Claude an isolated environment (a sandbox managed by Anthropic) where it can run real Python: compute, generate charts with matplotlib, process datasets, create files. It's different from the `bash` tool: if both are used in the same conversation, they're two separate execution environments, with no shared state between them."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "code_execution",
+                    "rows": [
+                      { "key": "What it does", "value": "Python sandbox: compute, chart, analyze data." },
+                      { "key": "State", "value": "Persists across calls within the same conversation." },
+                      { "key": "Output", "value": "Text, images (matplotlib), files with file_id." }
+                    ]
+                  },
+                  "right": {
+                    "head": "bash",
+                    "rows": [
+                      { "key": "What it does", "value": "Full shell: install packages, git, scripts, system commands." },
+                      { "key": "State", "value": "Persistent shell session across commands." },
+                      { "key": "Output", "value": "stdout/stderr from the commands." }
+                    ]
+                  }
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# code_execution: Claude computes and can generate charts\nresponse = client.beta.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=2000,\n    tools=[{\"type\": \"code_execution_20250825\", \"name\": \"code_execution\"}],\n    betas=[\"code-execution-2025-08-25\"],\n    messages=[{\"role\": \"user\", \"content\": \"Calculate the mean and standard deviation of [12, 15, 11, 19, 22, 14] and plot a histogram\"}],\n)\n\n# the response includes \"tool_result\" blocks with the code's output\n# and eventually references to generated files (charts as file_id)"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Combine with Files API",
+                  "content": "The code execution tool and the Files API complement each other: you can upload a CSV dataset with the Files API for code execution to process, and retrieve the generated charts also by file_id. Files generated by code execution are downloadable, unlike the ones you uploaded yourself."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Managed Agents",
+          "subsections": [
+            {
+              "title": "A ready-made agent harness, on Anthropic's infrastructure",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "So far, everything that runs an agent (the tool-use loop, conversation persistence, the sandbox where bash/code execution run) is built and maintained by your application, request by request. Managed Agents is the alternative: instead of a stateless endpoint you send messages to, it's a stateful API that provides the complete harness — agent loop, sandbox, prompt caching, and compaction already handled by Anthropic — designed for long, asynchronous tasks, not the typical request-response of the Messages API."
+                },
+                {
+                  "type": "table",
+                  "columns": ["Concept", "What it is"],
+                  "rows": [
+                    ["Agent", "Model, system prompt, tools, MCP servers, and skills — created once and referenced by id in each session"],
+                    ["Environment", "Where the session runs: an Anthropic-managed cloud sandbox, or a self-hosted one on your own infrastructure"],
+                    ["Session", "A running instance of an agent inside an environment, executing a concrete task"],
+                    ["Events", "The messages exchanged with the session: user turns, tool results, status updates — via server-sent events"]
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "from anthropic import Anthropic\n\nclient = Anthropic()\n\nagent = client.beta.agents.create(\n    name=\"Coding assistant\",\n    model=\"claude-opus-5\",\n    system=\"You are a programming assistant. Write clean, documented code.\",\n    tools=[{\"type\": \"agent_toolset_20260401\"}],  # pre-built tool set: bash, files, web\n)\n\nenvironment = client.beta.environments.create(\n    name=\"my-environment\",\n    config={\"type\": \"cloud\", \"networking\": {\"type\": \"unrestricted\"}},\n)\n\nsession = client.beta.sessions.create(agent=agent.id, environment_id=environment.id)\n\nwith client.beta.sessions.events.stream(session.id) as stream:\n    client.beta.sessions.events.send(session.id, events=[\n        {\"type\": \"user.message\", \"content\": [{\"type\": \"text\", \"text\": \"Generate the first 20 Fibonacci numbers in fibonacci.txt\"}]},\n    ])\n    for event in stream:\n        if event.type == \"agent.tool_use\":\n            print(f\"[using tool: {event.name}]\")\n        elif event.type == \"session.status_idle\":\n            break  # the session is still alive: more events can be sent later"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Sessions with real state, not a history you resend yourself",
+                  "content": "Unlike the manual Messages API loop (where you save and resend the messages array on every request), here the history, the sandbox filesystem, and the results stay persisted server-side. The session can be paused and resumed later, or interrupted mid-execution by sending a new event to redirect the agent — there's no need to rebuild context from scratch."
+                }
+              ]
+            },
+            {
+              "title": "When to choose Managed Agents",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Messages API (your own loop)",
+                    "rows": [
+                      { "key": "Control", "value": "Total: you decide every step of the loop, where each tool runs." },
+                      { "key": "Infrastructure", "value": "The sandbox, persistence, and scheduling are your responsibility." },
+                      { "key": "Ideal for", "value": "Short tasks, request-response, or when you already have your own execution infrastructure." }
+                    ]
+                  },
+                  "right": {
+                    "head": "Managed Agents",
+                    "rows": [
+                      { "key": "Control", "value": "Delegated: Anthropic runs the loop, you send events and consume them." },
+                      { "key": "Infrastructure", "value": "Sandbox (cloud or self-hosted), caching, and compaction already handled." },
+                      { "key": "Ideal for", "value": "Long tasks (minutes or hours), asynchronous, with multiple tool calls and a need to resume the session later." }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Scheduled deployments: the server-side equivalent of a cron",
+                  "content": "Managed Agents supports running an agent on a recurring schedule (cron) directly on Anthropic's infrastructure, without your own app needing to stay running to trigger it. It's the API version of the autonomous debugging pattern seen in Introduction to Claude Code → Autonomous Debugging: a scheduled agent that monitors something and acts, with no interactive session involved."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Beta, and not eligible for Zero Data Retention",
+                  "content": "Managed Agents requires the beta header `managed-agents-2026-04-01` and is in beta. Because it's stateful by design (it saves history, sandbox state, and outputs server-side), it isn't eligible for Zero Data Retention or for a HIPAA BAA — unlike the Messages API, where ZDR is an option. Relevant if the project has compliance requirements around data retention."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

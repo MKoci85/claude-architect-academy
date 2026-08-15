@@ -48,6 +48,63 @@ function Md({ children, highlightTerm }) {
   );
 }
 
+// ── i18n ───────────────────────────────────────────────────
+
+const UI_STRINGS = {
+  es: {
+    searchPlaceholder: 'Buscar artículos…',
+    searchLabel: 'Buscar',
+    clearSearch: 'Limpiar búsqueda',
+    noSearchResults: (q) => `Sin resultados para “${q}”`,
+    switchTheme: 'Cambiar tema',
+    switchLanguage: 'Switch language / Cambiar idioma',
+    exercises: 'Ejercicios',
+    exam: 'Examen de práctica',
+    all: 'Todo',
+    articlesCount: (n) => `artículo${n === 1 ? '' : 's'}`,
+    resultsCount: (n) => `resultado${n === 1 ? '' : 's'}`,
+    resultsFor: (q) => `para “${q}”`,
+    inCollection: (title) => ` en ${title}`,
+    noResultsFor: (q) => `No se encontraron resultados para “${q}”`,
+    home: 'Inicio',
+    content: 'Contenido',
+    heroEyebrow: 'Base de conocimiento',
+    heroHeadline: <>Domina Claude Code<br /><em>y su ecosistema</em></>,
+    heroSub: 'Documentación en español sobre Claude Code, la API de Anthropic, MCP, hooks, subagentes y más — preparada para el examen CCAR-F.',
+    practicalExercises: 'Ejercicios prácticos',
+    exercise: (n) => `Ejercicio ${n}`,
+    resolutionComingSoon: 'Resolución en camino — próximamente.',
+  },
+  en: {
+    searchPlaceholder: 'Search articles…',
+    searchLabel: 'Search',
+    clearSearch: 'Clear search',
+    noSearchResults: (q) => `No results for “${q}”`,
+    switchTheme: 'Switch theme',
+    switchLanguage: 'Switch language / Cambiar idioma',
+    exercises: 'Exercises',
+    exam: 'Practice exam',
+    all: 'All',
+    articlesCount: (n) => `article${n === 1 ? '' : 's'}`,
+    resultsCount: (n) => `result${n === 1 ? '' : 's'}`,
+    resultsFor: (q) => `for “${q}”`,
+    inCollection: (title) => ` in ${title}`,
+    noResultsFor: (q) => `No results found for “${q}”`,
+    home: 'Home',
+    content: 'Contents',
+    heroEyebrow: 'Knowledge base',
+    heroHeadline: <>Master Claude Code<br /><em>and its ecosystem</em></>,
+    heroSub: 'English documentation on Claude Code, the Anthropic API, MCP, hooks, subagents, and more — prepared for the CCAR-F exam.',
+    practicalExercises: 'Practical exercises',
+    exercise: (n) => `Exercise ${n}`,
+    resolutionComingSoon: 'Solution coming soon.',
+  },
+};
+
+function useUI(lang) {
+  return UI_STRINGS[lang] || UI_STRINGS.es;
+}
+
 // ── Helpers ────────────────────────────────────────────────
 
 const COLLECTION_BADGE = {
@@ -88,6 +145,20 @@ function useTheme() {
   return [theme, toggle];
 }
 
+function useLanguage() {
+  const [lang, setLang] = useState(() => {
+    const stored = localStorage.getItem('wiki-lang');
+    return stored === 'en' ? 'en' : 'es';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('wiki-lang', lang);
+  }, [lang]);
+
+  const toggle = useCallback(() => setLang(l => l === 'es' ? 'en' : 'es'), []);
+  return [lang, toggle];
+}
+
 // ── Icons ──────────────────────────────────────────────────
 
 function IconSearch() {
@@ -122,6 +193,15 @@ function IconArrow() {
   );
 }
 
+function IconHome() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11.5L12 4l9 7.5" />
+      <path d="M5.5 10v9a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-9" />
+    </svg>
+  );
+}
+
 // ── TopBar ─────────────────────────────────────────────────
 
 // Escapa HTML y resalta las coincidencias de q dentro de text
@@ -135,7 +215,8 @@ function highlightMatch(text, q) {
   return escaped.replace(new RegExp(`(${escapedQ})`, 'ig'), '<mark>$1</mark>');
 }
 
-function TopBar({ search, onSearch, searchResults, onResultClick, theme, onToggle, onLogoClick, onExercises }) {
+function TopBar({ search, onSearch, searchResults, onResultClick, theme, onToggle, lang, onToggleLang, onLogoClick, onExercises }) {
+  const t = useUI(lang);
   const wrapRef = useRef(null);
   const [open, setOpen] = useState(false);
 
@@ -170,8 +251,8 @@ function TopBar({ search, onSearch, searchResults, onResultClick, theme, onToggl
 
   return (
     <div className="topbar">
-      <button className="topbar-logo" onClick={onLogoClick}>
-        Claude Wiki
+      <button className="topbar-logo" onClick={onLogoClick} title={t.home}>
+        Claude <IconHome />
       </button>
       <div className="topbar-sep" />
 
@@ -182,8 +263,8 @@ function TopBar({ search, onSearch, searchResults, onResultClick, theme, onToggl
           onChange={e => { onSearch(e.target.value); }}
           onKeyDown={handleKey}
           onFocus={() => { if (searchResults && searchResults.length > 0 && search.trim()) setOpen(true); }}
-          placeholder="Buscar artículos…"
-          aria-label="Buscar"
+          placeholder={t.searchPlaceholder}
+          aria-label={t.searchLabel}
           aria-expanded={open}
           aria-haspopup="listbox"
         />
@@ -191,7 +272,7 @@ function TopBar({ search, onSearch, searchResults, onResultClick, theme, onToggl
           <button
             onClick={() => { onSearch(''); setOpen(false); }}
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 16, lineHeight: 1, padding: 0 }}
-            aria-label="Limpiar búsqueda"
+            aria-label={t.clearSearch}
           >×</button>
         )}
 
@@ -199,7 +280,7 @@ function TopBar({ search, onSearch, searchResults, onResultClick, theme, onToggl
         {(open || showEmpty) && (
           <div className="search-dropdown" role="listbox">
             {showEmpty ? (
-              <div className="search-empty">Sin resultados para &ldquo;{search}&rdquo;</div>
+              <div className="search-empty">{t.noSearchResults(search)}</div>
             ) : (
               (Array.isArray(searchResults) ? searchResults : []).slice(0, 8).map(article => (
                 <button
@@ -227,14 +308,17 @@ function TopBar({ search, onSearch, searchResults, onResultClick, theme, onToggl
         )}
       </div>
 
-      <button className="theme-btn" onClick={onToggle} title="Cambiar tema">
+      <button className="lang-btn" onClick={onToggleLang} title={t.switchLanguage}>
+        {lang === 'en' ? 'EN' : 'ES'}
+      </button>
+      <button className="theme-btn" onClick={onToggle} title={t.switchTheme}>
         {theme === 'dark' ? '☀' : '☾'}
       </button>
       <button className="exercises-btn" onClick={onExercises}>
-        Ejercicios
+        {t.exercises}
       </button>
       <a className="exam-btn" href="/practice" target="_blank" rel="noopener noreferrer">
-        Examen de práctica
+        {t.exam}
       </a>
     </div>
   );
@@ -263,7 +347,8 @@ function ArticleCard({ article, onClick }) {
 
 // ── SuperSectionView ───────────────────────────────────────
 
-function SuperSectionView({ collection, onArticle }) {
+function SuperSectionView({ collection, onArticle, lang }) {
+  const t = useUI(lang);
   const [activeSection, setActiveSection] = useState(null);
 
   const sections = collection.sections || [];
@@ -285,7 +370,7 @@ function SuperSectionView({ collection, onArticle }) {
           className={`super-tab-btn ${activeSection === null ? 'active' : ''}`}
           onClick={() => setActiveSection(null)}
         >
-          Todo
+          {t.all}
         </button>
         {sections.map(s => (
           <button
@@ -338,7 +423,8 @@ const COLLECTION_ACCENT = [
   { bg: 'rgba(79,70,229,0.10)',   border: 'rgba(79,70,229,0.28)',   dot: '#4F46E5' },
 ];
 
-function CollectionCard({ collection, index, onClick }) {
+function CollectionCard({ collection, index, onClick, lang }) {
+  const t = useUI(lang);
   const accent = COLLECTION_ACCENT[index % COLLECTION_ACCENT.length];
   const count = (collection.sections || []).reduce((n, s) => n + (s.articles || []).length, 0);
 
@@ -354,7 +440,7 @@ function CollectionCard({ collection, index, onClick }) {
         <div className="collection-card-desc">{collection.summary}</div>
       )}
       <div className="collection-card-footer">
-        <span className="collection-card-count">{count} artículos</span>
+        <span className="collection-card-count">{count} {t.articlesCount(count)}</span>
         <span className="collection-card-arrow">→</span>
       </div>
     </button>
@@ -363,7 +449,8 @@ function CollectionCard({ collection, index, onClick }) {
 
 // ── HomeView ───────────────────────────────────────────────
 
-function HomeView({ collections, articles, activeCollection, onCollection, onArticle, onOpenCollection, search }) {
+function HomeView({ collections, articles, activeCollection, onCollection, onArticle, onOpenCollection, search, lang }) {
+  const t = useUI(lang);
   const activeCollectionData = collections.find(c => c.title === activeCollection);
   const isSuper = activeCollectionData?.isSuper && !search.trim();
   const isHome = activeCollection === 'Todos' && !search.trim();
@@ -372,12 +459,12 @@ function HomeView({ collections, articles, activeCollection, onCollection, onArt
     <>
       {isHome && (
         <div className="home-hero">
-          <div className="home-hero-eyebrow">Base de conocimiento</div>
+          <div className="home-hero-eyebrow">{t.heroEyebrow}</div>
           <h1 className="home-hero-headline">
-            Domina Claude Code<br /><em>y su ecosistema</em>
+            {t.heroHeadline}
           </h1>
           <p className="home-hero-sub">
-            Documentación en español sobre Claude Code, la API de Anthropic, MCP, hooks, subagentes y más&nbsp;— preparada para el examen CCAR-F.
+            {t.heroSub}
           </p>
         </div>
       )}
@@ -385,25 +472,25 @@ function HomeView({ collections, articles, activeCollection, onCollection, onArt
       {isHome ? (
         <div className="collections-grid">
           {collections.map((col, i) => (
-            <CollectionCard key={col.title} collection={col} index={i} onClick={onOpenCollection} />
+            <CollectionCard key={col.title} collection={col} index={i} onClick={onOpenCollection} lang={lang} />
           ))}
         </div>
       ) : isSuper ? (
-        <SuperSectionView collection={activeCollectionData} onArticle={onArticle} />
+        <SuperSectionView collection={activeCollectionData} onArticle={onArticle} lang={lang} />
       ) : (
         <>
           <div className="results-meta">
             {search.trim() ? (
-              <><strong>{articles.length}</strong> {articles.length === 1 ? 'resultado' : 'resultados'} para &ldquo;{search}&rdquo;</>
+              <><strong>{articles.length}</strong> {t.resultsCount(articles.length)} {t.resultsFor(search)}</>
             ) : articles.length > 0 ? (
-              <><strong>{articles.length}</strong> artículos{activeCollection !== 'Todos' ? ` en ${activeCollection}` : ''}</>
+              <><strong>{articles.length}</strong> {t.articlesCount(articles.length)}{activeCollection !== 'Todos' ? t.inCollection(activeCollection) : ''}</>
             ) : null}
           </div>
 
           {articles.length === 0 ? (
             <div className="empty-state">
               <div style={{ fontSize: 32 }}>⊘</div>
-              <p>No se encontraron resultados para &ldquo;{search}&rdquo;</p>
+              <p>{t.noResultsFor(search)}</p>
             </div>
           ) : (
             <div className="cards-grid">
@@ -621,7 +708,8 @@ function SubsectionContent({ sub, highlightTerm }) {
 
 // ── ArticleView ────────────────────────────────────────────
 
-function ArticleView({ article, sectionArticles, groupedSections, onArticle, onCollection, onHome, highlightTarget }) {
+function ArticleView({ article, sectionArticles, groupedSections, onArticle, onCollection, onHome, highlightTarget, lang }) {
+  const t = useUI(lang);
   const [flashIndex, setFlashIndex] = useState(null);
   const [openSection, setOpenSection] = useState(null);
 
@@ -671,7 +759,7 @@ function ArticleView({ article, sectionArticles, groupedSections, onArticle, onC
     if (groupedSections && groupedSections.length > 0) {
       return (
         <aside className="article-sidebar">
-          <button className="sidebar-home-btn" onClick={onHome}>← Inicio</button>
+          <button className="sidebar-home-btn" onClick={onHome}>{"← " + t.home}</button>
           <div className="sidebar-collection-label">
             <span className={`badge ${badge}`}>{article.collectionTitle}</span>
           </div>
@@ -707,7 +795,7 @@ function ArticleView({ article, sectionArticles, groupedSections, onArticle, onC
     if (sectionArticles && sectionArticles.length > 1) {
       return (
         <aside className="article-sidebar">
-          <button className="sidebar-home-btn" onClick={onHome}>← Inicio</button>
+          <button className="sidebar-home-btn" onClick={onHome}>{"← " + t.home}</button>
           <div className="sidebar-collection-label">
             <span className={`badge ${badge}`}>{article.collectionTitle}</span>
           </div>
@@ -735,7 +823,7 @@ function ArticleView({ article, sectionArticles, groupedSections, onArticle, onC
       {/* Article content */}
       <div className="article-view">
         <div className="breadcrumb">
-          <button className="breadcrumb-btn breadcrumb-home" onClick={onHome}>Inicio</button>
+          <button className="breadcrumb-btn breadcrumb-home" onClick={onHome}>{t.home}</button>
           <IconChevronRight />
           <span className={`badge ${badge}`}>{article.collectionTitle}</span>
           <IconChevronRight />
@@ -756,7 +844,7 @@ function ArticleView({ article, sectionArticles, groupedSections, onArticle, onC
 
         {article.subsections && article.subsections.length > 0 && (
           <>
-            <div className="section-label">Contenido</div>
+            <div className="section-label">{t.content}</div>
             <div>
               {article.subsections.map((sub, i) => (
                 <div
@@ -778,7 +866,8 @@ function ArticleView({ article, sectionArticles, groupedSections, onArticle, onC
 
 // ── ExercisesView ──────────────────────────────────────────
 
-function ExercisesView({ data, activeIndex, onSelect, onHome }) {
+function ExercisesView({ data, activeIndex, onSelect, onHome, lang }) {
+  const t = useUI(lang);
   if (!data) {
     return (
       <div className="exercises-scope">
@@ -802,9 +891,9 @@ function ExercisesView({ data, activeIndex, onSelect, onHome }) {
     <div className="exercises-scope">
       <div className="article-layout fade-in">
         <aside className="article-sidebar">
-          <button className="sidebar-home-btn" onClick={onHome}>← Inicio</button>
+          <button className="sidebar-home-btn" onClick={onHome}>{"← " + t.home}</button>
           <div className="sidebar-collection-label">
-            <span className="badge exercises-badge">Ejercicios prácticos</span>
+            <span className="badge exercises-badge">{t.practicalExercises}</span>
           </div>
           <nav className="sidebar-nav">
             {exercises.map((e, i) => (
@@ -821,9 +910,9 @@ function ExercisesView({ data, activeIndex, onSelect, onHome }) {
 
         <div className="article-view">
           <div className="breadcrumb">
-            <button className="breadcrumb-btn breadcrumb-home" onClick={onHome}>Inicio</button>
+            <button className="breadcrumb-btn breadcrumb-home" onClick={onHome}>{t.home}</button>
             <IconChevronRight />
-            <span className="breadcrumb-current">Ejercicio {ex.number}</span>
+            <span className="breadcrumb-current">{t.exercise(ex.number)}</span>
           </div>
 
           <h1 className="article-title">{ex.title}</h1>
@@ -841,7 +930,7 @@ function ExercisesView({ data, activeIndex, onSelect, onHome }) {
           ) : (
             <div className="empty-state">
               <div style={{ fontSize: 32 }}>⊘</div>
-              <p>Resolución en camino — próximamente.</p>
+              <p>{t.resolutionComingSoon}</p>
             </div>
           )}
         </div>
@@ -852,8 +941,17 @@ function ExercisesView({ data, activeIndex, onSelect, onHome }) {
 
 // ── App ────────────────────────────────────────────────────
 
+async function fetchLocalized(file, lang) {
+  const res = await fetch(`/data/${lang}/${file}`);
+  // El dev server (y algunos hostings estáticos) hacen fallback a index.html
+  // con 200 para rutas inexistentes — content-type es la señal confiable.
+  if (!res.ok || !(res.headers.get('content-type') || '').includes('json')) return null;
+  return res.json();
+}
+
 export default function App() {
   const [theme, toggleTheme] = useTheme();
+  const [lang, toggleLang] = useLanguage();
   const [collections, setCollections] = useState([]);
   const [searchIndex, setSearchIndex] = useState([]);
   const [allArticles, setAllArticles] = useState([]);
@@ -869,7 +967,7 @@ export default function App() {
 
   // Cargar índice desde JSON
   useEffect(() => {
-    fetch('/data/content.json')
+    fetch(`/data/${lang}/content.json`)
       .then(r => r.json())
       .then(async (index) => {
         let collections = [];
@@ -883,27 +981,31 @@ export default function App() {
                 const nestedSections = await Promise.all(
                   entry.items.map(async (item) => {
                     try {
-                      const data = await fetch(`/data/${item.file}`).then(r => r.json());
+                      const data = await fetchLocalized(item.file, lang);
+                      if (!data) return null; // sin traducción disponible en este idioma
                       return {
                         title: item.title || data.title,
                         description: item.description,
                         articles: data.sections?.flatMap(s => s.articles) || [],
                       };
                     } catch (e) {
-                      return { title: item.title, articles: [] };
+                      return null;
                     }
                   })
                 );
+                const visibleSections = nestedSections.filter(Boolean);
+                if (visibleSections.length === 0) return null;
                 return {
                   id: entry.title?.toLowerCase().replace(/\s+/g, '-'),
                   title: entry.title,
                   summary: entry.description,
                   isSuper: entry.isSuper || false,
-                  sections: nestedSections,
+                  sections: visibleSections,
                 };
               } else if (entry.file) {
                 // Colección normal con archivo único
-                const data = await fetch(`/data/${entry.file}`).then(r => r.json());
+                const data = await fetchLocalized(entry.file, lang);
+                if (!data) return null; // sin traducción disponible en este idioma
                 return { ...data, title: data.title || entry.title, summary: data.summary || data.description || entry.summary || entry.description };
               }
               return null;
@@ -940,7 +1042,7 @@ export default function App() {
         setAllArticles(flat);
       })
       .catch(() => {});
-  }, []);
+  }, [lang]);
 
   // Búsqueda con scoring local
   useEffect(() => {
@@ -971,15 +1073,27 @@ export default function App() {
     setActiveCollection('Todos');
   }, []);
 
+  // Cambiar de idioma puede dejar la vista actual apuntando a un artículo o
+  // colección que no existe en el otro idioma — volver al inicio evita ese estado roto.
+  const handleToggleLang = useCallback(() => {
+    setView('home');
+    setActiveArticle(null);
+    setActiveCollection('Todos');
+    setSearch('');
+    setExercisesData(null);
+    toggleLang();
+  }, [toggleLang]);
+
   const goExercises = useCallback(() => {
     setView('ejercicios');
     if (!exercisesData) {
-      fetch('/data/ejercicios.json')
-        .then(r => r.json())
+      const file = lang === 'en' ? '/data/en/exercises.json' : '/data/es/ejercicios.json';
+      fetch(file)
+        .then(r => (r.ok ? r.json() : lang === 'en' ? fetch('/data/es/ejercicios.json').then(r2 => r2.json()) : Promise.reject()))
         .then(setExercisesData)
         .catch(() => {});
     }
-  }, [exercisesData]);
+  }, [exercisesData, lang]);
 
   const goHomeToCollection = useCallback((collectionTitle) => {
     setView('home');
@@ -1010,6 +1124,8 @@ export default function App() {
         onResultClick={openArticle}
         theme={theme}
         onToggle={toggleTheme}
+        lang={lang}
+        onToggleLang={handleToggleLang}
         onLogoClick={goHome}
         onExercises={goExercises}
       />
@@ -1019,6 +1135,7 @@ export default function App() {
           activeIndex={activeExercise}
           onSelect={setActiveExercise}
           onHome={goHome}
+          lang={lang}
         />
       ) : view === 'home' ? (
         <HomeView
@@ -1029,6 +1146,7 @@ export default function App() {
           onArticle={openArticle}
           onOpenCollection={openCollection}
           search={search}
+          lang={lang}
         />
       ) : (
         <ArticleView
@@ -1056,6 +1174,7 @@ export default function App() {
           onCollection={goHomeToCollection}
           onHome={goHome}
           highlightTarget={highlightTarget}
+          lang={lang}
         />
       )}
     </>

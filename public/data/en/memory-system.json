@@ -1,0 +1,463 @@
+{
+  "id": "sistema-de-memoria",
+  "title": "Memory System",
+  "summary": "How Claude learns across sessions with CLAUDE.md, Auto Memory, Auto Dream, and context compaction",
+  "sections": [
+    {
+      "title": "Claude Code's Memory System",
+      "articles": [
+        {
+          "id": "memoria-overview",
+          "title": "Claude Code's memory system",
+          "summary": "How Claude learns from your sessions, organizes knowledge, and consolidates it automatically — so you don't have to explain the same thing twice.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "The memory mechanisms",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude Code uses several complementary mechanisms to maintain context across sessions. Each has a different write cadence and a different scope. The most robust setup combines all of them."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "📄 CLAUDE.md",
+                      "body": "You write it. Authoritative rules loaded at the start of every session. They define what Claude should always remember about your project or team."
+                    },
+                    {
+                      "title": "✏️ Auto Memory",
+                      "body": "Claude writes it. Accumulates knowledge across sessions without you writing anything — commands, patterns, preferences it discovers while working."
+                    },
+                    {
+                      "title": "🔄 Context compaction",
+                      "body": "Within the session. The /compact command (or the automatic trigger when approaching the window limit) summarizes the conversation history so work can continue without losing the session."
+                    },
+                    {
+                      "title": "🌙 Auto Dream",
+                      "body": "Claude runs it automatically when Auto Memory is active. It reviews and reorganizes those files: converts relative dates to absolute ones, removes contradictions and stale notes, merges duplicates."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "Note on this section: \"Session Memory\" is a term that circulates in some blogs and community projects as if it were an official Claude Code mechanism, but it's not documented by Anthropic — that's why this guide uses \"context compaction\" instead, which is the real term. Auto Dream is different: it's a real feature (confirmed by Anthropic), but it never had official public documentation — it doesn't appear on docs.claude.com or in the changelog. It works as a server-side feature flag, in gradual rollout since March 2026, whose availability depends on the account/organization rather than the installed Claude Code version. There's an open issue in Anthropic's GitHub repo (anthropics/claude-code #50694) pointing out exactly this lack of official documentation."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "auto-memory",
+          "title": "Auto Memory",
+          "summary": "Auto Memory lets Claude accumulate knowledge across sessions without the user writing anything. Claude saves notes for itself while working: build commands, debugging information, architecture notes, style preferences, and workflow habits.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "What it learns and saves",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude internally evaluates whether information from each session would have durable usefulness in a future conversation. It doesn't save everything — trivial conversations and rules already in CLAUDE.md aren't duplicated."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "⚡ Build commands",
+                      "body": "Compile times, test scripts, dev server configuration. Claude remembers them automatically."
+                    },
+                    {
+                      "title": "🐛 Debugging patterns",
+                      "body": "Recurring issues, auth token rotations, database troubleshooting. Saved in dedicated topic files."
+                    },
+                    {
+                      "title": "🏛️ Architecture decisions",
+                      "body": "API client singletons, authentication patterns, project conventions discovered in practice."
+                    },
+                    {
+                      "title": "✏️ Corrected preferences",
+                      "body": "Every time you say \"don't use that library\" or \"prefer this pattern,\" Claude remembers it for future sessions."
+                    },
+                    {
+                      "title": "📐 Code style",
+                      "body": "Naming conventions, formatting preferences, team-specific idiomatic patterns."
+                    },
+                    {
+                      "title": "🔄 Workflow",
+                      "body": "Repeated operational habits: how you deploy, how you test, which tools you use and in what order."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "💡",
+                  "content": "Decision criterion: Claude internally evaluates whether the information would have durable usefulness in a future conversation. Trivial conversations and rules already in CLAUDE.md aren't duplicated."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "estructura-de-archivos-de-memoria",
+          "title": "Memory file structure",
+          "summary": "The memory system uses a lightweight index that's always loaded, plus optional topic files that are read only when relevant to the task at hand.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Two-level organization",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Memory lives at ~/.claude/projects/<repo>/memory/. A directory shared by the entire git repository, organized into a main index and on-demand topic files."
+                },
+                {
+                  "type": "code",
+                  "lang": "text",
+                  "content": "~/.claude/projects/<repo>/memory/\n  MEMORY.md          ← main index, always loaded at start\n  build-commands.md  ← commands, timings, scripts\n  architecture.md    ← system design decisions\n  debugging.md       ← bug patterns and troubleshooting\n  patterns.md        ← team preferences and conventions"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "📑 MEMORY.md — The index",
+                      "body": "Acts as the table of contents for the memory directory. Claude reads it at the start of every session and uses it to know which topic files exist and what they contain. When it grows too large, Claude moves detailed content into topic files to keep it under the limit."
+                    },
+                    {
+                      "title": "📂 Topic files — On demand",
+                      "body": "Contain the detailed knowledge. They have frontmatter with name, description, and type so Claude can decide when they're relevant without reading them in full. They're only opened when the current task needs them."
+                    }
+                  ]
+                },
+                {
+                  "type": "stats",
+                  "items": [
+                    {
+                      "value": "200",
+                      "label": "max lines of MEMORY.md loaded at start"
+                    },
+                    {
+                      "value": "25KB",
+                      "label": "alternate size limit (whichever of the two is smaller applies)"
+                    },
+                    {
+                      "value": "1 repo",
+                      "label": "directory shared by the entire git repository"
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "Per-worktree scope: all worktrees and subdirectories within the same git repository share one auto memory directory. If you work with multiple worktrees in parallel, memory is shared — which can create contradictions between topic files. There's no automatic process that resolves them for you: if you notice a contradiction, you can edit the markdown files directly or ask Claude to review them."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "compactacion-de-contexto",
+          "title": "Context compaction",
+          "summary": "When a long session approaches the context window limit, Claude Code summarizes the history so work can continue. The /compact command triggers it manually; the PreCompact and PostCompact hooks let you intervene in the process.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "What it is and when it happens",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Context compaction summarizes the current conversation's history to free up room in the context window, without losing the session. It happens in two ways: automatically, when the conversation approaches the available token limit, or manually, when the user runs `/compact` (optionally with instructions on what to prioritize when summarizing)."
+                },
+                {
+                  "type": "callout",
+                  "icon": "💡",
+                  "content": "`/compact` accepts free text after the command to guide the summary — for example, indicating which decisions or modified files are important to preserve and which detail can be discarded. Without instructions, Claude decides what to prioritize."
+                }
+              ]
+            },
+            {
+              "title": "The PreCompact and PostCompact hooks",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Claude Code exposes two hook events around this process: `PreCompact` (before compaction occurs, with matcher `manual` or `auto` depending on the trigger; can block the compaction) and `PostCompact` (after, observational only). A typical use of `PostCompact` is to re-inject context that would be costly to rebuild from the already-summarized history — for example, a reduced version of the project state that a `SessionStart` hook had already loaded at the beginning."
+                }
+              ]
+            },
+            {
+              "title": "How it relates to Auto Memory",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "Compaction summarizes the history of ONE session — it's a short-term mechanism, scoped to the current conversation. Auto Memory is a different mechanism: it persists knowledge across different sessions, in files separate from the transcript. They aren't automatically connected — if something is lost in compaction and was never saved to a memory file, there's no way to recover it within that session."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "auto-dream",
+          "title": "Auto Dream — Memory consolidation",
+          "summary": "Auto Dream reviews and reorganizes Auto Memory files before the accumulation of sessions turns them into noise: relative dates without context, contradictions, stale references, and duplicates.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "The problem: accumulation without organization",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "After many sessions using Auto Memory on the same project, the files Claude accumulates (MEMORY.md and topic files) tend to gather several typical problems: **relative dates without context** (\"yesterday we decided to use Redis\" loses meaning two weeks later), **contradictions** (one note says Express is used, a more recent one says it was migrated to Fastify, and both remain written), **stale references** (debugging notes pointing to files that no longer exist), and **duplicates** (the same quirk noted several times across different sessions)."
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "What starts as a useful notebook that Claude loads every session ends up as noise that confuses Claude and also takes up more context and more tokens than necessary."
+                }
+              ]
+            },
+            {
+              "title": "The metaphor: Auto Memory by day, Auto Dream by night",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Auto Dream consolidates memory similarly to how the human brain consolidates memories during REM sleep — hence the name. Auto Memory is like the brain during the day: it absorbs raw information and takes quick notes. Auto Dream is like the REM cycle: it reviews what's accumulated, reinforces what's relevant, discards what's stale, and organizes the rest."
+                }
+              ]
+            },
+            {
+              "title": "The four phases",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Orientation — Map what exists",
+                      "body": "Scans all existing memory files and builds a map of current knowledge before touching anything.",
+                      "tag": "Read-only"
+                    },
+                    {
+                      "title": "Gather signal — Scan transcripts",
+                      "body": "Searches previous sessions' transcripts (saved in the .claude directory) selectively, not reading them in full: user corrections (\"no, that's wrong\"), design or architecture changes, and recurring patterns.",
+                      "tag": "Selective search"
+                    },
+                    {
+                      "title": "Consolidation — Merge and resolve",
+                      "body": "Converts relative dates to absolute ones, removes contradictory facts (keeps the most recent version), removes stale memories, and merges duplicate entries.",
+                      "tag": "Writes to /memory"
+                    },
+                    {
+                      "title": "Prune and index — Rebuild the index",
+                      "body": "Optimizes MEMORY.md to be concise and reflect the project's real state, without accumulating verbose entries.",
+                      "tag": "Keeps the index lightweight"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "How it activates: a feature flag, not a user setting",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Auto Dream isn't a stable public feature with a documented flag the user controls: it's a server-side feature flag, activated by Anthropic gradually per account or organization, not by the installed Claude Code version. That explains why it doesn't appear in official documentation or the changelog — it was never formally launched as a product feature."
+                },
+                {
+                  "type": "callout",
+                  "icon": "🆕",
+                  "content": "The visible behavior changed even in the short time it's been rolling out: in early versions it appeared as a separate toggle in the `/memory` panel that had to be turned on manually. As of this writing, that toggle no longer appears — Auto Dream activates automatically as soon as Auto Memory is enabled, without the user being able to control it separately. **Check the actual state by running `/memory` on your own installation**: this section describes an undocumented feature flag, so it can go stale faster than the rest of the site."
+                },
+                {
+                  "type": "callout",
+                  "icon": "💤",
+                  "content": "When it runs, the terminal status indicator shows \"Dreaming.\" If you have the `/dream` command available, it triggers it manually; if not, ask for it in natural language (\"consolidate the memory files with Auto Dream\") and Claude will run it anyway. Running `/memory` again afterward lets you see when it last ran."
+                }
+              ]
+            },
+            {
+              "title": "Cost and recommendation",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "Auto Dream consumes tokens — it's real work Claude does with its own algorithms, not free background cleanup. Even so, it's worth keeping active if you use Auto Memory intensively on a large project: without Auto Dream, Auto Memory loses effectiveness over time as contradictory or stale notes pile up."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "como-trabajan-juntos-los-mecanismos",
+          "title": "How the memory mechanisms work together",
+          "summary": "Each mechanism has a different write cadence and a different scope. The most robust setup combines them.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Comparison table",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Layer", "Who writes", "When it's read", "Scope", "Purpose"],
+                  "rows": [
+                    ["CLAUDE.md", "You", "At the start of every session", "Project / user / org", "Authoritative rules, explicit instructions you want reinforced always"],
+                    ["Auto Memory", "Claude", "Index at start, topics on demand", "Per git repository", "What Claude discovers while working: patterns, commands, observed preferences"],
+                    ["Context compaction", "Claude (automatic or via /compact)", "When the conversation approaches the token limit, or on request", "A single session", "Summarize the history so work can continue without losing the session"],
+                    ["Auto Dream", "Claude, on demand (/dream, not active by default)", "When triggered manually", "Per git repository — reorganizes Auto Memory files", "Consolidate Auto Memory: absolute dates, no contradictions, no duplicates"]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "CLAUDE.md vs Auto Memory",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "title": "📄 CLAUDE.md",
+                    "rows": [
+                      { "key": "Writes", "value": "The user, manually" },
+                      { "key": "Contains", "value": "Rules, instructions, context you want repeated every session" },
+                      { "key": "Cadence", "value": "Whenever you decide to update it" },
+                      { "key": "Scope", "value": "Project, user, or organization depending on where it lives" }
+                    ]
+                  },
+                  "right": {
+                    "title": "🌙 Auto Memory",
+                    "rows": [
+                      { "key": "Writes", "value": "Claude while working" },
+                      { "key": "Contains", "value": "What Claude infers: patterns, commands, learnings" },
+                      { "key": "Cadence", "value": "Incremental, every session with durable info" },
+                      { "key": "Scope", "value": "Per worktree / git repository" }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "CLAUDE.md and Auto Memory complement each other: CLAUDE.md is the rules you decide to always reinforce; Auto Memory is what Claude discovers on its own. Neither one organizes the other automatically — that's what Auto Dream is for: if an Auto Memory topic file grows with noise, contradictions, or duplicates, triggering Auto Dream (or asking Claude to consolidate memory) is the way to clean it up without doing it by hand file by file."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "case-facts-persistentes",
+          "title": "\"Case facts\": preserving hard data in long conversations",
+          "summary": "When a conversation is progressively summarized to save context, numeric values, dates, and customer expectations are the first to be lost. The fix is to extract them into a structured block that travels outside the summarized history.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "The risk of progressive summarization",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "In a long session (customer support, research, processing a case), each successive summary of the history tends to condense concrete details into vaguer language. \"The customer requested a $84.50 refund for order #7734, due March 15\" becomes, after two or three summaries, \"the customer had a pending refund claim.\" The exact amount, the order number, and the date — the data that matters for making the right decision — disappear first, precisely because they're the easiest thing to generalize when summarizing."
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "This risk is different from \"lost in the middle\": it's not that the model ignores content located in the middle of the context, but that the summarization process itself destroys the precision of the data before the model ever gets a chance to read it."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "title": "❌ Summarized history only",
+                    "rows": [
+                      { "key": "Turn 1", "value": "\"$84.50 refund, order #7734, due 3/15\"" },
+                      { "key": "Summary after turn 8", "value": "\"The customer had a pending refund claim\"" },
+                      { "key": "Turn 12", "value": "The agent can't confirm the exact amount or order number" }
+                    ]
+                  },
+                  "right": {
+                    "title": "✅ With a case facts block",
+                    "rows": [
+                      { "key": "Persistent block", "value": "{ order_id: \"7734\", amount: 84.50, deadline: \"2025-03-15\", status: \"pending_refund\" }" },
+                      { "key": "History", "value": "Can be summarized freely — the block doesn't depend on it" },
+                      { "key": "Turn 12", "value": "The agent confirms the exact amount and date with no ambiguity" }
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "The pattern: extract transactional facts into a separate block",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The technique consists of maintaining, alongside the conversation history (which can be summarized or compacted), a structured \"case facts\" block that's updated incrementally and included in full in every prompt, without going through the summarization process. This block contains only the data a later decision will need with precision: amounts, dates, IDs, statuses, explicit customer expectations."
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "content": "case_facts = {\n    \"order_id\": \"7734\",\n    \"amount_requested\": 84.50,\n    \"currency\": \"USD\",\n    \"deadline\": \"2025-03-15\",\n    \"status\": \"pending_refund\",\n    \"customer_stated_expectation\": \"full refund before 3/15\",\n}\n\ndef build_prompt(summarized_history, case_facts, new_message):\n    # case_facts always goes in full, outside any summarization\n    facts_block = \"\\n\".join(f\"- {k}: {v}\" for k, v in case_facts.items())\n    return f\"\"\"\nCase facts (always exact, do not summarize):\n{facts_block}\n\nConversation history (may be summarized):\n{summarized_history}\n\nNew customer message:\n{new_message}\n\"\"\"\n\ndef update_case_facts(case_facts, tool_result):\n    # every tool result containing a new fact updates the block\n    # instead of getting buried in the history that gets summarized later\n    if \"refund_amount\" in tool_result:\n        case_facts[\"amount_requested\"] = tool_result[\"refund_amount\"]\n    return case_facts"
+                },
+                {
+                  "type": "callout",
+                  "icon": "💡",
+                  "content": "This same pattern extends to sessions with multiple simultaneous issues: each issue has its own sub-block of facts (order_id, amount, status), and the history summary only needs to track which issue the conversation is on at any given moment — the numbers live separately."
+                }
+              ]
+            },
+            {
+              "title": "What to extract and what to leave in the summarizable history",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Data type", "Where it goes", "Why"],
+                  "rows": [
+                    ["Amounts, order/transaction IDs, deadlines", "Case facts block", "A summary generalizes or loses them; a later decision needs them exact"],
+                    ["Statuses (pending, approved, escalated)", "Case facts block", "They change the flow of the conversation; must remain unambiguous"],
+                    ["Explicit customer expectations (\"I want a human to call me\")", "Case facts block", "They determine whether escalation is warranted; losing them in a summary causes a missed escalation"],
+                    ["Intermediate reasoning, courtesies, small talk", "Summarizable history", "Doesn't affect any later decision; summarizing or dropping it costs nothing"],
+                    ["Full tool results (e.g. 40+ fields from an order lookup)", "Neither — filter beforehand", "Only 4-5 fields are relevant; the rest shouldn't even reach the context"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "Practical rule: if a piece of data appears in the final response the user will receive (an amount, a date, a confirmation), it has to live in the case facts block, not depend on surviving several rounds of conversational history summarization."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "cuando-funciona-bien-y-cuando-no",
+          "title": "When it works well and when it doesn't",
+          "summary": "The memory system has use cases where it shines and important limitations worth knowing so you don't rely on it in unsuitable contexts.",
+          "source": null,
+          "subsections": [
+            {
+              "title": "Use cases and limitations",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "✅ Works well with...",
+                      "body": "Repeated operational habits, preferences corrected over time, build and test commands, recurring debugging patterns, stable architecture decisions."
+                    },
+                    {
+                      "title": "⚠️ Works poorly as...",
+                      "body": "An authoritative policy engine, a knowledge base shared across teams, multi-developer storage, universal retrieval. For those cases, use CLAUDE.md or explicit documentation."
+                    },
+                    {
+                      "title": "🔍 How to review it",
+                      "body": "Run /memory in any session to see the current state, existing files, and (if Auto Dream ran) when the last consolidation happened. You can edit the markdown files directly."
+                    },
+                    {
+                      "title": "⚡ Technical limitations",
+                      "body": "Doesn't sync across machines. Needs periodic review to avoid noise accumulation — without Auto Dream active, nothing cleans up or reorganizes the topic files for you."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

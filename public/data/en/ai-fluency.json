@@ -1,0 +1,1561 @@
+{
+  "id": "ai-fluency",
+  "title": "AI Fluency: Framework & Foundations",
+  "summary": "The 4D framework (Delegation, Description, Discernment, Diligence) from Anthropic Academy's free course, recommended as preparation for the CCAR-F exam.",
+  "sections": [
+    {
+      "id": "af-introduccion",
+      "title": "Introduction to AI Fluency",
+      "articles": [
+        {
+          "id": "af-001",
+          "title": "Why do we need AI Fluency?",
+          "summary": "Having access to a powerful AI isn't the same as knowing how to use it well. This lesson defines what AI Fluency is and introduces the three modes in which people interact with AI systems.",
+          "subsections": [
+            {
+              "title": "The gap between having access and being fluent",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The starting point of this lesson is an important distinction: having **access** to a powerful AI isn't the same as knowing how to **use it well**. Many people already have AI assistants built into their day-to-day for writing, researching, making decisions, or solving problems, but that doesn't guarantee they're getting the most out of it, or that they're doing so safely or responsibly."
+                },
+                {
+                  "type": "text",
+                  "content": "Typical signs of this gap: getting an unexpected response from the AI and not knowing how to proceed, struggling to explain what you actually need (and ending up frustrated), or being unsure what happens to the information you share when using it."
+                }
+              ]
+            },
+            {
+              "title": "What AI Fluency is (and isn't)",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The course defines **AI Fluency** not as technical mastery or memorizing a list of \"best prompts,\" but as a set of skills, knowledge, and values that reinforce each other and evolve as the technology changes."
+                },
+                {
+                  "type": "text",
+                  "content": "Concretely, being fluent with AI means interacting with these systems in a way that is:"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Effective",
+                      "content": "Getting results that genuinely serve the goal you're after."
+                    },
+                    {
+                      "title": "Efficient",
+                      "content": "Without wasting time or effort in the process."
+                    },
+                    {
+                      "title": "Ethical",
+                      "content": "In an honest and responsible way."
+                    },
+                    {
+                      "title": "Safe",
+                      "content": "Protecting your own privacy and security, and that of others."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "The three modes of interacting with AI",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "To explain why fluency requires more than \"knowing how to prompt,\" the course identifies three distinct modes in which people interact with AI, and stresses that understanding these differences is key to knowing when to use each one."
+                },
+                {
+                  "type": "text",
+                  "content": "**1. Automation** — the user already knows exactly what result they want, and simply instructs the AI to execute the task. Examples: asking it to summarize a document, draft an email, generate an image, or put together a travel itinerary. This mode works very well when the end goal is clear from the start, but becomes awkward when the user doesn't yet fully know what they're looking for — because automating requires being able to specify the desired outcome in advance."
+                },
+                {
+                  "type": "text",
+                  "content": "**2. Augmentation** — here the relationship shifts from \"giving an order\" to \"collaborating.\" The AI doesn't execute a predefined task, but instead acts as a thinking partner, back and forth, to explore a problem together with the user. Examples: developing a story character when the author is stuck, working through a complex software architecture problem, or shaping your own ideas on a difficult research topic. The key is that the AI doesn't do the work *for* the user, but helps them think and work *better*. This mode is most useful when the solution isn't obvious in advance and there's a need for room to explore and experiment."
+                },
+                {
+                  "type": "text",
+                  "content": "**3. Agency** — here the AI acts relatively independently, on the user's behalf, over a period of time or in response to situations that weren't anticipated one by one. Examples: an assistant configured to classify incoming emails by topic or urgency and draft reply drafts for the most urgent ones, or an interactive character in a video game that reacts dynamically to each player. The key difference from the other two modes is that the user no longer defines individual actions one by one, but instead establishes the knowledge and behavior patterns the AI will follow on its own."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Screenwriter vs. director",
+                  "content": "The course uses this metaphor for the agency mode: the user stops being a \"screenwriter\" (who writes every exact line) and becomes a \"director\" (who sets a vision and lets the rest resolve within that frame)."
+                }
+              ]
+            },
+            {
+              "title": "No mode is superior — and toward the 4D framework",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The course explicitly clarifies that no mode is inherently better than the others — each serves a different type of situation, and it's actually common to combine all three within the same project (for example, using agency to classify information, augmentation to think through a strategy, and automation to execute tasks that have already been decided)."
+                },
+                {
+                  "type": "text",
+                  "content": "However, it makes an important observation: although many people start out using AI only in automation mode, it's the **augmentation and agency** modes that truly harness the distinctive capabilities of generative AI, and tend to be the ones that lead to the most creative and effective solutions."
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Core idea",
+                  "content": "If AI has stopped being a simple tool and started being able to act as a medium, partner, or co-creator (and sometimes all three at once), then the role of the person using it has also changed, and that demands developing new skills. Those skills are what structure the rest of the course: the **4D** framework (Delegation, Description, Discernment, Diligence)."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "af-framework",
+      "title": "The 4D Framework",
+      "articles": [
+        {
+          "id": "af-002",
+          "title": "The four competencies: Delegation, Description, Discernment, Diligence",
+          "summary": "Regardless of whether you're using AI in automation, augmentation, or agency mode, there are four cross-cutting competencies that determine whether the collaboration is effective, efficient, ethical, and safe.",
+          "subsections": [
+            {
+              "title": "Four competencies, whatever the mode",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Regardless of whether you're working with AI in automation, augmentation, or agency mode, there are four essential competencies that make the difference between an effective collaboration and one that isn't. The course calls them the **four Ds**: Delegation, Description, Discernment, and Diligence."
+                }
+              ]
+            },
+            {
+              "title": "Delegation — the big picture",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The first competency focuses on the big picture: what are you trying to achieve? What types of work are involved? What part should you handle yourself, and where can AI help?"
+                },
+                {
+                  "type": "text",
+                  "content": "The course's example: in a research project, you might decide that your AI assistant reviews lengthy documents and data, and then you have a discussion about the implications and findings — but reserve the critical analysis and final conclusions for yourself."
+                },
+                {
+                  "type": "text",
+                  "content": "Delegating effectively requires three things: understanding your goal and the problem you're solving, recognizing what AI can and can't do well, and thoughtfully dividing the work between you and the AI."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "It's not just about delegating tasks",
+                  "content": "Delegation doesn't mean simply \"offloading work.\" It's about having a clear vision and strategically choosing how AI fits into your process. This thoughtful approach is essential both for the effectiveness and efficiency of the collaboration."
+                }
+              ]
+            },
+            {
+              "title": "Description — clear communication",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The second competency focuses on clear communication with the AI. The course contrasts a vague request like \"make me a logo\" against describing your company's values, target audience, preferred colors, style references, etc. Another example: if you're using an AI as a tutor, you can take the extra step of clarifying \"don't give me the answer, help me work through this problem step by step so I understand the concept better.\""
+                },
+                {
+                  "type": "text",
+                  "content": "Description goes beyond simply writing prompts. It's about having detailed, context-rich conversations that establish: what you expect to achieve, the output format, how you want the AI to approach the task, the context and information the AI might need, and the tone and style of the interaction."
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Key idea",
+                  "content": "Describing effectively means articulating your needs and vision in a way that sets both you and the AI up for the greatest possible collaborative success."
+                }
+              ]
+            },
+            {
+              "title": "Discernment — evaluating what the AI gives back",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The third competency involves thoughtfully evaluating what the AI produces. The course's example: you asked an AI assistant to suggest a marketing strategy. Your discernment kicks in when you evaluate: is the data correct? does the reasoning make sense? are the recommendations aligned with your brand's values and audience? and, above all, does this result actually help you move forward?"
+                },
+                {
+                  "type": "text",
+                  "content": "Discernment relies on your own domain expertise and requires developing the judgment and critical eye to separate what's useful from what isn't, and to recognize when an AI output needs to be refined or discarded outright."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "The Description-Discernment cycle",
+                  "content": "Most interactions with AI form small cycles of description and discernment: describe what you need, evaluate what you get, refine the request, and so on. The course goes deeper into this cycle later on."
+                }
+              ]
+            },
+            {
+              "title": "Diligence — responsible interactions",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The fourth competency focuses on responsibility when interacting with AI. Examples the course raises: if you use AI to draft job descriptions or review applications, how do you ensure fairness and control for potential bias? When making important decisions with AI's help, how do you verify the accuracy of the information presented? Are you protecting sensitive data? Have you considered how to be transparent about the AI's involvement? Are you willing to take responsibility for AI-assisted work you've done?"
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "Key idea",
+                  "content": "Diligence means taking ownership of your AI-assisted work and being willing to stand behind the final products created with its help. It's critical for safe and ethical collaboration with AI."
+                }
+              ]
+            },
+            {
+              "title": "Why these competencies don't expire",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Competency", "Question it answers"],
+                  "rows": [
+                    ["Delegation", "When and how to use AI?"],
+                    ["Description", "How do I communicate clearly with AI?"],
+                    ["Discernment", "How do I evaluate what AI produces?"],
+                    ["Diligence", "How do I use AI responsibly?"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "What makes these competencies valuable",
+                  "content": "Unlike prompting tricks tied to a specific tool or technique that can become obsolete, the four Ds are foundational skills that help you adapt and grow alongside a constantly evolving technology."
+                }
+              ]
+            },
+            {
+              "title": "Practical exercises",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The course proposes three short exercises to put the 4D framework into practice before moving on."
+                },
+                {
+                  "type": "text",
+                  "content": "**Exercise 1 — Apply the 4Ds to a scenario (5 min).** Choose one of three AI collaboration scenarios and think through how you'd apply each of the four competencies:"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Communication project",
+                      "content": "Drafting a series of emails for a marketing campaign together with an AI assistant. Think about what you'd delegate vs. what you'd do yourself, how you'd communicate the tone and success criteria, what you'd use to evaluate the drafts, and what transparency and accountability considerations would apply."
+                    },
+                    {
+                      "title": "Research project",
+                      "content": "Using AI to analyze a large dataset for a paper. Think about how you'd split up the analytical work, what context the AI would need about your research question, how you'd verify the accuracy of the analysis, and what ethical considerations would arise when publishing AI-assisted results."
+                    },
+                    {
+                      "title": "Creative project",
+                      "content": "Collaborating with AI to develop story characters. Think about which creative elements you'd explore together with the AI vs. which you'd develop independently, how you'd guide the AI to fit your story's world, how you'd decide which suggestions to keep or discard, and how you'd acknowledge the AI's contribution in the final work."
+                    }
+                  ]
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Exercise 2 — Explore something you're passionate about (5-10 min)",
+                      "body": "Choose a topic you know well and enjoy (a hobby, a professional interest, a book series) and have a natural conversation about it with Claude, the way you would with someone who shares that interest. The idea is to notice the moments when the AI enhances your thinking, when you need to correct or clarify something it misunderstood, and when your own expertise lets you critically evaluate its responses — that is, putting discernment into practice in a domain where you have expertise."
+                    },
+                    {
+                      "title": "Exercise 3 — Learn something new (5-10 min)",
+                      "body": "Ask Claude to teach you about a topic you're interested in but don't know well, without worrying about prompting \"correctly\" or \"incorrectly.\" The comparison to the previous exercise is the point: here you should notice the moments when explanations help, when examples make something abstract concrete, when the answers flow naturally with your questions, and — unlike the previous exercise — the moments when, lacking your own expertise, it's worth independently verifying what the AI is telling you."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Final reflection",
+                  "content": "Before moving on, the course suggests thinking about: which of the 4Ds do you already feel comfortable with, and which do you need to develop more? Can you recall a recent AI interaction where the framework would have helped? Which 4D framework skills would boost your work or personal projects the most?"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "af-deep-dive-1",
+      "title": "Deep Dive 1: Generative AI Fundamentals",
+      "articles": [
+        {
+          "id": "af-003",
+          "title": "Generative AI Fundamentals",
+          "summary": "What distinguishes generative AI from traditional AI, the three developments that made it possible, and how models like Claude work under the hood.",
+          "subsections": [
+            {
+              "title": "What distinguishes generative AI",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Generative AI refers to systems capable of creating new content, rather than simply analyzing existing data. While traditional AI might classify an email as spam or not spam based on patterns, generative AI can write a brand-new email. The first approach analyzes and categorizes; the second creates something that didn't exist before. That's the underlying shift in AI capabilities."
+                },
+                {
+                  "type": "text",
+                  "content": "Large language models (**LLMs**), like Anthropic's Claude models, are a prominent type of generative AI. They're called \"language\" models because they're trained to predict and generate human language, and \"large\" because they contain billions of parameters — mathematical values that determine how the model processes information, similar to synaptic connections in a brain."
+                }
+              ]
+            },
+            {
+              "title": "The three developments that made today's generative AI possible",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The path to today's generative AI wasn't sudden: it involved three key developments that converged at just the right moment."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "1. Algorithmic and architectural advances",
+                      "content": "Neural networks have existed conceptually for decades, but the development of the transformer architecture in 2017 was a turning point: it allows processing text sequences while maintaining relationships between words across long passages, which is critical for understanding language in context."
+                    },
+                    {
+                      "title": "2. Explosion of digital data",
+                      "content": "The raw material for training these models. Modern LLMs like Claude learn from diverse sources — websites, code repositories, and other texts that represent human knowledge and communication — which gives them a broad, nuanced understanding of both language and concepts."
+                    },
+                    {
+                      "title": "3. Massive increase in compute power",
+                      "content": "Specialized hardware like GPUs and TPUs, along with distributed computing networks (clusters), made it possible to train such complex models on such large amounts of data — something unfeasible just a few years earlier."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Scaling laws and emergent capabilities",
+                  "content": "The combination of these three factors led to an important finding known as **scaling laws**: empirical findings showing that as models grow and train with more data and more compute, their performance improves predictably. Even more surprising: researchers found that entirely new capabilities emerged as models grew — abilities that no one explicitly programmed, like reasoning step by step or adapting to new tasks with minimal instructions."
+                }
+              ]
+            },
+            {
+              "title": "How they work under the hood: pre-training and fine-tuning",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "During initial training, or **pre-training**, models like Claude analyze patterns across billions of text examples — something like reading every available website and text, not just to absorb information, but to understand the statistical relationships between words, phrases, and concepts. In this stage, the model builds something like a complex map of language and knowledge, by being shown text and asked to predict what comes next, refining its predictions over many iterations."
+                },
+                {
+                  "type": "text",
+                  "content": "After pre-training, models go through additional training called **fine-tuning**, where they learn to follow instructions, give helpful responses, and, importantly, avoid generating harmful content. This usually includes human feedback and reinforcement learning, which uses rewards and penalties to steer the model's behavior toward being more helpful, honest, and harmless."
+                }
+              ]
+            },
+            {
+              "title": "Prompt and context window",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Once trained, the model is deployed for you to interact with. When you interact with Claude or another LLM, you give it a **prompt** — text that the model reads and continues based on the patterns it learned during training. The model doesn't retrieve pre-built answers from a database: it generates new text that statistically follows from what you wrote."
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "Context window: the model's working memory",
+                  "content": "There's a practical limit to how much information an LLM can consider at once: the **context window**. It includes your prompts, the model's responses, and any other information shared in the conversation. Although AI companies keep expanding this limit, these limits are a reminder that these systems don't have unlimited access to information and can't use content outside their current context window without specialized tools, like web search."
+                }
+              ]
+            },
+            {
+              "title": "Reflection",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Before moving on, the course suggests thinking about",
+                  "content": "How does understanding the technical fundamentals of these systems (the training data, pre-training, and fine-tuning) change the way you work with them? What ethical considerations arise from knowing how these systems work and what their current limitations are?"
+                }
+              ]
+            },
+            {
+              "title": "What makes modern generative AI powerful",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Massive processing during training",
+                      "content": "Enables learning complex, nuanced patterns of language and knowledge."
+                    },
+                    {
+                      "title": "In-context learning",
+                      "content": "LLMs can adapt to new tasks based on instructions or examples in the prompt, without needing additional training."
+                    },
+                    {
+                      "title": "Emergent capabilities",
+                      "content": "Arise from scale: as models grow, they develop skills that weren't explicitly designed, sometimes surprising even the people who built them."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "af-004b",
+          "title": "Delegation in depth",
+          "summary": "Delegating well depends less on the AI and more on how clearly you understand the problem yourself. Three capabilities: knowing the problem, knowing the tools, and dividing work with judgment.",
+          "subsections": [
+            {
+              "title": "Delegating isn't the same as handing off a task",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Of the four qualities of AI fluency, Delegation mainly targets two: working effectively (reaching the right outcome) and efficiently (without wasting your own or others' time). A common mistake is treating delegation as a binary switch — either I do this myself, or I hand it entirely to the AI — when in practice almost no real task is that simple. The same piece of work, like preparing a report for a client, can have parts that are best fully automated (organizing data into a table), parts best worked on together with the AI (choosing which findings to highlight), and parts best left entirely to humans (the final decision on what to recommend to the client)."
+                }
+              ]
+            },
+            {
+              "title": "Knowing the problem before the tool",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The first capability that needs developing has to do, paradoxically, with yourself rather than the AI: it's about having clarity on what you're trying to solve before thinking about how AI might help. An engineer who isn't clear on whether they're debugging a performance issue or a concurrency issue is going to struggle to ask an AI assistant for specific help, no matter how good the model is — the problem is a lack of their own focus, not the tool."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Knowledge of the problem",
+                  "content": "The people who collaborate best with AI aren't necessarily the best prompters, but those who already have mastery of the problem they're solving — the AI skill comes afterward, built on top of that foundation. Without that clarity, it's not even possible to judge whether an AI response is good or bad, because there's no standard to compare it against."
+                }
+              ]
+            },
+            {
+              "title": "Knowing the available tools",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The second capability is having a mental map, even a rough one, of what AI tools exist and what each is good for. Not every model or configuration performs equally well for everything: a model optimized for fast, cheap responses isn't the best choice for an analysis requiring careful multi-step reasoning, and vice versa — using an extended-reasoning model to autocomplete a routine email wastes both time and cost."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Knowledge of the tools",
+                  "content": "This capability isn't built by reading a spec sheet once, but by using different tools for different types of tasks and paying attention to where they perform well and where they don't. Since the landscape changes often, it's better to treat it as a map that gets updated through practice, not a fixed table memorized once."
+                }
+              ]
+            },
+            {
+              "title": "Dividing the work with judgment",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The third capability is where the previous two combine: with the problem clear and the AI options mapped out, it's time to concretely decide which part of a workflow should be automated without supervision, which part should be worked on back-and-forth with the AI, which part must stay in human hands without exception, and which routine tasks an agent can handle autonomously on your behalf."
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Dividing the work",
+                  "content": "A typical example: in organizing an event, drafting the invitation can be automated (low risk, easy-to-review result), defining the program can be worked out together with the AI by exploring options (a zone of real uncertainty), and the decision of who to invite as keynote speaker stays in human hands (it depends on relationships and context the AI doesn't have). There's no universal rule — the right split depends on the risk of each part and how verifiable the result is."
+                }
+              ]
+            },
+            {
+              "title": "Delegation's three capabilities",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Capability", "What it solves"],
+                  "rows": [
+                    ["Knowledge of the problem", "Being clear on what you're trying to achieve before involving the AI."],
+                    ["Knowledge of the tools", "Knowing what each available AI system can and can't do well."],
+                    ["Dividing the work", "Deciding, task by task, what gets automated, what gets collaborated on, and what stays in human hands."]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "Core idea",
+                  "content": "Delegating well isn't \"letting go of the wheel,\" nor is it refusing to use AI out of distrust — it's deliberately asking the same question for every piece of work: who is in the best position to solve this, and why?"
+                }
+              ]
+            },
+            {
+              "title": "Exercise: map a task of your own with the three capabilities",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Choose a concrete, bounded task",
+                      "body": "Something from your day-to-day that you can describe in two or three sentences: writing a difficult message, preparing an agenda, summarizing a long document."
+                    },
+                    {
+                      "title": "First write, without AI, what the problem actually is",
+                      "body": "What's the real goal behind the task, and how would you know if the result is good. This forces you to practice knowledge of the problem before touching any tool."
+                    },
+                    {
+                      "title": "Deliberately choose an AI tool different from your usual one",
+                      "body": "If you always use the same assistant for everything, try a different configuration or model for this specific task, and notice whether the quality of the result changes."
+                    },
+                    {
+                      "title": "Split the task into 3 to 5 parts and assign each one",
+                      "body": "For each part, decide whether you automate it without reviewing, work on it together, or do it yourself alone — and write down the reason for each decision, not just the decision."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "To think about afterward",
+                  "content": "When reviewing your own split: was there any part you gave to the AI by default, without thinking, that actually deserved more human care? Was there any part you did yourself out of habit that, looking at it critically, the AI could have handled just as well and faster?"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "af-004c",
+          "title": "Guide project: planning with Delegation",
+          "summary": "A multi-step project of your own used as a running practice case throughout the rest of the framework, starting with a full delegation analysis.",
+          "subsections": [
+            {
+              "title": "Why a guide project is worth having",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Practicing each 4D framework competency on a different example each time comes with a cost: you have to re-explain the context from scratch in every exercise, and it's hard to compare your own progress from one lesson to the next. That's why, at this point in the course, it's worth choosing a **multi-step project of your own** to use as a fixed practice case in the upcoming lessons on Description, Discernment, and Diligence — instead of a new project each time, you work on the same one throughout, viewing it from the angle of a different competency in each lesson."
+                },
+                {
+                  "type": "text",
+                  "content": "For this project to serve as a useful practice case, it's worth having it meet three conditions: real variety of tasks (not a single action repeated many times), bounded in time (something you can make progress on in no more than an hour total, not a weeks-long project), and something you genuinely care about the outcome of — if the project doesn't matter to you, the discernment and accountability decisions that come up in future lessons will feel forced."
+                }
+              ]
+            },
+            {
+              "title": "A few project ideas by type of work",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Project type", "Examples"],
+                  "rows": [
+                    [
+                      "Communication",
+                      "Putting together a short presentation on a topic you know well, writing a post that explains something complex to someone without a technical background, preparing a proposal for your own idea."
+                    ],
+                    [
+                      "Analysis",
+                      "Researching the current state of a technology or trend, comparing two or three alternatives (products, approaches, tools), and putting together a well-founded recommendation."
+                    ],
+                    [
+                      "Creative",
+                      "Sketching a short story with a couple of developed characters, or the content outline for a personal website."
+                    ],
+                    [
+                      "Learning",
+                      "Building a study plan for a new skill, or your own guide to a process you already know well."
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Building the project's vision together with the AI",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "With the project chosen, the next step isn't to dive straight into producing content, but to first have a conversation with the AI focused purely on clarifying the vision: what a successful result would look like, and why that particular result would matter to you. Letting the AI ask questions back (instead of just describing the project once) tends to surface assumptions you hadn't made explicit — for example, discovering midway through the conversation that the real goal wasn't actually \"write a guide\" but \"have a specific person understand a specific process,\" which meaningfully changes the expected outcome."
+                }
+              ]
+            },
+            {
+              "title": "Applying Delegation's three capabilities to the whole project",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "With the vision now clear, you repeat the same work-splitting exercise from the previous section, but now over a larger, multi-stage project. First, together with the AI, identify the main tasks needed to complete the project. Then, task by task (not all at once), it's worth asking:"
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "What does this specific task involve?",
+                      "body": "What knowledge, skill, or capability is needed to do it well, before thinking about who does it."
+                    },
+                    {
+                      "title": "What part needs human judgment or context?",
+                      "body": "Sensitivity to the audience, judgment about what's appropriate, decisions with consequences the AI can't fully evaluate."
+                    },
+                    {
+                      "title": "What part is better solved with the AI's help?",
+                      "body": "Generating variants quickly, summarizing lots of material, producing a first draft to work from afterward."
+                    },
+                    {
+                      "title": "Where is it better to work together instead of picking one extreme?",
+                      "body": "Parts where neither fully automating nor doing everything manually performs as well as real back-and-forth between the two."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "Make it a dialogue, not a list of one-sided decisions",
+                  "content": "It's worth resisting the temptation to solve this alone, writing a list of \"this goes to the AI, this doesn't\" without discussing it. The real value shows up when the AI questions one of your own assumptions (for example, suggesting that a part you thought you'd automate actually needs more human judgment than you thought) or when you notice, while talking it through, that a certain task is simpler than you thought and didn't warrant that much caution."
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Save the result",
+                  "content": "The result of this exercise is a concrete plan: the project's task list along with the split decision for each one. It's worth saving, because the upcoming lessons on Description, Discernment, and Diligence pick this same project back up to practice each competency on a case you already know, instead of starting from scratch each time."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "af-005",
+          "title": "Description in depth",
+          "summary": "Describing well to an AI isn't writing a short, clever prompt — it's covering three distinct dimensions: what result you expect, how it should get there, and how it should behave along the way.",
+          "subsections": [
+            {
+              "title": "A short prompt usually fails for what it doesn't say, not what it says",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A common pattern: someone asks an AI assistant \"write me a report on this incident\" and then gets frustrated because the result doesn't work — it lacks the right level of technical detail, has the wrong tone for the audience, or jumps straight to conclusions without showing the reasoning. The problem is almost never that the AI \"didn't understand\"; it's that the request left out information that only existed in the asker's head. Description is the competency that deals with exactly that: closing the gap between what's in your mind and what actually gets expressed in the request."
+                },
+                {
+                  "type": "text",
+                  "content": "It's worth separating this competency into three independent dimensions, because each one fails in a different way and is fixed with a different type of information: what you want to get, how you want it to get there, and how you want the AI to behave while working with you."
+                }
+              ]
+            },
+            {
+              "title": "What you want to get (product)",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The first dimension is the most obvious: precisely defining the final result. Naming the type of deliverable (\"an email,\" \"a summary\") isn't enough — you need to fix its concrete shape: length, format, level of detail, and who it's for. \"Write me a summary\" and \"write me three one-line bullets, meant for someone who's going to read them on their phone before a meeting\" are radically different requests, even though both ask for a \"summary.\""
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Example",
+                  "content": "Asking the AI to review a piece of code can mean very different things depending on what product you're after: finding bugs, suggesting readability improvements, checking compliance with a team convention, or all three at once in separate sections. Without specifying it, the AI picks on its own which of those variants to deliver, and it may not match what was actually needed."
+                }
+              ]
+            },
+            {
+              "title": "How you want it to get there (process)",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The second dimension isn't about the result but the path: what steps to follow, in what order, and based on what information. This tends to be just as decisive as the final request, because two different paths can lead to results of very different quality even when aiming at the same goal."
+                },
+                {
+                  "type": "text",
+                  "content": "There are very different ways to communicate this process guidance: you can give the AI an explicit sequence of steps (first do this, then this other thing), a general criterion it must respect without fixing the exact steps, or a worked example to serve as a model to imitate. What changes case by case is how much process freedom it's worth leaving the AI: for a mechanical, well-understood task, fixed steps are enough; for an ambiguous task, an open criterion may perform better than a rigid procedure poorly suited to a case that wasn't anticipated."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Example",
+                  "content": "Asking the AI to \"prioritize these 15 support tickets\" with no further context leaves it free to choose its own prioritization criterion. Specifying \"prioritize first by impact on paying users, and for equal impact, by ticket age\" fixes the process and makes the result predictable and auditable — you can check whether it followed that criterion or not."
+                }
+              ]
+            },
+            {
+              "title": "How you want the AI to behave (performance)",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The third dimension has to do with the interaction style during the joint work, beyond the final product or the internal process. The same task can need very different behaviors depending on the moment: sometimes it's better for the AI to actively question the asker's assumptions, and other times it's better for it to simply execute without objecting. Sometimes it helps for it to explain its reasoning step by step, and other times that explanation is just noise that lengthens the response without adding anything."
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "Why this dimension gets forgotten so often",
+                  "content": "Of the three dimensions, this is the one most people leave unspecified, because they don't think of the AI as a conversation partner with a configurable \"mode,\" but as a box that returns a fixed output. Treating it as an interactive system — rather than a database that only hands over what's literally asked for — is what lets you make use of this third dimension: explicitly telling it whether you need it to discuss things with you right now or just execute, whether you need depth or brevity, whether you need it to show its reasoning or go straight to the result."
+                }
+              ]
+            },
+            {
+              "title": "The three dimensions in a single request",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Dimension", "Question it answers", "Example applied to reviewing a PR"],
+                  "rows": [
+                    [
+                      "Product",
+                      "What final result do you need?",
+                      "\"I want a list of security issues found in this diff, not a general review.\""
+                    ],
+                    [
+                      "Process",
+                      "How should it get to that result?",
+                      "\"Review the endpoints that receive user input first, and only then the rest of the file.\""
+                    ],
+                    [
+                      "Performance",
+                      "How should it behave while doing it?",
+                      "\"If something looks like a false positive to you, flag it as such instead of omitting it — I'd rather dismiss a doubtful finding myself than miss a real one.\""
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Core idea",
+                  "content": "The three dimensions don't compete with each other — a well-described request almost always touches all three, even briefly. When an AI result disappoints, it's usually worth checking which of the three dimensions was left unspecified, instead of assuming the request \"was already well explained.\""
+                }
+              ]
+            },
+            {
+              "title": "Exercise: diagnose a request that went wrong",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Find a recent interaction that left you unsatisfied",
+                      "body": "A request to an AI (yours or someone else's) where the result didn't work as expected. It doesn't need to be serious, something small and recent is enough."
+                    },
+                    {
+                      "title": "Write down the original request exactly as it was made",
+                      "body": "Word for word, without correcting it yet."
+                    },
+                    {
+                      "title": "Mark which dimension was missing",
+                      "body": "Was the product left unspecified (what exact shape the result should have), the process (how it should get there), or the behavior (how the AI should act during the task)? Often more than one is missing."
+                    },
+                    {
+                      "title": "Rewrite the request covering all three dimensions",
+                      "body": "And if you can, try it again with an AI to compare the result against the original."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "To think about afterward",
+                  "content": "Of the three dimensions (product, process, performance), which one do you tend to omit most often in your own requests? Is it because you assume the AI will \"just figure it out,\" or because in the moment you weren't entirely sure what you needed?"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "af-004",
+          "title": "Capabilities and limitations",
+          "summary": "What LLMs like Claude do especially well, and where their real limits are: knowledge cutoff, hallucinations, context window, non-determinism, and complex reasoning.",
+          "subsections": [
+            {
+              "title": "What LLMs do especially well",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The course suggests thinking about an LLM's strengths and limitations as if it were a new colleague: understanding them helps you collaborate better. Models like Claude are remarkably versatile with language: drafting emails in a particular tone, condensing lengthy reports into clear summaries, translating between languages, or explaining complex topics across very different fields, from microbiology to marketing strategy."
+                },
+                {
+                  "type": "text",
+                  "content": "A notable point is that the same system can move from one task to another without needing additional training — helping write poetry and then, right after, explaining quantum computing or analyzing business trends, all within a simple conversation. They can also keep track of a conversation, remembering what was discussed before and building on it, similar to how a human conversation partner would."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Extension through external tools",
+                  "content": "Many modern LLMs can connect to external tools and information sources — searching the web, processing files, or using other applications — which considerably expands what they can help solve."
+                }
+              ]
+            },
+            {
+              "title": "Knowledge cutoff and hallucinations",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Models are bounded by their training data: they have a **knowledge cutoff** date, the point after which they have no inherent knowledge of the world. It's like someone who went on a retreat with no internet access on a given date: they don't know what happened after they left. To learn about recent developments, the model needs tools like web search."
+                },
+                {
+                  "type": "text",
+                  "content": "In addition, the training process doesn't verify every piece of data in the texts it learns from, so models sometimes reproduce inaccuracies present in that data, or make mistakes when combining learned information. This is what's known as **hallucination**: the AI states something with apparent confidence that sounds plausible but is incorrect. Unlike a search engine, which retrieves existing documents, an LLM generates responses following statistical patterns — and that's where hallucinations can appear."
+                }
+              ]
+            },
+            {
+              "title": "Context window and non-determinism",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "As seen in the previous lesson, every LLM has a maximum limit on the information it can consider in one interaction: the context window. If that limit is exceeded, the model loses the ability to \"remember\" information that fell outside it, typically in a scheme similar to \"first in, first out.\" This can limit its ability to process long documents or recall an entire conversation."
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "Non-determinism (temperature)",
+                  "content": "Unlike traditional software, which gives identical results for the same inputs, LLMs are by default somewhat unpredictable or \"non-deterministic\": the same question can get slightly different answers each time. This comes from the model making probabilistic decisions about what text comes next. That creative variability is useful for brainstorming, but requires care when consistency or accuracy is critical. Many interfaces expose a parameter called **temperature** to control this degree of randomness."
+                }
+              ]
+            },
+            {
+              "title": "Complex reasoning and access to specific data",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Historically, LLMs showed limitations in complex reasoning tasks, particularly multi-step math or logic problems — although more recent reasoning or \"extended thinking\" models, designed to think step by step, show strong progress in this area."
+                },
+                {
+                  "type": "text",
+                  "content": "Finally, although models like Claude can access external tools, they may not have access to the specific data sources or tools a given task requires. It's like having a brilliant colleague who can't access your company's internal database: no matter how capable they are, their help will be limited if they lack that access."
+                }
+              ]
+            },
+            {
+              "title": "Complementary strengths between humans and AI",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The field is moving fast: techniques like retrieval augmented generation (RAG) connect models to external knowledge sources, and tool use and reasoning capabilities keep improving. Even so, some limitations will likely persist in the near future, even without knowing exactly which ones."
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Core idea",
+                  "content": "Understanding what AI can and can't do is essential to AI fluency, and helps decide when and how to effectively incorporate it into work and daily life. The most effective applications leverage complementary strengths: humans bring critical thinking, judgment, creativity, and ethical oversight; AI brings speed, scale, pattern recognition, and the ability to process large volumes of information. These complementary strengths will keep evolving alongside the technology, which is why continuous learning and experimentation have real value."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "af-deep-dive-2",
+      "title": "Deep Dive 2: Effective Prompting Techniques",
+      "articles": [
+        {
+          "id": "af-006",
+          "title": "Effective prompting techniques",
+          "summary": "Prompting isn't a list of trendy tricks: it's the Description competency put into practice. A concrete repertoire of techniques for writing better requests, and a wildcard technique for when none of the others are enough.",
+          "subsections": [
+            {
+              "title": "Prompting is Description in action",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Prompt engineering sounds like a specialized discipline, but at its core it's the practical application of what we already covered in Description: precisely communicating what result you're after, how you expect to get there, and how the AI should behave along the way. The techniques that follow aren't magic rules — they're concrete ways to close the gap between what's in your head and what actually reaches the AI in writing."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "There's no universal technique",
+                  "content": "None of these techniques is always the right one. A one-line request can be perfectly sufficient for a simple, routine task, while an ambiguous or high-stakes task might need several techniques combined. Part of becoming AI-fluent is developing judgment about when it's worth spending extra time on the request and when it isn't."
+                }
+              ]
+            },
+            {
+              "title": "Give background context, not just the instruction",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "An isolated instruction forces the AI to guess information that only you actually have: what the result will be used for, how familiar you are with the topic, and what invisible constraints exist. Adding that background context — even if it seems redundant — usually improves the result more than reformulating the instruction itself."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "label": "Without background context",
+                    "items": [
+                      "\"Explain what a database index is.\""
+                    ]
+                  },
+                  "right": {
+                    "label": "With background context",
+                    "items": [
+                      "\"I'm about to review a junior teammate's PR who added an index to a table with 50 million rows, and I want to be able to explain in the review why that can be risky in production. I know how to code but I've never administered large databases — explain what an index does and what the cost of adding one badly is.\""
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "Show examples instead of (or in addition to) describing",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "When what you're after is a style, a format, or a specific pattern that's easier to recognize than to put into words, showing one or two worked examples tends to work better than trying to describe it with adjectives. This is technically known as **few-shot prompting**."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Example",
+                  "content": "Instead of asking \"convert these technical error messages into language customer support can understand,\" it's better to show two already-converted cases (technical message → plain-language version) and only then ask it to apply the same criterion to a new message. The examples pin down the expected level of simplification better than any abstract description."
+                }
+              ]
+            },
+            {
+              "title": "Set explicit constraints on the result",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Leaving the format, length, or technical constraints of the result unspecified leaves those decisions up to the AI's judgment — which might not match what was actually needed. Fixing those constraints in advance saves an entire round of iteration."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Example",
+                  "content": "\"Write the function in TypeScript, with no external dependencies, with explicit handling of empty array and null value cases, and add the return types — don't use `any` anywhere.\" Each constraint avoids a round of corrections later."
+                }
+              ]
+            },
+            {
+              "title": "Break down into steps when the process matters",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "For tasks where the order in which things are done affects the quality of the result, specifying the sequence of steps keeps the AI from choosing a different path than the one you had in mind. This is sometimes called **chain of thought prompting**: not leaving the reasoning implicit, but guiding it step by step."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "label": "Without breaking it down",
+                    "items": [
+                      "\"Review this database schema and tell me if it's well designed.\""
+                    ]
+                  },
+                  "right": {
+                    "label": "Broken down into steps",
+                    "items": [
+                      "\"Review this schema in this order: first identify whether there's poor normalization, then check whether the data types are appropriate for each column, then evaluate whether the existing indexes cover the most frequent queries, and finally suggest changes prioritized by impact.\""
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "It's not always needed",
+                  "content": "For a simple, well-understood task, breaking it down into steps is extra work. It's better to save this technique for tasks where there are several reasonable ways to proceed and some produce better results than others."
+                }
+              ]
+            },
+            {
+              "title": "Ask it to reason before answering",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Giving the AI explicit room to think before giving the final answer — instead of jumping straight to the result — tends to produce more thorough analyses, especially on tasks with several factors at play. This is different from asking for an explanation after the answer: what matters is that the reasoning happens before committing to a conclusion, not as an after-the-fact justification."
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Additional benefit",
+                  "content": "Seeing the prior reasoning also serves as a diagnostic: if you notice it went off track at some point, you know exactly where to reinforce your Description next time, instead of only knowing that \"the final result didn't work.\""
+                }
+              ]
+            },
+            {
+              "title": "Define the role or criterion it should adopt",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Asking the AI to adopt a specific role or level of expertise noticeably changes what aspects it prioritizes and what assumptions it takes for granted. It's not a cosmetic trick — it genuinely changes what information it brings to the foreground."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Example — security role",
+                      "content": "\"Review this endpoint as if you were an external pentester looking for ways to exploit it, not just someone looking for functional bugs.\""
+                    },
+                    {
+                      "title": "Example — legacy code role",
+                      "content": "\"Suggest the refactor assuming this code will keep running for five more years and will be maintained by people who never wrote it — prioritize clarity over cleverness.\""
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "The wildcard: ask the AI to draft the request for you",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "When you don't even know where to start asking",
+                  "content": "There are situations where the problem isn't picking the right technique, but that you're not even clear on how to put what you need into words. In those cases, describing the situation to the AI in general terms and directly asking it to help you draft the request tends to unblock the conversation faster than continuing to try to formulate it alone."
+                },
+                {
+                  "type": "text",
+                  "content": "Different AI systems perform quite differently at this type of meta-task (helping formulate the request itself), so it's worth treating it as part of your platform-awareness practice: testing how each tool responds when asked to help improve a prompt, not just when asked to solve the final task."
+                }
+              ]
+            },
+            {
+              "title": "The repertoire at a glance",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Technique", "When to use it"],
+                  "rows": [
+                    ["Background context", "When the result depends on information only you have (purpose, audience, level of knowledge)"],
+                    ["Examples (few-shot)", "When the pattern you're after is easier to show than to describe in words"],
+                    ["Explicit constraints", "When there are non-negotiable format, length, or technical requirements"],
+                    ["Break down into steps", "When the order of the process affects the quality of the result"],
+                    ["Ask for prior reasoning", "When the task has several factors at play and the analysis matters as much as the conclusion"],
+                    ["Define role or criterion", "When different expert perspectives would prioritize different things"],
+                    ["Ask for help formulating the request", "When you're not clear on how to put what you need into words"]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Prompting is a process, not a single attempt",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The first request rarely produces exactly what was needed, and that's not a failure — it's the normal starting point of an iteration. When a result doesn't convince you, it's worth first diagnosing what was missing (context? constraints? an example?) before simply repeating the request in different words."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Tends to work", "Tends to fail"],
+                  "rows": [
+                    ["Diagnosing which technique is missing before reformulating everything from scratch", "Repeating the same vague request expecting a different result"],
+                    ["Explicitly asking for variations when the first result isn't entirely convincing", "Piling unrelated tasks into the same conversation"],
+                    ["Giving specific feedback on which part of the previous result didn't work", "Assuming the AI \"should already know\" what was corrected before, without telling it"],
+                    ["Starting a new conversation when the current one has drifted too far", "Insisting on fixing a conversation thread that's already tangled"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Core idea",
+                  "content": "None of these techniques replaces the others — they combine based on what the specific task needs. And since model capabilities change over time, it's worth treating this repertoire as a starting point for experimentation, not a fixed recipe."
+                }
+              ]
+            },
+            {
+              "title": "Exercise: audit a request of your own with the full repertoire",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Choose a real request you made to an AI recently",
+                      "body": "Preferably one whose result didn't leave you fully satisfied."
+                    },
+                    {
+                      "title": "Go through the technique table one by one",
+                      "body": "For each technique in the repertoire, mark whether your original request used it or not — background context, examples, constraints, steps, prior reasoning, role."
+                    },
+                    {
+                      "title": "Choose the two missing techniques that would have the biggest impact",
+                      "body": "No need to apply all seven at once — prioritize the ones that directly address why the previous result didn't work."
+                    },
+                    {
+                      "title": "Rewrite the request and try it again",
+                      "body": "Compare the new result against the original and note what concretely changed."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "To think about afterward",
+                  "content": "Which technique in the repertoire do you almost never use, and why? Is it because you didn't know about it, or because in the moment it didn't occur to you that it applied to that specific task?"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "af-discernment",
+      "title": "Discernment",
+      "articles": [
+        {
+          "id": "af-007",
+          "title": "Discernment in depth",
+          "summary": "Description gets the AI closer to what you're after; Discernment tells you whether what came back actually works. Three angles of evaluation — result, process, and behavior — plus the closing step: turning that evaluation into useful feedback.",
+          "subsections": [
+            {
+              "title": "Accepting a result without reviewing it is the most common failure",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "It's easy to ask an AI for an analysis, get something that sounds reasonable, and move on without questioning it — especially when the result is well-written and presented with confidence. Discernment is the competency that actively pushes back against that reflex: it's the discipline of critically evaluating what the AI delivers, instead of accepting it by default just because it sounds convincing."
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "Verbal fluency isn't the same as accuracy",
+                  "content": "A language model can produce a perfectly written technical explanation with flawless structure that nonetheless contains a factual error or an unjustified logical leap. The quality of the prose isn't evidence of the quality of the content — which is why you need an evaluation criterion separate from the overall impression the text leaves."
+                }
+              ]
+            },
+            {
+              "title": "Product discernment: is the result itself good?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The most direct angle is evaluating the final result on its own: is it correct? is it complete? is it appropriate for the use it's going to get?"
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Example",
+                  "content": "An AI assistant suggests a SQL query for a report. Product discernment is checking whether the query returns the correct data — not whether it \"looks like\" a well-written query, but whether, when run against real data, the result matches what's expected, including edge cases like rows with null values."
+                }
+              ]
+            },
+            {
+              "title": "Process discernment: does the reasoning hold up?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A final result that's correct by chance, with flawed reasoning behind it, is a hidden risk: it can fail on the next similar case. Process discernment looks at the path, not just the destination — whether there are logical leaps, whether relevant information was ignored, or whether the reasoning rests on an assumption that was never verified."
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Example",
+                  "content": "When asked to diagnose why an endpoint is slow, an AI can reach the correct conclusion (\"missing an index\") via a flawed path (assuming without checking that the table has a certain number of rows). If that assumption isn't confirmed, the same diagnostic technique can fail the next time it's applied to a different case."
+                }
+              ]
+            },
+            {
+              "title": "Performance discernment: does the interaction itself work?",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Beyond the result and the reasoning, it's worth evaluating how the interaction itself went: does the AI respond well to corrections, or does it repeat the same mistake after you've pointed it out? Is the level of detail what you needed, or do you constantly have to ask it to be more concise or more thorough?"
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Example",
+                  "content": "If, in a debugging session, the AI keeps proposing the same already-dismissed solution after being told why it doesn't apply, that's a sign of weak performance — independent of whether any individual suggestion turned out to be useful."
+                }
+              ]
+            },
+            {
+              "title": "Closing the loop: turning evaluation into feedback",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Spotting a problem isn't enough if it doesn't translate into a concrete correction. Useful feedback names the specific problem (not \"this is wrong\" but exactly what's failing), explains why it matters, and suggests what to change."
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "Sometimes the problem isn't Description",
+                  "content": "When Discernment catches a recurring problem, the first instinct is usually to improve the request's description — but sometimes the real problem is further back, in the choice of tool or approach itself (Delegation). Insisting on better describing a request that the tool simply can't solve well is wasted effort."
+                }
+              ]
+            },
+            {
+              "title": "The three angles combined",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Angle", "What it evaluates", "Quick question"],
+                  "rows": [
+                    ["Product discernment", "The final result itself", "Is it correct and sufficient for the use I'm going to give it?"],
+                    ["Process discernment", "The reasoning behind the result", "Does it hold up, or did it get there by chance?"],
+                    ["Performance discernment", "The quality of the interaction", "Does it respond well when I correct it?"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Core idea",
+                  "content": "Discernment and Description feed each other: Description communicates what's needed, Discernment evaluates whether it was met, and that evaluation feeds back into the next description. Without that active cycle, the final call on what's acceptable ends up, by default, in the AI's hands."
+                }
+              ]
+            },
+            {
+              "title": "Exercise: evaluate three answers on something you have expertise in",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Choose a topic where you have real expertise",
+                      "body": "Something from your work, studies, or a hobby where you'd be able to spot an error even if it's well written."
+                    },
+                    {
+                      "title": "Ask an AI for three different answers on the same specific aspect of the topic",
+                      "body": "For example, three ways of explaining the same technical concept, or three analyses of the same problem."
+                    },
+                    {
+                      "title": "Evaluate each one with the three angles",
+                      "body": "Product: does it have errors only someone with your expertise would notice? Process: does the reasoning hold up, or are there unjustified shortcuts? Performance: does it use the field's terminology correctly?"
+                    },
+                    {
+                      "title": "Give specific feedback on the weakest one",
+                      "body": "Name the specific problem (not \"it's wrong,\" but exactly what) and ask for a corrected version."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "To think about afterward",
+                  "content": "How much of what you caught depended on your specific expertise in the topic? How would you evaluate the same answer if you knew nothing about the field — what indirect signals (internal coherence, consistency, apparent precision) would you use in that case?"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "af-description-discernment-loop",
+      "title": "The Description-Discernment Loop",
+      "articles": [
+        {
+          "id": "af-008",
+          "title": "The Description-Discernment loop in practice",
+          "summary": "Description and Discernment aren't applied once and done: they repeat in a cycle, task by task, across an entire project. How to apply that cycle to the guide project defined in the Delegation lesson.",
+          "subsections": [
+            {
+              "title": "From theory to a concrete project",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "So far, Description and Discernment have been covered separately, each with its own isolated examples. The natural next step is to stop viewing them as two independent techniques and instead see them working together, in a cycle, on a real multi-step piece of work — specifically, on the **guide project** defined while practicing Delegation."
+                },
+                {
+                  "type": "text",
+                  "content": "The goal isn't simply to \"finish the project,\" but to notice the work pattern itself: how a clear description enables a clear evaluation, and how that evaluation feeds back into the next description, round after round, until reaching a result that neither human intervention alone nor unsupervised AI would have produced separately."
+                }
+              ]
+            },
+            {
+              "title": "Before starting: revisit the work split",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "It's worth first going back to the task-splitting plan defined in the Delegation lesson and briefly reviewing it: which parts had been planned for automation, which for working together with the AI, and which for exclusively human handling. If anything has changed since then — a task turned out simpler or more delicate than expected — this is the moment to adjust the plan before executing, not midway through."
+                }
+              ]
+            },
+            {
+              "title": "Fix in advance how each task will be described",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Before starting to produce content, it helps to plan with the AI how the three Description dimensions will be covered for the project as a whole, instead of improvising them task by task on the fly:"
+                },
+                {
+                  "type": "table",
+                  "headers": ["Dimension", "What's worth fixing before executing"],
+                  "rows": [
+                    ["Product", "What concrete shape each project deliverable will have: format, length, level of detail."],
+                    ["Process", "Whether there's a particular method or sequence of steps that should be followed for the project's more complex tasks."],
+                    ["Performance", "What kind of interaction fits this specific project: does it need the AI to question ideas, or execute without objecting? Conciseness or depth?"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Talk it through, don't just decide it alone",
+                  "content": "It's worth discussing these three questions directly with the AI when starting the project, rather than settling them alone in writing beforehand — the conversation itself tends to reveal plan ambiguities that weren't obvious until they were put into words."
+                }
+              ]
+            },
+            {
+              "title": "The cycle that repeats on each task",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "With the approach already agreed on, the work moves forward task by task, repeating the same four-step sequence on each one:"
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Describe the specific task",
+                      "body": "Covering what's needed, how to approach it, and what type of interaction fits that specific case."
+                    },
+                    {
+                      "title": "Evaluate what the AI gives back",
+                      "body": "Using Discernment's three angles: whether the result itself works, whether the reasoning holds up, and whether the interaction was productive."
+                    },
+                    {
+                      "title": "Give concrete feedback and refine",
+                      "body": "Name the specific problem detected, adjust the description if more precision was needed, and ask for a new iteration."
+                    },
+                    {
+                      "title": "Bring your own final judgment",
+                      "body": "Decide what from the result gets kept, what gets modified, and what gets discarded — the final call stays in human hands, not in the AI's last response."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "It's not a single step",
+                  "content": "This four-step cycle repeats on every task in the project, not just once at the start. A project with several tasks means several full turns of the cycle, not one initial description followed by a single review at the end."
+                }
+              ]
+            },
+            {
+              "title": "To think about when finishing the project",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "Reflection",
+                  "content": "What kind of descriptions (more detailed, more open-ended, with examples) got better results on this specific project? What took more effort in practice, describing precisely or evaluating with judgment? How did the actual execution end up comparing to the original split plan from the Delegation lesson, and what adjustments did you make along the way?"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "af-diligence",
+      "title": "Diligence",
+      "articles": [
+        {
+          "id": "af-009",
+          "title": "Diligence in depth",
+          "summary": "The other three competencies aim for better results; Diligence aims for that work to be ethically and safely sustainable. Three fronts of responsibility: which tool you work with, how transparent you are about its role, and what you stand behind once published.",
+          "subsections": [
+            {
+              "title": "Final responsibility is never the AI's",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Delegation, Description, and Discernment aim to get better results with AI. Diligence is different: it doesn't aim for a better result, but for the way of getting there to be defensible — ethically, legally, and professionally. The underlying premise is simple but easy to forget under time pressure: whoever signs off on, publishes, or delivers a piece of work is responsible for it, no matter how much an AI was involved in the process. \"The AI generated it\" isn't a valid defense against an error."
+                }
+              ]
+            },
+            {
+              "title": "Which tool you work with and how you use it",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The first front has to do with decisions made even before writing the first prompt: which AI system to use, and what information to share with it. Pasting a public code snippet into an AI assistant isn't the same as pasting credentials, customer data, or information under a confidentiality agreement — and that distinction depends on understanding the data policy of the tool being used, and whether the use is allowed under your own organization's policies."
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Example",
+                  "content": "Before pasting a production stack trace that includes a real customer's data into an AI assistant, it's worth asking whether that tool retains the data you enter to train future models, and whether company policy allows sharing that kind of information with external services."
+                }
+              ]
+            },
+            {
+              "title": "How transparent you are about the AI's role",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The second front is honesty about how much the AI was involved in a given piece of work, toward those who have a right to know. Different contexts have different thresholds: using AI to check the spelling of an internal message probably needs no disclosure at all, but delivering a technical analysis where the AI generated a large part of the substantive content does warrant transparency with whoever is going to use it to make a decision."
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Example",
+                  "content": "If a significant part of an architecture report was written with AI assistance, explicitly disclosing that to the people who are going to decide based on that report isn't a courtesy gesture — it gives them context on how critical it is that they review it before acting on those conclusions."
+                }
+              ]
+            },
+            {
+              "title": "What you stand behind once you publish it",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The third front is the most concrete: once an AI-assisted result goes out into the world (it's published, delivered, executed), responsibility for it being correct falls on whoever shares it, not on the tool that helped produce it. This means verifying concrete data and claims before taking them as given, not just trusting that \"it sounded reasonable.\""
+                },
+                {
+                  "type": "callout",
+                  "variant": "warning",
+                  "title": "Example",
+                  "content": "A team that uses AI to generate the draft of a database migration script is still responsible for testing it against a staging environment before running it in production — the same controls that would apply if the script had been written end-to-end by a person on the team."
+                }
+              ]
+            },
+            {
+              "title": "The three fronts combined",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Front", "Question it answers"],
+                  "rows": [
+                    ["Choice and use of the tool", "Is it appropriate to use this AI with this information, in this context?"],
+                    ["Transparency about its role", "Who needs to know how much the AI was involved in this result?"],
+                    ["Responsibility for what's published", "Have I verified this enough to stand behind it with my name?"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "Core idea",
+                  "content": "There's no universal manual that resolves these three fronts for every context — what's reasonable on a personal project may not be in a regulated environment. That's why it's worth developing your own criteria, consistent with the policies of the organization you work in, instead of deciding case by case with no underlying standard."
+                }
+              ]
+            },
+            {
+              "title": "Exercise: audit the diligence of a recent piece of work",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Choose a recent piece of work where you used AI substantively",
+                      "body": "Not a quick lookup, but something with real weight: a report, a piece of production code, an important communication."
+                    },
+                    {
+                      "title": "Review the first front",
+                      "body": "What information did you share with the AI? Was there anything there that, in hindsight, you shouldn't have shared with that particular service?"
+                    },
+                    {
+                      "title": "Review the second front",
+                      "body": "Did whoever received or used that result know how much the AI was involved? If they didn't, should they have?"
+                    },
+                    {
+                      "title": "Review the third front",
+                      "body": "What did you verify before accepting the result as good? If something had been wrong, would you have caught it with the level of review you did?"
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "To think about afterward",
+                  "content": "Of the three fronts, which one do you tend to let slide with the least care, and why? Would your answer change if the work in question had more serious legal, financial, or safety consequences than your example?"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "af-conclusion",
+      "title": "Conclusion & Certificate",
+      "articles": [
+        {
+          "id": "af-010",
+          "title": "Course conclusion",
+          "summary": "A final recap of the 4Ds, the key takeaways from each competency, and the closing exercises: talking with Claude about the framework and building your own personal AI-use policy.",
+          "subsections": [
+            {
+              "title": "Recap of the four competencies",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The course closes with a recap of the AI Fluency framework's four core competencies."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Competency", "In one sentence"],
+                  "rows": [
+                    ["Delegation", "Deciding what work the AI does, what you do, and what you do together — combining understanding of the problem, knowledge of the AI's capabilities, and judgment for splitting the work."],
+                    ["Description", "Clearly communicating what you want (product), how to approach it (process), and how you want the AI to behave (performance) to guide it toward the results you need."],
+                    ["Discernment", "Critically evaluating the AI's output (product), reasoning (process), and behavior (performance), to ensure quality and fit."],
+                    ["Diligence", "Choosing AI systems with judgment (creation), being transparent about their role (transparency), and taking responsibility for the final result (deployment)."]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "info",
+                  "title": "The 4Ds apply to all three interaction modes",
+                  "content": "These four competencies aren't specific to one mode of use: they apply equally in Automation (the AI executes specific tasks per your instructions), Augmentation (you and the AI collaborate as thinking partners), and Agency (the AI is configured to act relatively independently on your behalf)."
+                }
+              ]
+            },
+            {
+              "title": "The essence of each competency, in one idea",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Delegation",
+                      "content": "Before splitting work with an AI, you need clarity on your own problem — AI fluency doesn't replace domain expertise, it builds on it."
+                    },
+                    {
+                      "title": "Description",
+                      "content": "Most disappointing results come from information left unsaid, not from an AI that \"didn't understand.\" Covering what's wanted, how to get there, and how to behave closes that gap."
+                    },
+                    {
+                      "title": "Discernment",
+                      "content": "A well-written result isn't the same as a correct result. Evaluating the product, the process, and the interaction itself is what keeps you from accepting by default something that doesn't hold up."
+                    },
+                    {
+                      "title": "Diligence",
+                      "content": "Final responsibility for what's published or delivered never transfers to the tool. Choosing well what to work with, being transparent, and verifying before standing behind it are part of the work, not an optional step."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "variant": "success",
+                  "title": "It's not a standard of perfection, it's a practice",
+                  "content": "These four competencies aren't acquired all at once by reading about them — they're sharpened through repeated use, adjusting your own judgment as both the problems you face and the available tools change. The realistic goal isn't applying them perfectly from day one, but gradually building them into a working habit."
+                }
+              ]
+            },
+            {
+              "title": "An honest closing note on AI's limits",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "It's worth closing with something already covered in the capabilities-and-limitations lesson, but that deserves reemphasis: today's AI systems are genuinely powerful tools, not universal solutions that solve any problem just by asking. How useful and safe they turn out to be depends heavily on how they're used — on the Delegation, Description, Discernment, and Diligence decisions made around them, not just on how advanced the model itself is."
+                }
+              ]
+            },
+            {
+              "title": "Exercise: ask the AI for a self-diagnosis",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A useful way to close out the framework review is to have an open conversation with an AI about how to apply it to your own situation, instead of leaving it as a theoretical outline. Some possible conversation threads:"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "Apply it to your own work",
+                      "content": "Describe your own type of work or study and ask the AI to help think through concrete examples of Delegation, Description, Discernment, and Diligence applied to that specific context."
+                    },
+                    {
+                      "title": "Honest self-diagnosis",
+                      "content": "Ask the AI to give you honest feedback, based on how the conversation has gone so far, on which competency seems strongest and which needs more practice."
+                    },
+                    {
+                      "title": "Review a recent case of your own",
+                      "content": "Bring a real, recent AI interaction that didn't go as expected, and analyze it together through the lens of the four competencies to identify where it broke down."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Exercise: build a personal AI-use policy",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The second closing exercise is building, with the help of an AI as a thinking partner (not simply asking it for an already-made list of rules), a set of concrete personal guidelines for working with AI responsibly."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Set information boundaries",
+                      "body": "What kind of information you'll never share with an AI assistant (customer data, credentials, confidential information) and in what contexts it's worth checking the tool's data policy before using it."
+                    },
+                    {
+                      "title": "Set your own verification standard",
+                      "body": "What level of review you apply before accepting an AI-assisted result as good, based on the risk of the context — an internal draft isn't the same as something published or run in production."
+                    },
+                    {
+                      "title": "Set a transparency standard",
+                      "body": "In what situations you'll explicitly disclose that an AI was involved in a piece of work, and at what level of detail, based on who's going to use it and for what."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

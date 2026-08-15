@@ -1,0 +1,708 @@
+{
+  "title": "MCP",
+  "sections": [
+    {
+      "title": "Fundamentals",
+      "articles": [
+        {
+          "id": "mcp-que-es",
+          "title": "What is MCP?",
+          "summary": "An open protocol for connecting Claude Code to databases, browsers, APIs, and repositories without leaving the session",
+          "subsections": [
+            {
+              "title": "Definition",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "MCP (Model Context Protocol) standardizes how language models connect to external systems. Claude Code uses it to access tools beyond the local filesystem — securely, declaratively, and without interrupting the workflow."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "🧩 Extensible by design",
+                      "body": "Any tool with an MCP server integrates the same way — databases, cloud services, internal APIs, automated browsers."
+                    },
+                    {
+                      "title": "🔒 Credentials under control",
+                      "body": "The three scopes let you decide precisely which credentials the team shares and which stay personal, without mixing them."
+                    },
+                    {
+                      "title": "⚡ Tool Search: no overhead",
+                      "body": "Claude Code loads tool definitions on demand, not all at once. Minimal impact on the context window even with several servers connected."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "By the numbers",
+              "blocks": [
+                {
+                  "type": "stats",
+                  "items": [
+                    {
+                      "value": "On demand",
+                      "label": "Tool Search loads a tool's schema right when it's about to be invoked, not all of them upfront"
+                    },
+                    {
+                      "value": "3",
+                      "label": "scopes to control each server's visibility"
+                    },
+                    {
+                      "value": "Minimal",
+                      "label": "impact on the context window as more connected servers are added (per official docs — no exact figure published)"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Commands",
+      "articles": [
+        {
+          "id": "mcp-agregar",
+          "title": "Adding servers",
+          "summary": "Commands to register MCP servers across different scopes and transports",
+          "subsections": [
+            {
+              "title": "stdio server (local, default)",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "claude mcp add playwright -- npx -y @playwright/mcp --headless"
+                }
+              ]
+            },
+            {
+              "title": "Remote HTTP server",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "claude mcp add --transport http github https://api.githubcopilot.com/mcp"
+                }
+              ]
+            },
+            {
+              "title": "With environment variables",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "claude mcp add -e API_KEY=xxx -e DB_URL=yyy myserver -- npx my-server"
+                }
+              ]
+            },
+            {
+              "title": "From raw JSON",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Useful for complex configurations with multiple arguments:"
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "claude mcp add-json postgres '{\"command\":\"npx\",\"args\":[\"-y\",\"@mcp/postgres\"],\"env\":{\"DB\":\"$DATABASE_URL\"}}'"
+                }
+              ]
+            },
+            {
+              "title": "With explicit scope",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "claude mcp add --scope project shared-db -- npx @mcp/postgres\nclaude mcp add --scope user brave -- npx @brave/brave-search-mcp-server\nclaude mcp add --scope local secret-tool -- npx my-private-server"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mcp-gestionar",
+          "title": "Managing servers",
+          "summary": "List, inspect, and remove registered MCP servers",
+          "subsections": [
+            {
+              "title": "Management commands",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "# List all servers and their status\nclaude mcp list\n\n# Inspect a specific server (config + connection status)\nclaude mcp get playwright\n\n# Remove a server\nclaude mcp remove playwright\n\n# Remove from a specific scope (if it exists in several)\nclaude mcp remove --scope project playwright"
+                }
+              ]
+            },
+            {
+              "title": "Command quick reference",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Command", "Description", "Useful flags"],
+                  "rows": [
+                    ["mcp add <name> -- <cmd>", "Adds a stdio server to the local scope", "--scope, -e KEY=VAL, --transport"],
+                    ["mcp add --transport http <name> <url>", "Adds an HTTP/remote server", "--scope project to share"],
+                    ["mcp add-json <name> '<json>'", "Adds from literal JSON configuration", "Useful for configs with multiple args"],
+                    ["mcp list", "Lists servers and connection status", "Shows scope, status, errors"],
+                    ["mcp get <name>", "Inspects a server's config and status", "—"],
+                    ["mcp remove <name>", "Removes a server", "--scope if it exists in several"],
+                    ["mcp add-from-claude-desktop", "Imports servers from Claude Desktop", "Imports to local scope by default"]
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "mcp-sesion",
+          "title": "In-session commands",
+          "summary": "The /mcp command for managing servers during an interactive session",
+          "subsections": [
+            {
+              "title": "MCP management panel",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "# Open the MCP management panel (also handles OAuth 2.1)\n/mcp\n\n# Enable / disable a server for this session\n/mcp enable playwright\n/mcp disable playwright\n\n# Enable / disable all\n/mcp enable all\n/mcp disable all"
+                },
+                {
+                  "type": "callout",
+                  "kind": "info",
+                  "content": "The `/mcp` command also drives the OAuth 2.1 flow for remote servers that require authentication."
+                }
+              ]
+            },
+            {
+              "title": "Import from Claude Desktop",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "claude mcp add-from-claude-desktop"
+                },
+                {
+                  "type": "text",
+                  "content": "Useful for migrating an existing Claude.app configuration. Imports to local scope by default. Imported servers can be moved to a different scope afterward."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Scopes",
+      "articles": [
+        {
+          "id": "mcp-scopes",
+          "title": "Where each server lives",
+          "summary": "The three scopes determine who can see an MCP server and in which projects it's available",
+          "subsections": [
+            {
+              "title": "The three scopes",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The scope determines who can see an MCP server and in which projects it's available. Choosing it correctly avoids leaking credentials to the team or forcing every developer to reconfigure the same thing."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Scope", "Flag", "File", "Who", "Projects", "Git"],
+                  "rows": [
+                    ["Local", "--scope local", "~/.claude.json (by project path)", "You only", "Only the current project", "Not versioned"],
+                    ["Project", "--scope project", ".mcp.json at the project root", "Whole team", "Only this project", "Committed to the repo"],
+                    ["User", "--scope user", "~/.claude.json (global)", "You only", "All your projects", "Not versioned"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "kind": "info",
+                  "content": "If the same server name is defined in more than one scope, the resolution order is: **local → project → user** (first one wins)."
+                }
+              ]
+            },
+            {
+              "title": "Local scope (default)",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "You only, this project only. The default scope when nothing is specified. Ideal for experimenting with a new server or when the credentials are yours, not the team's."
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "# --scope local is implicit\nclaude mcp add playwright -- npx -y @playwright/mcp --headless\n\n# With personal credentials\nclaude mcp add -e PERSONAL_TOKEN=$MY_TOKEN internal-tool -- npx my-tool"
+                }
+              ]
+            },
+            {
+              "title": "Project scope (team)",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The whole team, in this project. Stored in `.mcp.json` and versioned with Git. Credentials go in as `$VAR` references, never as literal values."
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "# Team server: stored in .mcp.json and committed\nclaude mcp add --scope project github --transport http https://api.githubcopilot.com/mcp\n\n# With an environment variable reference (the real value isn't committed)\nclaude mcp add --scope project -e DB_URL=$DATABASE_URL postgres -- npx @mcp/postgres\n\n# Each team dev has their own DATABASE_URL variable\n# The server is shared, the credentials aren't"
+                }
+              ]
+            },
+            {
+              "title": "User scope (global)",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "You only, across all your projects. Personal tools you always use, regardless of the project."
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "# Available across all your projects\nclaude mcp add --scope user brave-search -- npx -y @brave/brave-search-mcp-server\n\n# Personal productivity tools\nclaude mcp add --scope user obsidian -- npx @obsidian/mcp-server\nclaude mcp add --scope user linear -- npx @linear/mcp-server"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Transports",
+      "articles": [
+        {
+          "id": "mcp-transportes",
+          "title": "Stdio vs HTTP",
+          "summary": "The transport defines how Claude Code communicates with the MCP server",
+          "subsections": [
+            {
+              "title": "Comparison",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "label": "stdio — Recommended for local",
+                    "items": [
+                      "The server runs as a child process of the shell",
+                      "Communication via stdin/stdout — no network",
+                      "Inherits environment variables from the shell",
+                      "Minimal latency (local process)",
+                      "No OAuth or additional tokens required",
+                      "Only works on the local machine"
+                    ]
+                  },
+                  "right": {
+                    "label": "HTTP — Recommended for remote",
+                    "items": [
+                      "The server runs in the cloud or on your own infrastructure",
+                      "Connection via HTTPS with OAuth 2.1",
+                      "Centralized server shareable with the team",
+                      "Accessible from any machine",
+                      "Requires authentication configuration",
+                      "Higher latency than stdio"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "OAuth 2.1 flow for HTTP servers",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Add the HTTP server",
+                      "description": "The server is registered but still has no access token."
+                    },
+                    {
+                      "title": "Start authentication with /mcp",
+                      "description": "From the interactive session, /mcp detects that the server needs auth and opens the OAuth 2.1 flow in the browser."
+                    },
+                    {
+                      "title": "Authorize in the browser",
+                      "description": "The browser opens the provider's authorization page (GitHub, Atlassian, etc.). The user approves the requested permissions."
+                    },
+                    {
+                      "title": "Token saved automatically",
+                      "description": "Claude Code receives the access token and stores it securely. Future sessions reuse the token without asking for authorization again (until it expires)."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "lang": "bash",
+                  "content": "# 1. Register the HTTP server\nclaude mcp add --scope project github --transport http https://api.githubcopilot.com/mcp\n\n# 2. Start auth from the session\n/mcp"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Tool Search",
+      "articles": [
+        {
+          "id": "mcp-tool-search",
+          "title": "Lazy loading of tools",
+          "summary": "How Claude Code loads tool definitions on demand to reduce context consumption",
+          "subsections": [
+            {
+              "title": "The problem with traditional MCP clients",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Most MCP clients load every tool definition from every server at the start of each session. Connecting 5 servers with 20 tools each injects the schemas of all 100 tools into the context — regardless of whether they'll be used. This can consume tens of thousands of tokens just for definitions."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "label": "🐌 Other MCP clients",
+                    "items": [
+                      "100% of definitions loaded at startup",
+                      "All schemas in context from the very first message",
+                      "Consumption grows linearly with each added server",
+                      "10 servers = saturated context before starting"
+                    ]
+                  },
+                  "right": {
+                    "label": "⚡ Claude Code with Tool Search",
+                    "items": [
+                      "Only the schema of the tools that will actually be invoked gets loaded",
+                      "Minimal impact on the context window (per official docs, no exact figure published)",
+                      "Multiple servers can be connected without saturating the window",
+                      "Token cost scales much less with the number of servers"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "title": "How it works",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Registering available servers",
+                      "description": "When the session starts, Claude Code registers the connected servers but doesn't load their tools. It only knows they exist."
+                    },
+                    {
+                      "title": "On-demand search",
+                      "description": "When the task requires a specific capability, Claude Code searches among the available servers for one that can cover it — similar to a semantic search over the server's metadata."
+                    },
+                    {
+                      "title": "Loading the specific schema",
+                      "description": "Only the schema of the tool about to be invoked gets loaded. The rest of the tools from the same server and from other servers stay out of the context."
+                    },
+                    {
+                      "title": "Invocation and result",
+                      "description": "The tool is invoked with the correct parameters and the result is integrated into the context. The schema can be unloaded from the context afterward if it's no longer needed."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Configuration",
+      "articles": [
+        {
+          "id": "mcp-configuracion",
+          "title": "The .mcp.json file",
+          "summary": "The shared MCP server configuration for teams lives in .mcp.json at the project root",
+          "subsections": [
+            {
+              "title": "Full configuration",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "json",
+                  "label": ".mcp.json",
+                  "content": "{\n  \"mcpServers\": {\n    \"playwright\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@playwright/mcp\", \"--headless\"]\n    },\n    \"github\": {\n      \"type\": \"http\",\n      \"url\": \"https://api.githubcopilot.com/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer $GITHUB_TOKEN\"\n      }\n    },\n    \"postgres\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@modelcontextprotocol/server-postgres\"],\n      \"env\": {\n        \"POSTGRES_CONNECTION_STRING\": \"$DATABASE_URL\"\n      }\n    }\n  }\n}"
+                }
+              ]
+            },
+            {
+              "title": "Environment variables in .mcp.json",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Environment variables can be used in these fields:"
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "✅ Allowed",
+                      "body": "command, args (any element in the array), url, headers (values), env (values). Supported syntax: $VAR and ${VAR}."
+                    },
+                    {
+                      "title": "❌ Forbidden",
+                      "body": "Pasting tokens directly into .mcp.json. Committing .mcp.json with hardcoded secrets. Using literal sensitive values in headers."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "lang": "json",
+                  "label": "With custom headers and variables",
+                  "content": "{\n  \"mcpServers\": {\n    \"internal-api\": {\n      \"type\": \"http\",\n      \"url\": \"https://api.internal.company.com/mcp\",\n      \"headers\": {\n        \"Authorization\": \"Bearer ${API_TOKEN}\",\n        \"X-Team-ID\": \"${TEAM_ID}\",\n        \"X-Environment\": \"development\"\n      }\n    }\n  }\n}"
+                },
+                {
+                  "type": "callout",
+                  "kind": "warning",
+                  "content": "If a referenced variable doesn't exist when the session starts, Claude Code reports a missing-variable warning (visible in `claude mcp list`) and uses the literal unexpanded text `${VAR}` as-is — it doesn't omit it or replace it with an empty string. In practice, this almost always makes the connection fail (for example, a URL with a literal `${VAR}` is invalid)."
+                }
+              ]
+            },
+            {
+              "title": "Popular servers",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": ["Server", "Package / URL", "Description"],
+                  "rows": [
+                    ["🐘 PostgreSQL", "@modelcontextprotocol/server-postgres", "SQL queries, schema inspection, explain plans."],
+                    ["🎭 Playwright", "@playwright/mcp", "Browser automation, screenshots, E2E testing."],
+                    ["🐙 GitHub", "api.githubcopilot.com/mcp", "Issues, PRs, repos, code search. HTTP + OAuth."],
+                    ["🔍 Brave Search", "@brave/brave-search-mcp-server", "Real-time web search from the session."],
+                    ["📋 Linear", "mcp.linear.app/sse", "Issues, projects, cycles. HTTP + OAuth 2.1."],
+                    ["📁 Filesystem", "@modelcontextprotocol/server-filesystem", "Access to specific directories outside the project."]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Error handling",
+      "articles": [
+        {
+          "id": "mcp-errores-estructurados",
+          "title": "Structured error responses",
+          "summary": "MCP's isError flag is just the starting point. Categorizing the error and marking whether it's retryable is what lets the agent make the correct recovery decision.",
+          "subsections": [
+            {
+              "title": "Why 'Operation failed' isn't enough",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "MCP defines an isError: true flag so a server can tell the client that a tool call failed, instead of returning a raw exception. But that flag alone doesn't tell the agent what to do next: a network timeout, invalid input, a business policy violation, and a denied permission are completely different errors that require completely different responses. A generic message like \"Operation failed\" forces the agent to guess."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Category", "Example", "Retryable?", "Expected agent action"],
+                  "rows": [
+                    ["transient", "Network timeout, service momentarily unavailable", "Yes", "Retry automatically, with backoff if there are several attempts"],
+                    ["validation", "Invalid date format, missing required field", "No (without fixing the input)", "Fix the parameter and retry with a valid value"],
+                    ["permission", "Token without sufficient scope, resource outside the allowed root", "No", "Don't retry — inform the user or escalate, never keep insisting with the same token"],
+                    ["business", "Refund above the policy limit, suspended account", "No", "Explain the reason to the user; consider escalating to a human, don't retry"]
+                  ]
+                },
+                {
+                  "type": "code",
+                  "lang": "python",
+                  "content": "# Poorly designed MCP response: says nothing actionable\n{\"isError\": True, \"content\": [{\"type\": \"text\", \"text\": \"Operation failed\"}]}\n\n# Well-designed MCP response: structured metadata + readable explanation\n{\n    \"isError\": True,\n    \"content\": [{\n        \"type\": \"text\",\n        \"text\": json.dumps({\n            \"errorCategory\": \"business\",\n            \"isRetryable\": False,\n            \"message\": \"The requested amount ($650) exceeds the auto-approval limit ($500) without supervisor review.\",\n            \"suggestedAction\": \"escalate_to_human\",\n        })\n    }]\n}"
+                },
+                {
+                  "type": "callout",
+                  "icon": "⚠️",
+                  "content": "A `business` or `permission` error marked as retryable can make the agent insist on the same action several times without anything changing — it wastes turns and, in the worst case, produces a retry pattern that reads like an agent bug. The `isRetryable` field cuts off that loop at the root."
+                }
+              ]
+            },
+            {
+              "title": "Access failures vs. valid empty results",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A subtle but critical distinction: when a search tool finds nothing, that isn't an error. A lookup_customer that finds no customer with that email succeeded — the correct response is \"no results,\" not a failure. Confusing the two leads to two opposite anti-patterns: treating a legitimate empty result as if it were a failure (and retrying pointlessly), or — worse — having the server return an empty list as a successful response when there was actually a timeout or connection error, hiding the real failure."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "title": "✅ Valid empty result",
+                    "rows": [
+                      { "key": "isError", "value": "false" },
+                      { "key": "Content", "value": "{ results: [], query: \"customer@mail.com\" }" },
+                      { "key": "Meaning", "value": "The search ran correctly; there simply are no matches" },
+                      { "key": "Agent action", "value": "Inform the user the record wasn't found, ask for an alternate identifier" }
+                    ]
+                  },
+                  "right": {
+                    "title": "❌ Access failure disguised as success",
+                    "rows": [
+                      { "key": "isError", "value": "false (incorrect)" },
+                      { "key": "Content", "value": "{ results: [] } — but there was actually a silenced timeout" },
+                      { "key": "Meaning", "value": "The server suppressed the error and disguised it as 'no results'" },
+                      { "key": "Consequence", "value": "The agent assumes the customer doesn't exist when the search actually never completed" }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "icon": "🎯",
+                  "content": "Design rule: an MCP server should never convert an internal exception into a successful empty result to \"simplify\" the response. If the search couldn't run, it's isError: true with category transient or permission. If it ran and found nothing, it's isError: false with an empty array. These are semantically distinct states and must remain distinguishable to the agent."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Security",
+      "articles": [
+        {
+          "id": "mcp-seguridad",
+          "title": "What to know before connecting a server",
+          "summary": "Security considerations, permissions, and best practices for MCP servers",
+          "subsections": [
+            {
+              "title": "Risks to consider",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "🔑 Never hardcode credentials",
+                      "body": ".mcp.json gets committed to the repo. Any token included directly stays exposed in the git history forever. Always use $VAR references."
+                    },
+                    {
+                      "title": "⚠️ Prompt injection via tool result",
+                      "body": "A compromised MCP server can return content designed to manipulate Claude's behavior. Verify the source of third-party servers before using them in project scope."
+                    },
+                    {
+                      "title": "🌐 HTTP servers: review which domains you allow",
+                      "body": "Adding an HTTP server means letting Claude Code send data to that domain. With sandboxing, add the domain to allowedDomains."
+                    },
+                    {
+                      "title": "🔐 OAuth 2.1: least privilege",
+                      "body": "OAuth tokens are stored locally. If the token has broad scopes (write access to every repo in an org), configure servers with the least-privilege principle."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Permissions for MCP servers",
+              "blocks": [
+                {
+                  "type": "code",
+                  "lang": "json",
+                  "label": "Block an entire server",
+                  "content": "{\n  \"permissions\": {\n    \"deny\": [\"mcp__puppeteer\"]\n  }\n}\n// Pattern: mcp__<server-name>"
+                },
+                {
+                  "type": "code",
+                  "lang": "json",
+                  "label": "Allow only specific tools",
+                  "content": "{\n  \"permissions\": {\n    \"allow\": [\n      \"mcp__github__list_issues\",\n      \"mcp__github__get_issue\",\n      \"mcp__github__list_prs\"\n    ],\n    \"deny\": [\"mcp__github\"]\n  }\n}\n// Pattern: mcp__<server>__<tool-name>"
+                },
+                {
+                  "type": "code",
+                  "lang": "json",
+                  "label": "Block only destructive tools",
+                  "content": "{\n  \"permissions\": {\n    \"deny\": [\n      \"mcp__github__delete_repository\",\n      \"mcp__github__delete_branch\"\n    ]\n  }\n}\n// The rest of the server's tools remain available"
+                }
+              ]
+            },
+            {
+              "title": "Best practices",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "title": "🔒 Scope by sensitivity",
+                      "body": "Servers with team credentials → project scope (with $VAR references). Personal or experimental credentials → local or user scope."
+                    },
+                    {
+                      "title": "⚡ Start with local scope",
+                      "body": "Test the server in local scope first. Once verified it works and exposes nothing sensitive, promote it to project scope for the team."
+                    },
+                    {
+                      "title": "📦 Version without secrets",
+                      "body": "Committing .mcp.json standardizes the team's configuration — but only if every sensitive value is a $VAR reference. Document the required variables in the README."
+                    },
+                    {
+                      "title": "🔍 Audit periodically",
+                      "body": "claude mcp list shows all servers and their status. Review regularly for obsolete servers or expired credentials."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Security checklist",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "kind": "warning",
+                  "content": "**Before adding an MCP server to project scope:**\n\n- Never hardcode tokens or secrets in .mcp.json — always $VAR references.\n- Project scope for team servers, local scope for experiments and personal credentials.\n- The SSE transport is deprecated — use HTTP with OAuth 2.1 for remote servers.\n- Use `deny: [\"mcp__server\"]` to block entire servers, or `mcp__server__tool` for specific tools.\n- With sandboxing active, add the HTTP server's domain to allowedDomains or the server will fail.\n- `~/.claude.json` (MCP local/user scope) ≠ `.claude/settings.local.json` (project settings). They're different files."
+                }
+              ]
+            },
+            {
+              "title": "Tool design: bounded capability, not absolute",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The most expensive design mistake in an MCP server isn't a configuration one but a surface-area one: exposing a single tool of absolute capability — a `run_command` that accepts any string and executes it, or undifferentiated read/write access to an entire database — instead of a bounded set of capabilities with an explicit contract. With auto-execute as the default permission, that tool shifts all containment control onto the model, which doesn't know the approval policy of whoever invoked it."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "label": "Absolute-capability tool ❌",
+                    "items": [
+                      "A single `run_command` or full database access, without distinguishing the operation",
+                      "The model decides how far to go — the application has no control point",
+                      "Read and write, or query and delete, share the same approval",
+                      "Auditing what ran requires parsing the command string after the fact"
+                    ]
+                  },
+                  "right": {
+                    "label": "Contract-bounded tools ✅",
+                    "items": [
+                      "Separate capabilities (`check_stock`, `update_stock`, `delete_record`)",
+                      "Each tool declares its own permission — granular via `mcp__server__tool`",
+                      "Destructive operations stay in `ask` or `deny` without affecting read operations",
+                      "The name of the invoked tool is already the audit record"
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "kind": "warning",
+                  "icon": "🌀",
+                  "content": "There is no Anthropic-documented native guardrail against recursion or loops inside an MCP server — for example, a tool that internally calls itself again with no stop condition. The only containment mechanisms are operational, not design-level: a per-server timeout (`timeout` field in `.mcp.json`, in milliseconds) and an output-size cap (`MAX_MCP_OUTPUT_TOKENS`, on the order of 25,000 tokens per call by default). Neither stops a single-step destructive call; they only bound how much time or text an already-occurring failure can consume. Validating the server in a sandbox before production and setting the timeout explicitly isn't optional — it's the only safety net that exists for this case."
+                },
+                {
+                  "type": "code",
+                  "lang": "json",
+                  "label": "Explicit per-server timeout — the only safety net against a loop",
+                  "content": "{\n  \"mcpServers\": {\n    \"inventory\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@mcp/inventory\"],\n      \"timeout\": 30000\n    }\n  }\n}"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

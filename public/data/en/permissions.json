@@ -1,0 +1,501 @@
+{
+  "title": "Permissions",
+  "description": "Granular control over what Claude Code can do: modes, rules, configuration, and sandboxing.",
+  "sections": [
+    {
+      "title": "The Permissions system",
+      "articles": [
+        {
+          "id": "permisos-pipeline",
+          "title": "The evaluation pipeline",
+          "summary": "Before executing any tool, the SDK walks through five steps in order. The first step that resolves the decision wins — the rest aren't evaluated.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Every time Claude wants to use a tool, the SDK evaluates a chain of five decisions. Order matters: a deny rule can block something even if the active mode is `bypassPermissions`."
+            },
+            {
+              "type": "steps",
+              "items": [
+                {
+                  "title": "Hooks",
+                  "body": "Run first. They can approve, deny, or pass the decision to the next step. They can also modify the tool call before it executes. Always run, no exceptions."
+                },
+                {
+                  "title": "Deny rules",
+                  "body": "`disallowed_tools` and the deny rules in `settings.json` are checked. If there's a match, the tool is blocked **even under `bypassPermissions`**. Highest priority."
+                },
+                {
+                  "title": "Permission mode",
+                  "body": "The active mode is applied. `bypassPermissions` approves everything that reaches this point. `acceptEdits` approves file operations. The other modes pass to the next step."
+                },
+                {
+                  "title": "Allow rules",
+                  "body": "`allowed_tools` and the allow rules in `settings.json` are checked. If the tool is listed, it's approved automatically without calling the callback."
+                },
+                {
+                  "title": "canUseTool callback",
+                  "body": "If nothing above resolved the decision, your callback is called for runtime approval. In `dontAsk` mode this step is skipped and the tool is **denied**."
+                }
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "tip",
+              "title": "Order matters",
+              "content": "Deny rules are evaluated **before** the permission mode. This means you can use `bypassPermissions` while still blocking specific tools with `disallowed_tools` — something `allowed_tools` can't do in that mode."
+            }
+          ]
+        },
+        {
+          "id": "permisos-modos",
+          "title": "The six permission modes",
+          "summary": "Each mode defines a global behavior for tools not resolved by hooks, deny rules, or allow rules. It's configured at startup or changed dynamically during streaming.",
+          "blocks": [
+            {
+              "type": "table",
+              "headers": ["Mode", "Auto-approves", "Calls canUseTool", "Deny rules", "Execution", "Risk"],
+              "rows": [
+                ["`default`", "No", "Yes", "Applies", "Full", "Low"],
+                ["`dontAsk`", "Only allowedTools", "No", "Applies", "Full", "Low"],
+                ["`acceptEdits`", "Only files", "For the rest", "Applies", "Full", "Medium"],
+                ["`bypassPermissions`", "Everything", "No", "Applies", "Full", "High"],
+                ["`plan`", "No", "No", "Applies", "Read-only", "None"],
+                ["`auto`", "ML classifier", "If the classifier passes", "Applies", "Full", "Variable"]
+              ]
+            },
+            {
+              "type": "cards",
+              "title": "What each mode means",
+              "items": [
+                {
+                  "title": "default",
+                  "description": "Standard mode. Doesn't auto-approve anything. Every tool not resolved by allow rules reaches the `canUseTool` callback. Ideal starting point."
+                },
+                {
+                  "title": "dontAsk",
+                  "description": "Turns any permission prompt into a silent denial. Tools that aren't pre-approved are rejected without calling `canUseTool`. Defines a fixed surface."
+                },
+                {
+                  "title": "acceptEdits",
+                  "description": "Auto-approves all file operations within the working directory. Claude edits code freely. Bash commands and other tools still require approval."
+                },
+                {
+                  "title": "bypassPermissions",
+                  "description": "Approves every tool without prompts. Claude has full system access. Hooks and deny rules remain effective. Only for controlled environments."
+                },
+                {
+                  "title": "plan",
+                  "description": "Completely prevents tool execution. Claude analyzes and creates detailed plans, but makes no changes. `AskUserQuestion` is still available."
+                },
+                {
+                  "title": "auto",
+                  "description": "A model classifier evaluates each tool call and decides whether to approve it. Available in the Agent SDK in both TypeScript and Python. Reduces friction without opening everything up with `bypassPermissions`."
+                }
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "Inheritance in subagents with bypassPermissions",
+              "content": "When you use `bypassPermissions`, all subagents inherit this mode and **it cannot be overridden**. Subagents can have different system prompts and less restricted behavior. Enabling it gives them full autonomous access to the system."
+            }
+          ]
+        },
+        {
+          "id": "permisos-allow-deny",
+          "title": "Allow & Deny rules: declarative control",
+          "summary": "allowed_tools and disallowed_tools add entries to the approval and denial lists. They don't control which tools exist — they control whether they're auto-approved.",
+          "blocks": [
+            {
+              "type": "compare",
+              "title": "allowed_tools vs disallowed_tools",
+              "left": {
+                "label": "allowed_tools ✅",
+                "items": [
+                  "Listed tools are auto-approved without going through `canUseTool`",
+                  "Unlisted ones still fall through to the permission mode and the callback",
+                  "Doesn't restrict `bypassPermissions` — unlisted tools are still approved in that mode",
+                  "Use it together with `dontAsk` for a minimal surface"
+                ]
+              },
+              "right": {
+                "label": "disallowed_tools 🚫",
+                "items": [
+                  "Listed tools are **always** denied",
+                  "Takes priority over any mode, including `bypassPermissions`",
+                  "It's the only way to guarantee a tool never runs",
+                  "A bare deny (`Bash`) hides the tool from Claude's context"
+                ]
+              }
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "Common trap",
+              "content": "`allowedTools: [\"Read\"]` together with `permissionMode: \"bypassPermissions\"` **restricts nothing**. Unlisted tools aren't denied — they still fall through to the mode, where `bypassPermissions` approves all of them. For a minimal surface, use `dontAsk` + `allowedTools`, not `bypassPermissions` + `allowedTools`."
+            },
+            {
+              "type": "code",
+              "lang": "javascript",
+              "label": "Recommended combinations",
+              "content": "// Headless agent with minimal surface\nconst options = {\n  allowedTools: [\"Read\", \"Glob\", \"Grep\"],\n  permissionMode: \"dontAsk\" // everything else: denied\n};\n\n// bypassPermissions with Bash explicitly blocked\n// allowed_tools does NOT work for this — you need disallowed_tools\nconst options = {\n  permissionMode: \"bypassPermissions\",\n  disallowedTools: [\"Bash\"] // guarantees blocking even under bypass\n};"
+            },
+            {
+              "type": "code",
+              "lang": "json",
+              "label": ".claude/settings.json — declarative per-project rules",
+              "content": "{\n  \"permissions\": {\n    \"allow\": [\"Read\", \"Grep\"],\n    \"deny\": [\"Bash\", \"Write\"],\n    \"ask\": [\"Edit\"]\n  }\n}"
+            }
+          ]
+        },
+        {
+          "id": "permisos-dinamico",
+          "title": "Dynamic mode switching",
+          "summary": "You can change the permission mode while streaming is active. The new mode takes effect immediately. This enables progressive-trust patterns.",
+          "blocks": [
+            {
+              "type": "steps",
+              "items": [
+                {
+                  "title": "Start restrictive",
+                  "body": "Begin with `plan` or `default`. Claude analyzes the code and proposes what it would change. You review the plan before anything executes."
+                },
+                {
+                  "title": "Evaluate the proposal",
+                  "body": "If the plan looks good and the changes are within the expected scope, you call `setPermissionMode(\"acceptEdits\")` so it proceeds with the edits."
+                },
+                {
+                  "title": "Escalate if needed",
+                  "body": "If the agent needs system commands in addition to editing files, you can escalate to `bypassPermissions` right at that point — in an isolated environment where you trust the operations."
+                },
+                {
+                  "title": "Lock down if something goes out of scope",
+                  "body": "You can go back to `dontAsk` to cut off access immediately if the agent attempts something outside what was expected."
+                }
+              ]
+            },
+            {
+              "type": "code",
+              "lang": "python",
+              "label": "Python — progressive trust",
+              "content": "async def main():\n    q = query(\n        prompt=\"Refactor the auth module\",\n        options=ClaudeAgentOptions(\n            permission_mode=\"plan\",  # starts without execution\n        ),\n    )\n    # Claude analyzes and proposes — you review the plan\n    await q.set_permission_mode(\"acceptEdits\")  # ok, let it edit\n    async for message in q:\n        if hasattr(message, \"result\"):\n            print(message.result)"
+            },
+            {
+              "type": "code",
+              "lang": "javascript",
+              "label": "TypeScript — progressive trust",
+              "content": "async function main() {\n  const q = query({\n    prompt: \"Refactor the auth module\",\n    options: { permissionMode: \"plan\" } // starts without execution\n  });\n  // Claude analyzes and proposes — you review the plan\n  await q.setPermissionMode(\"acceptEdits\"); // ok, let it edit\n  for await (const message of q) {\n    if (\"result\" in message) console.log(message.result);\n  }\n}"
+            },
+            {
+              "type": "callout",
+              "variant": "tip",
+              "title": "The most effective pattern",
+              "content": "Start with `plan` for complex or high-impact tasks. Once the plan convinces you, switch dynamically to `acceptEdits` or `default` so it executes. You get the best of both worlds: thoroughness while planning, speed while executing."
+            }
+          ]
+        },
+        {
+          "id": "permisos-comportamiento",
+          "title": "How Claude thinks depending on the mode",
+          "summary": "Each mode doesn't just change which tools Claude can use — it changes its reasoning strategy. This dimension is less obvious but just as important.",
+          "blocks": [
+            {
+              "type": "compare",
+              "title": "default vs plan: two philosophies",
+              "left": {
+                "label": "default — act to understand",
+                "items": [
+                  "Has a safety net: can run intermediate steps and correct course",
+                  "Acts incrementally without needing much prior context",
+                  "Opens the file, reads, edits, corrects along the way",
+                  "Context builds up as it goes"
+                ]
+              },
+              "right": {
+                "label": "plan — understand to act",
+                "items": [
+                  "The plan is the final product — can't fix mistakes by running more steps",
+                  "Explores, seeks additional context, asks questions before committing",
+                  "Proposes the complete plan at once, with all the necessary changes",
+                  "More thorough in the upfront analysis"
+                ]
+              }
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "The analogy",
+              "content": "**default** = the agile developer: starts coding, hits an error, fixes it, moves on. If something goes wrong, there's a `git reset`.\n\n**plan** = the surgeon: studies the X-rays, reviews the history, and plans every incision before touching the patient. No room to improvise in the operating room."
+            },
+            {
+              "type": "table",
+              "headers": ["Mode", "Reasoning strategy"],
+              "rows": [
+                ["`default`", "Acts incrementally. Uses execution as feedback to correct course."],
+                ["`dontAsk`", "Designs the approach around the tools available. Doesn't attempt what it knows is blocked."],
+                ["`acceptEdits`", "Flows through code edits, but pauses when it needs to leave the filesystem. Prefers edit-based solutions."],
+                ["`bypassPermissions`", "More direct decisions, chains operations without interruptions. Maximum efficiency, minimum caution."],
+                ["`plan`", "Explores before committing. The plan is the final product — needs to be confident before proposing it."],
+                ["`auto`", "Proposes granular, well-justified operations, because each one goes through independent classifier evaluation."]
+              ]
+            },
+            {
+              "type": "cards",
+              "title": "When does each strategy make sense?",
+              "items": [
+                {
+                  "title": "Use default when…",
+                  "description": "The task is concrete and bounded, you can supervise the changes as they happen, and you're in a repo with git — mistakes are reversible."
+                },
+                {
+                  "title": "Use plan when…",
+                  "description": "You want to review the scope before anything is touched, the task affects many files, or the changes are hard or costly to revert."
+                },
+                {
+                  "title": "Use dontAsk when…",
+                  "description": "You have a headless agent with predefined tools and want zero human intervention at runtime."
+                },
+                {
+                  "title": "Use acceptEdits when…",
+                  "description": "You're prototyping quickly in an isolated directory and trust Claude's edits, but want oversight for system commands."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "permisos-sintaxis",
+          "title": "Advanced syntax and trap cases",
+          "summary": "Tool specifiers let you approve or block specific invocations, not just entire tools. The interaction between tools creates non-obvious scenarios.",
+          "blocks": [
+            {
+              "type": "code",
+              "lang": "javascript",
+              "label": "Base specifier syntax",
+              "content": "// Two ways to specify a rule\n// Tool ← blocks/allows every invocation of the tool\n// Tool(specifier) ← blocks/allows only invocations that match\n\nBash              // every Bash invocation\nBash(npm run build)  // exactly that command\nBash(npm run *)      // any npm run ...\nRead(.env)           // read any .env at any depth\nRead(/src/**/*.ts)   // read .ts under /src/ relative to project root\nWebFetch(domain:api.example.com)  // fetch only to that domain"
+            },
+            {
+              "type": "code",
+              "lang": "javascript",
+              "label": "Glob patterns for Bash — * matches spaces too",
+              "content": "// * in Bash rules matches any sequence, including spaces\n\"Bash(npm run *)\"      // npm run build, npm run test, npm run dev...\n\"Bash(* --version)\"    // node --version, python --version...\n\"Bash(git * main)\"     // git checkout main, git merge main...\n\n// Critical difference: space before the *\n\"Bash(ls *)\"   // ✓ ls -la  ✗ lsof  ← word boundary from the space\n\"Bash(ls*)\"    // ✓ ls -la  ✓ lsof  ← no boundary\n\n// A trailing :* is equivalent to space + *\n\"Bash(ls:*)\"   // equivalent to \"Bash(ls *)\""
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "Safety with shell operators",
+              "content": "Claude Code understands `&&`, `||`, `;`, `|`, `|&`, `&`, and newlines — and evaluates each subcommand separately. A `Bash(safe-cmd *)` rule doesn't give it permission to run `safe-cmd && evil-cmd`. Claude Code parses the full command, splits it into subcommands, and evaluates each part independently. If any subcommand lacks permission, the entire compound command is blocked."
+            },
+            {
+              "type": "code",
+              "lang": "javascript",
+              "label": "Paths for Read and Edit — prefixes and anchor points",
+              "content": "// The path prefix determines the anchor point:\n//   //path  → absolute path from filesystem root\n//   ~/path  → relative to the home directory\n//   /path   → relative to the project root\n//   path    → relative to the current directory\n\nRead(//Users/alice/.ssh/**)  // absolute — double slash\nRead(~/.zshrc)               // home\nEdit(/src/**/*.ts)           // project root\nRead(*.env)                  // current directory\n\n// .env is special: matches at any depth\nRead(.env)      // equivalent to Read(**/.env)\nRead(//**/.env) // any .env across the whole filesystem\n\n// ⚠️ Trap: Read(/Users/alice/file) is NOT absolute\n// It's relative to the project root. For absolute: Read(//Users/alice/file)"
+            },
+            {
+              "type": "table",
+              "headers": ["Trap", "Config that fails", "Why", "Robust config"],
+              "rows": [
+                ["Deny Read but not Bash", "`deny: [\"Read(.env)\"]`", "`cat .env` run from Bash doesn't use the Read tool", "Also add `deny: [\"Bash(cat *.env)\"]`"],
+                ["WebFetch with restricted domain", "`allow: [\"WebFetch(domain:api.internal.com)\"]`", "Bash can use `curl` or `wget` to reach any URL", "Add `deny: [\"Bash(curl *)\", \"Bash(wget *)\"]`"],
+                ["allowed_tools + bypassPermissions", "`allowedTools: [\"Read\"], permissionMode: \"bypassPermissions\"`", "Unlisted tools aren't denied — bypass approves all of them", "Use `dontAsk` instead of `bypassPermissions`"],
+                ["Bare deny vs. specifier", "`deny: [\"Bash\"]`", "Claude doesn't see the tool in its context — it can't even propose it", "Use `deny: [\"Bash(rm *)\"]` if you only want to block specific commands"]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "permisos-settings",
+          "title": "Configuration in settings.json",
+          "summary": "Rules are defined declaratively in .claude/settings.json and apply to the whole project. There are five precedence levels — deny always wins across levels.",
+          "blocks": [
+            {
+              "type": "code",
+              "lang": "json",
+              "label": ".claude/settings.json — full configuration",
+              "content": "{\n  \"defaultMode\": \"default\",\n  \"permissions\": {\n    \"allow\": [\n      \"Bash(npm run *)\",\n      \"Bash(git commit *)\",\n      \"Bash(* --version)\",\n      \"WebFetch(domain:api.github.com)\"\n    ],\n    \"ask\": [\n      \"Bash(git push *)\"\n    ],\n    \"deny\": [\n      \"Bash(rm -rf *)\",\n      \"Bash(curl *)\",\n      \"Read(//**/.env)\"\n    ]\n  }\n}"
+            },
+            {
+              "type": "code",
+              "lang": "json",
+              "label": "Read-only agent — can explore, never modify",
+              "content": "{\n  \"defaultMode\": \"dontAsk\",\n  \"permissions\": {\n    \"allow\": [\n      \"Read\",\n      \"Bash(ls *)\", \"Bash(find * -type f)\",\n      \"Bash(grep *)\", \"Bash(cat *)\",\n      \"Bash(git log *)\", \"Bash(git diff *)\", \"Bash(git status)\"\n    ],\n    \"deny\": [\n      \"Edit\", \"Write\",\n      \"Bash(git commit *)\", \"Bash(git push *)\",\n      \"Bash(rm *)\", \"Bash(curl *)\", \"Bash(wget *)\"\n    ]\n  }\n}"
+            },
+            {
+              "type": "code",
+              "lang": "json",
+              "label": "Controlling MCP servers and subagents",
+              "content": "{\n  \"permissions\": {\n    \"allow\": [\n      \"mcp__github__create_issue\",\n      \"mcp__github__list_issues\",\n      \"Agent(Explore)\"\n    ],\n    \"deny\": [\n      \"mcp__puppeteer\",\n      \"Agent(Plan)\"\n    ]\n  }\n}"
+            },
+            {
+              "type": "steps",
+              "items": [
+                {
+                  "title": "Managed settings",
+                  "body": "MDM / server-managed. Cannot be overridden by any other level. If a tool is denied here, nothing can allow it."
+                },
+                {
+                  "title": "Command line args",
+                  "body": "`--allowedTools` / `--disallowedTools`. Temporary per-session overrides. Take precedence over any settings.json."
+                },
+                {
+                  "title": "Local project settings",
+                  "body": "`.claude/settings.local.json` — not committed. For personal overrides you don't want to share with the team."
+                },
+                {
+                  "title": "Shared project settings",
+                  "body": "`.claude/settings.json` — committed. The team's rules that apply to every developer on the project."
+                },
+                {
+                  "title": "User settings",
+                  "body": "`~/.claude/settings.json` — global for the user. Applies to every project. Useful for personal cross-project rules."
+                }
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "Cross-level deny",
+              "content": "If `user settings` has a deny and `project settings` has an allow for the same tool, **deny wins**. It doesn't matter which one is \"higher\" in the hierarchy — a deny rule from any level blocks the tool. Only managed settings can ignore rules from lower levels with `allowManagedPermissionRulesOnly: true`."
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "Pre-approved Bash commands (read-only built-in)",
+              "content": "Claude Code has a built-in list of commands that run without a prompt in any mode: `ls`, `cat`, `echo`, `pwd`, `head`, `tail`, `grep`, `find`, `wc`, `which`, `diff`, `stat`, `du`, `cd`, plus the read-only forms of `git` (the official documentation doesn't enumerate every one — `git log`, `git status`, and `git diff` are examples, but there are more like `git show`). You don't need to list them in `allowedTools`. If you want to block one, explicitly add `deny: [\"Bash(cat *)\"]`."
+            }
+          ]
+        },
+        {
+          "id": "permisos-sandboxing",
+          "title": "Sandboxing",
+          "summary": "Sandboxing sits one level below permissions: it restricts at the OS level what Bash commands can touch — filesystem and network — regardless of which tools are allowed.",
+          "blocks": [
+            {
+              "type": "compare",
+              "title": "Without sandboxing vs. With sandboxing",
+              "left": {
+                "label": "Without sandboxing ❌",
+                "items": [
+                  "Every Bash command requires manual approval",
+                  "Approval fatigue: repeated clicking without reading carefully",
+                  "Claude can't work autonomously",
+                  "Prompt injection can exfiltrate data"
+                ]
+              },
+              "right": {
+                "label": "With sandboxing ✅",
+                "items": [
+                  "Limits defined up front, fewer prompts",
+                  "Claude works freely within the sandbox",
+                  "Applies to every subprocess: kubectl, npm, terraform…",
+                  "Immediate notification if something tries to escape the boundary"
+                ]
+              }
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "Effective sandboxing requires both layers",
+              "content": "Without network isolation, a compromised agent can exfiltrate sensitive files like SSH keys. Without filesystem isolation, it can backdoor system resources to gain network access. The two restrictions complement each other — configuring only one leaves gaps."
+            },
+            {
+              "type": "table",
+              "headers": ["Platform", "Technology", "Installation"],
+              "rows": [
+                ["macOS", "Seatbelt (built-in)", "No extra install"],
+                ["Linux", "bubblewrap + socat", "`sudo apt-get install bubblewrap socat`"],
+                ["WSL2", "bubblewrap + socat", "WSL2 only, not WSL1"],
+                ["Native Windows", "Not supported", "Planned"]
+              ]
+            },
+            {
+              "type": "code",
+              "lang": "bash",
+              "label": "Enabling sandboxing",
+              "content": "# From a Claude Code session\n/sandbox\n\n# Or in settings.json\n# \"sandbox\": { \"enabled\": true }"
+            },
+            {
+              "type": "code",
+              "lang": "json",
+              "label": "Full sandbox configuration",
+              "content": "{\n  \"sandbox\": {\n    \"enabled\": true,\n    \"autoAllowBashIfSandboxed\": true,\n    \"failIfUnavailable\": false,\n    \"allowUnsandboxedCommands\": true,\n    \"filesystem\": {\n      \"allowWrite\": [\"~/.kube\", \"/tmp\"],\n      \"denyWrite\": [\"~/.ssh\"],\n      \"denyRead\": [\"~/.ssh\", \"~/.aws\"],\n      \"allowRead\": [\".\"]\n    },\n    \"network\": {\n      \"allowedDomains\": [\n        \"registry.npmjs.org\",\n        \"api.github.com\"\n      ],\n      \"deniedDomains\": [\"internal.corp.com\"]\n    },\n    \"excludedCommands\": [\"docker\", \"watchman\"]\n  }\n}"
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "Tools that require excludedCommands",
+              "content": "**docker** — accesses the host's Docker socket, which the sandbox blocks. **watchman** — incompatible with the sandbox; if you use Jest, consider `jest --no-watchman`. **WSL2 + Windows bins** — `cmd.exe`, `powershell.exe`, and binaries under `/mnt/c/` can't be launched from the sandbox in WSL2."
+            },
+            {
+              "type": "compare",
+              "title": "Permissions vs Sandboxing",
+              "left": {
+                "label": "Permissions",
+                "items": [
+                  "Control which tools Claude can use",
+                  "Evaluated before any tool runs",
+                  "Apply to every tool: Bash, Read, Edit, WebFetch, MCP"
+                ]
+              },
+              "right": {
+                "label": "Sandboxing",
+                "items": [
+                  "Control what each command can touch at the OS level",
+                  "Enforced afterward, at the kernel level",
+                  "Only applies to Bash and its subprocesses"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "permisos-cicd",
+          "title": "CI/CD: non-interactive mode without hangs or unsafe bypass",
+          "summary": "Invoking Claude Code in a pipeline without first resolving interactivity produces jobs that hang waiting for an approval no one can give — and the most common reaction, skipping permissions entirely, trades that problem for a worse one.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "A pipeline that invokes Claude Code as if it were an interactive terminal session, without `-p`/`--print`, hangs on the first tool call that requires confirmation — there's no one on the job's side to respond to the prompt, and the step ends up failing on a timeout, intermittently depending on which action triggers the confirmation on each run. The reflex reaction is usually to add `--dangerously-skip-permissions`: the hang disappears, but so does any gate over destructive commands, right in the environment — CI — that typically has access to deployment credentials and registry tokens."
+            },
+            {
+              "type": "compare",
+              "title": "Unsafe bypass vs. explicit configuration",
+              "left": {
+                "label": "--dangerously-skip-permissions without a sandbox ❌",
+                "items": [
+                  "Resolves the hang, but removes every approval gate",
+                  "Any command the model decides to run executes unchecked",
+                  "The CI environment usually has access to deployment secrets",
+                  "No trace of what was approved and what wasn't — everything is approved"
+                ]
+              },
+              "right": {
+                "label": "--print + dontAsk + versioned allowlist ✅",
+                "items": [
+                  "`-p`/`--print` runs in and out without prompts; with `--output-format json` the output integrates structurally into the pipeline",
+                  "`--permission-mode dontAsk` auto-denies anything not pre-approved, instead of waiting for a response",
+                  "The allowed surface lives in `.claude/settings.json`, versioned and reviewable in code review",
+                  "`--bare` skips loading hooks, skills, or CLAUDE.md from the local machine — the same run on any runner"
+                ]
+              }
+            },
+            {
+              "type": "code",
+              "lang": "bash",
+              "label": "Correct invocation in a pipeline",
+              "content": "claude --bare -p \"Review the diff and fix the lint failures\" \\\n  --output-format json \\\n  --permission-mode dontAsk \\\n  --settings .claude/settings.json"
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "Bypass isn't the solution, it's a different problem",
+              "content": "`--dangerously-skip-permissions` can make sense inside an ephemeral, isolated container with no production credentials mounted — never as a generic answer to a permission prompt hanging. If the pipeline needs a specific operation to run without friction, that operation gets added to `allow` in `settings.json`; the entire permission system doesn't get switched off to avoid configuring one rule."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

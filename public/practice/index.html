@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Examen de Práctica — Claude Certified Architect (CCAR-F)</title>
+<title>Practice Exam — Claude Certified Architect (CCAR-F)</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="stylesheet" href="/practice/style.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,10 +12,10 @@
 </head>
 <body>
 <div id="app"></div>
-<button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Cambiar tema">🌙</button>
+<button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
 
 <script>
-/* ====================== TEMA ====================== */
+/* ====================== THEME ====================== */
 (function(){
   const saved = localStorage.getItem('practice-theme');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -36,13 +37,13 @@ function initThemeBtn(){
   if(btn) btn.textContent = isDark ? '☀️' : '🌙';
 }
 
-/* ====================== METADATA DE DOMINIOS ====================== */
+/* ====================== DOMAIN METADATA ====================== */
 const DOMAINS = [
-  {id:1, name:'Arquitectura Agentic y Orquestación', weight:27},
-  {id:2, name:'Configuración y Flujos de Claude Code', weight:20},
-  {id:3, name:'Diseño de Herramientas e Integración MCP', weight:18},
-  {id:4, name:'Prompt Engineering y Salida Estructurada', weight:20},
-  {id:5, name:'Gestión de Contexto y Confiabilidad', weight:15}
+  {id:1, name:'Agentic Architecture & Orchestration', weight:27},
+  {id:2, name:'Claude Code Configuration & Workflows', weight:20},
+  {id:3, name:'Tool Design & MCP Integration', weight:18},
+  {id:4, name:'Prompt Engineering & Structured Output', weight:20},
+  {id:5, name:'Context Management & Reliability', weight:15}
 ];
 
 const EXAM_COUNTS = {1:16, 2:12, 3:11, 4:12, 5:9};
@@ -52,7 +53,7 @@ const TOTAL_SECONDS = 120*60;
 
 function domainName(id){return DOMAINS.find(d=>d.id===id).name;}
 
-/* ====================== CONSTRUCCIÓN DEL POOL ====================== */
+/* ====================== POOL CONSTRUCTION ====================== */
 let POOLS = {1:[],2:[],3:[],4:[],5:[]};
 let POOL_TOTAL = 0;
 
@@ -73,7 +74,7 @@ function buildPoolsFromJson(data){
   POOL_TOTAL = Object.values(POOLS).reduce((a,arr)=>a+arr.length,0);
 }
 
-/* Compara la respuesta dada contra la(s) correcta(s), sirve para preguntas single y multi */
+/* Compares the given answer against the correct one(s), works for single and multi questions */
 function answerMatches(q, ans){
   if(q.type==='multi'){
     const a = Array.isArray(ans) ? ans.slice().sort((x,y)=>x-y) : [];
@@ -83,7 +84,7 @@ function answerMatches(q, ans){
   return ans===q.correct;
 }
 
-/* Considera "respondida" una pregunta single con selección o multi con al menos una opción marcada */
+/* Treats a single question as "answered" if selected, or a multi question if at least one option is marked */
 function isAnswered(ans){
   if(ans===null || ans===undefined) return false;
   if(Array.isArray(ans)) return ans.length>0;
@@ -116,7 +117,7 @@ function interleave(lists){
   return result;
 }
 
-/* Arma la muestra del dominio garantizando un piso de preguntas multi-respuesta, el resto se completa al azar con lo que quede del pool */
+/* Builds the domain sample guaranteeing a floor of multi-response questions, the rest is filled randomly from what's left in the pool */
 function pickDomainQuestions(domainId, n){
   const multiPool = shuffle(POOLS[domainId].filter(q=>q.type==='multi'));
   const singlePool = shuffle(POOLS[domainId].filter(q=>q.type!=='multi'));
@@ -144,7 +145,7 @@ function sampleExam(){
   return interleave(perDomain);
 }
 
-/* ====================== ESTADO ====================== */
+/* ====================== STATE ====================== */
 let QUESTIONS = [];
 let TOTAL_Q = 0;
 
@@ -240,7 +241,7 @@ function finishExam(){
 function confirmFinish(){
   const unanswered = state.answers.filter(a=>!isAnswered(a)).length;
   if(unanswered>0){
-    const ok = confirm('Tenés '+unanswered+' pregunta(s) sin responder. ¿Querés finalizar igual?');
+    const ok = confirm('You have '+unanswered+' unanswered question(s). Finish anyway?');
     if(!ok) return;
   }
   finishExam();
@@ -283,8 +284,8 @@ function computeScore(){
 function render(){
   const app = document.getElementById('app');
   if(state.screen==='intro') app.innerHTML = renderIntro();
-  else if(state.screen==='loading') app.innerHTML = '<div style="padding:80px 20px;text-align:center;font-size:17px;color:var(--text-secondary)">Cargando preguntas…</div>';
-  else if(state.screen==='error') app.innerHTML = '<div style="padding:80px 20px;text-align:center;font-size:17px;color:var(--danger)">Error al cargar el banco de preguntas. Intenta recargar la página.</div>';
+  else if(state.screen==='loading') app.innerHTML = '<div style="padding:80px 20px;text-align:center;font-size:17px;color:var(--text-secondary)">Loading questions…</div>';
+  else if(state.screen==='error') app.innerHTML = '<div style="padding:80px 20px;text-align:center;font-size:17px;color:var(--danger)">Error loading the question bank. Try reloading the page.</div>';
   else if(state.screen==='exam') app.innerHTML = renderExam();
   else if(state.screen==='results') app.innerHTML = renderResults();
   else if(state.screen==='review') app.innerHTML = renderReview();
@@ -293,20 +294,20 @@ function render(){
 function renderIntro(){
   const rows = DOMAINS.map(d=>{
     const poolSize = POOLS[d.id].length || '—';
-    return '<div class="domain-row"><span class="name">'+d.name+'</span><span class="meta">'+d.weight+'% · '+EXAM_COUNTS[d.id]+' de '+poolSize+' en el pool</span></div>';
+    return '<div class="domain-row"><span class="name">'+d.name+'</span><span class="meta">'+d.weight+'% · '+EXAM_COUNTS[d.id]+' of '+poolSize+' in the pool</span></div>';
   }).join('');
   return `
   <div class="hero">
-    <p class="eyebrow">Examen de práctica no oficial</p>
+    <p class="eyebrow">Unofficial practice exam</p>
     <h1>Claude Certified Architect — Foundations (CCAR-F)</h1>
-    <p class="subtitle">${EXAM_LENGTH} preguntas · 120 minutos · opción múltiple y multi-respuesta</p>
+    <p class="subtitle">${EXAM_LENGTH} questions · 120 minutes · multiple-choice and multiple-response</p>
   </div>
   <div class="intro-cta">
-    <button class="btn-primary" onclick="startExam()">Comenzar examen</button>
+    <button class="btn-primary" onclick="startExam()">Start exam</button>
   </div>
   <div class="domain-list">${rows}</div>
   <div class="disclaimer">
-    Simulación no oficial basada en los dominios y pesos publicados por Anthropic para el CCAR-F. No reproduce preguntas reales ni está afiliada a Anthropic. Pool de <b>${POOL_TOTAL} preguntas</b> — cada intento sortea ${EXAM_LENGTH} al azar con opciones mezcladas.
+    Unofficial simulation based on the domains and weights published by Anthropic for the CCAR-F. It does not reproduce real exam questions and is not affiliated with Anthropic. Pool of <b>${POOL_TOTAL} questions</b> — each attempt draws ${EXAM_LENGTH} at random with shuffled options.
   </div>
   `;
 }
@@ -338,30 +339,30 @@ function renderExam(){
   return `
   <div class="topbar">
     <div class="topbar-row">
-      <div class="topbar-left">Pregunta <b>${i+1}</b> de ${TOTAL_Q} · ${answeredCount} respondidas</div>
+      <div class="topbar-left">Question <b>${i+1}</b> of ${TOTAL_Q} · ${answeredCount} answered</div>
       <div id="timerDisplay" class="timer${state.timeLeft<=300?' low':''}">${formatTime(state.timeLeft)}</div>
     </div>
     <div class="progress-track"><div class="progress-fill" style="width:${((i+1)/TOTAL_Q*100)}%"></div></div>
   </div>
   <div class="question-wrap">
     <div class="domain-tag">${domainName(q.domain)}</div>
-    <p class="q-number">Pregunta ${i+1}</p>
-    ${q.situation?`<div class="situation-card"><span class="situation-label">Situación</span>${q.situation}</div>`:''}
+    <p class="q-number">Question ${i+1}</p>
+    ${q.situation?`<div class="situation-card"><span class="situation-label">Situation</span>${q.situation}</div>`:''}
     <p class="q-text">${q.q}</p>
-    ${isMulti?`<p style="margin:-8px 0 14px;font-size:14px;color:var(--text-secondary);font-style:italic;">Seleccioná exactamente ${q.correct.length} respuestas (${selectedArr.length} marcadas).</p>`:''}
+    ${isMulti?`<p style="margin:-8px 0 14px;font-size:14px;color:var(--text-secondary);font-style:italic;">Select exactly ${q.correct.length} answers (${selectedArr.length} selected).</p>`:''}
     <div class="options">${optionsHtml}</div>
 
     ${state.navOpen?`<div class="navgrid-panel"><div class="navgrid">${navGrid}</div></div>`:''}
 
     <div class="navrow">
-      <button class="btn-secondary" onclick="prev()" ${i===0?'disabled':''}>Anterior</button>
-      <div class="navrow-center"><button class="link-btn" onclick="toggleNav()">${state.navOpen?'Ocultar mapa':'Mapa de preguntas'}</button></div>
+      <button class="btn-secondary" onclick="prev()" ${i===0?'disabled':''}>Previous</button>
+      <div class="navrow-center"><button class="link-btn" onclick="toggleNav()">${state.navOpen?'Hide map':'Question map'}</button></div>
       ${i===TOTAL_Q-1
-        ? '<button class="btn-primary" onclick="confirmFinish()">Finalizar examen</button>'
-        : '<button class="btn-primary" onclick="next()">Siguiente</button>'}
+        ? '<button class="btn-primary" onclick="confirmFinish()">Finish exam</button>'
+        : '<button class="btn-primary" onclick="next()">Next</button>'}
     </div>
     <div class="actions" style="margin-top:18px;">
-      <button class="link-btn" onclick="confirmFinish()">Finalizar examen ahora</button>
+      <button class="link-btn" onclick="confirmFinish()">Finish exam now</button>
     </div>
   </div>
   `;
@@ -381,19 +382,19 @@ function renderResults(){
 
   return `
   <div class="score-hero">
-    <p class="eyebrow">Resultado</p>
+    <p class="eyebrow">Result</p>
     <div class="score-circle" style="--pct:${pct}">
       <span class="num">${pct}%</span>
-      <span class="lbl">${s.correct} / ${s.total} correctas</span>
+      <span class="lbl">${s.correct} / ${s.total} correct</span>
     </div>
-    <p class="score-note">Anthropic exige un puntaje escalado de 720 sobre 1000 para aprobar el examen real — no es un simple % de aciertos, ya que usan un modelo de escalado para equiparar dificultad entre distintas versiones del examen. Usá este resultado como referencia de tu dominio por área, no como predicción exacta de aprobar.</p>
+    <p class="score-note">Anthropic requires a scaled score of 720 out of 1000 to pass the real exam — it's not a simple % of correct answers, since they use a scaling model to equalize difficulty across different exam versions. Use this result as a reference for your domain proficiency, not an exact pass prediction.</p>
   </div>
-  <h1 style="font-size:20px;margin-bottom:18px;">Desempeño por dominio</h1>
+  <h1 style="font-size:20px;margin-bottom:18px;">Performance by domain</h1>
   <div class="domain-bars">${domainBars}</div>
   <div class="actions">
-    <button class="btn-primary" onclick="goReview('all')">Revisar todas las respuestas</button>
-    <button class="btn-secondary" onclick="goReview('incorrect')">Revisar solo errores</button>
-    <button class="btn-secondary" onclick="restart()">Nuevo examen (preguntas distintas)</button>
+    <button class="btn-primary" onclick="goReview('all')">Review all answers</button>
+    <button class="btn-secondary" onclick="goReview('incorrect')">Review errors only</button>
+    <button class="btn-secondary" onclick="restart()">New exam (different questions)</button>
   </div>
   `;
 }
@@ -419,13 +420,13 @@ function renderReview(){
       return `<div class="${cls}">${letter}. ${opt}</div>`;
     }).join('');
     const icon = !isAnswered(selected)
-      ? '<span class="result-icon bad">SIN RESPONDER</span>'
-      : (isCorrect ? '<span class="result-icon ok">CORRECTA</span>' : '<span class="result-icon bad">INCORRECTA</span>');
+      ? '<span class="result-icon bad">UNANSWERED</span>'
+      : (isCorrect ? '<span class="result-icon ok">CORRECT</span>' : '<span class="result-icon bad">INCORRECT</span>');
 
     return `<div class="review-item">
       <div class="domain-tag">${domainName(q.domain)}</div>
       ${icon}
-      ${q.situation?`<div class="situation-card"><span class="situation-label">Situación</span>${q.situation}</div>`:''}
+      ${q.situation?`<div class="situation-card"><span class="situation-label">Situation</span>${q.situation}</div>`:''}
       <p class="q-text">${i+1}. ${q.q}</p>
       ${optsHtml}
       <div class="review-explain">${q.explanation}</div>
@@ -434,23 +435,23 @@ function renderReview(){
 
   return `
   <div class="hero" style="padding-top:40px;">
-    <p class="eyebrow">Revisión</p>
-    <h1 style="font-size:26px;">Revisión de respuestas</h1>
+    <p class="eyebrow">Review</p>
+    <h1 style="font-size:26px;">Answer review</h1>
   </div>
   <div class="filter-row">
-    <button class="filter-btn${state.reviewFilter==='all'?' active':''}" onclick="setReviewFilter('all')">Todas (${QUESTIONS.length})</button>
-    <button class="filter-btn${state.reviewFilter==='incorrect'?' active':''}" onclick="setReviewFilter('incorrect')">Solo errores (${QUESTIONS.filter((q,i)=>!answerMatches(q, state.answers[i])).length})</button>
+    <button class="filter-btn${state.reviewFilter==='all'?' active':''}" onclick="setReviewFilter('all')">All (${QUESTIONS.length})</button>
+    <button class="filter-btn${state.reviewFilter==='incorrect'?' active':''}" onclick="setReviewFilter('incorrect')">Errors only (${QUESTIONS.filter((q,i)=>!answerMatches(q, state.answers[i])).length})</button>
   </div>
-  ${html || '<p style="color:var(--text-secondary);">No hay preguntas que coincidan con este filtro. ¡Buen trabajo!</p>'}
+  ${html || '<p style="color:var(--text-secondary);">No questions match this filter. Great job!</p>'}
   <div class="actions" style="margin-top:24px;">
-    <button class="btn-secondary" onclick="state.screen='results';render();">Volver al resultado</button>
-    <button class="btn-primary" onclick="restart()">Nuevo examen (preguntas distintas)</button>
+    <button class="btn-secondary" onclick="state.screen='results';render();">Back to result</button>
+    <button class="btn-primary" onclick="restart()">New exam (different questions)</button>
   </div>
-  <footer class="note">Material de práctica no oficial · No afiliado a Anthropic · Pool de ${POOL_TOTAL} preguntas</footer>
+  <footer class="note">Unofficial practice material · Not affiliated with Anthropic · Pool of ${POOL_TOTAL} questions</footer>
   `;
 }
 
-// Precargar el pool para que renderIntro() muestre los tamaños reales
+// Preload the pool so renderIntro() shows real sizes
 (async function preload(){
   try{
     const res = await fetch('/practice/examen_cca_f_en.json');

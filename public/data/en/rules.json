@@ -1,0 +1,429 @@
+{
+  "title": "Rules",
+  "description": "How to control Claude Code's behavior with always-on rules and path-conditional rules.",
+  "sections": [
+    {
+      "title": "The Rules system",
+      "articles": [
+        {
+          "id": "reglas-overview",
+          "title": "What are rules?",
+          "summary": "Rules are permanent instructions that Claude loads automatically in every session. They have two independent axes: where they live (level) and when they activate (type).",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "A rule is a `.md` file that Claude loads automatically — without you having to ask. Every rule has two independent characteristics:\n\n- **Level** — where the file lives: in the project (`.claude/rules/`) or on your system (`~/.claude/rules/`)\n- **Type** — when it activates: always (no frontmatter) or only when touching certain files (with `paths:`)"
+            },
+            {
+              "type": "compare",
+              "title": "Axis 1 — Level: where does the rule live?",
+              "left": {
+                "label": "Project level · .claude/rules/",
+                "items": [
+                  "Applies only in that repository",
+                  "Can be versioned with git",
+                  "Shared with the whole team",
+                  "Supports rules with and without paths:",
+                  "Recommended for most cases"
+                ]
+              },
+              "right": {
+                "label": "System level · ~/.claude/rules/",
+                "items": [
+                  "Applies across all your projects",
+                  "Only on your machine",
+                  "Personal developer preferences",
+                  "⚠ paths: ignored (2026 bug)",
+                  "Only rules without frontmatter work here"
+                ]
+              }
+            },
+            {
+              "type": "compare",
+              "title": "Axis 2 — Type: when does it activate?",
+              "left": {
+                "label": "No frontmatter → always active",
+                "items": [
+                  "Loads at the start of every session",
+                  "Applies to all files",
+                  "High attention: at the start of context",
+                  "File with nothing special at the top",
+                  "Ideal for universal standards"
+                ]
+              },
+              "right": {
+                "label": "With paths: → activates by route",
+                "items": [
+                  "Loads only when touching a matching file",
+                  "Applies only to files matching the glob",
+                  "Mechanical activation: pure glob match",
+                  "Requires frontmatter with paths:",
+                  "Ideal for per-layer conventions"
+                ]
+              }
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "Rules vs Skills",
+              "content": "**Rules** = permanent instructions that Claude always applies. **Skills** = sets of instructions and best practices that Claude consults automatically when a task matches the domain they cover, not only when explicitly requested."
+            }
+          ]
+        },
+        {
+          "id": "reglas-sin-frontmatter",
+          "title": "Always-active rules (no frontmatter)",
+          "summary": ".md files with no frontmatter in .claude/rules/ or ~/.claude/rules/. Claude loads them at the start of every session and keeps them in context for the whole conversation.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "A `.md` file with no frontmatter in `.claude/rules/` is a rule that loads **always**, at the start of every session. It sits at the beginning of context and stays there even in very long sessions (turn 50+). It's the simplest type and the one with the highest attention weight."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": ".claude/rules/code-style.md — no frontmatter",
+              "content": "# Code standards — always applies\n\n## TypeScript\n- Always use strict TypeScript (strict: true)\n- Prefer `type` over `interface` for objects\n- Never use `any`, use `unknown` if the type is unknown\n\n## General style\n- 2-space indentation\n- Single quotes for strings\n- Semicolon at the end of every statement"
+            },
+            {
+              "type": "text",
+              "content": "Works at both levels: `.claude/rules/` (project) and `~/.claude/rules/` (system). At the system level it's the **only variant that works** — there's a reported bug (`#21858`) that causes rules with `paths:` to be silently ignored in `~/.claude/`."
+            },
+            {
+              "type": "table",
+              "headers": ["✅ Put here", "❌ Don't put here"],
+              "rows": [
+                ["Universal code style: strict TypeScript, quotes, indentation", "Layer-specific conventions → use path-based rules"],
+                ["Architecture constraints that must never be broken (e.g. never call the DB from controllers)", "Very long instructions → they saturate context from the start"],
+                ["Cross-cutting security guidelines (secret handling, mandatory validations)", "Workflows or procedures → that's a skill, not a rule"]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "reglas-por-ruta",
+          "title": "Path-based rules (with paths:)",
+          "summary": "Rules that only load when Claude works with files matching a glob pattern. Mechanical activation, no reasoning involved. Only work at project level.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Path-based rules use frontmatter with `paths:` to define which files trigger them. The trigger is **mechanical, not semantic**: Claude doesn't evaluate whether it \"needs\" the rule. If it opens a file matching the glob, the rule loads. If not, it stays on disk. No reasoning involved."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": ".claude/rules/api-rules.md — with paths",
+              "content": "---\npaths:\n  - \"src/api/**/*.ts\"\n---\n\n# Rules for API endpoints\n- All endpoints must validate input with Zod\n- Use the standard error format from `src/api/errors.ts`\n- Include OpenAPI comments on every route handler\n- Return correct HTTP status codes (200, 201, 400, 404, 500)"
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": ".claude/rules/frontend-rules.md — brace expansion in glob",
+              "content": "---\npaths:\n  - \"src/**/*.{ts,tsx}\"\n  - \"components/**/*.{ts,tsx}\"\n---\n\n# Rules for React components\n- Use functional components, never classes\n- Name handlers with a `handle` prefix (e.g. `handleSubmit`)\n- Extract complex logic into custom hooks"
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "Known bug (2026): paths: doesn't work in ~/.claude/",
+              "content": "Rules with `paths:` in `~/.claude/rules/` (system level) are **silently ignored**. Path-based rules only work in `.claude/rules/` at the project level. If you need to verify which rules are active, use `/memory` in the session."
+            },
+            {
+              "type": "cards",
+              "title": "When to use path-based rules",
+              "items": [
+                {
+                  "title": "Per-layer conventions",
+                  "description": "API, frontend, tests, docs — each layer with its own conventions without polluting the others."
+                },
+                {
+                  "title": "Monorepos",
+                  "description": "Multiple domains or packages with different styles. Each domain has its own rules."
+                },
+                {
+                  "title": "File-type-specific rules",
+                  "description": "Rules that only make sense in a certain file type (e.g. validations only in endpoints)."
+                }
+              ]
+            },
+            {
+              "type": "table",
+              "headers": ["✅ Put here", "❌ Don't put here"],
+              "rows": [
+                ["Layer-specific conventions: API, frontend, tests, DB", "Rules that apply to the whole project with no exceptions → those go without frontmatter"],
+                ["Large projects or monorepos where each domain has its own style", "Rules in ~/.claude/rules/ → known bug: paths: doesn't work there"],
+                ["When global rules start accumulating exceptions per file type", "Workflows or procedures → that's a skill, not a path-based rule"]
+              ]
+            }
+          ]
+        },
+        {
+          "id": "claude-md-niveles",
+          "title": "CLAUDE.md: levels, inheritance, and precedence",
+          "summary": "The three levels of CLAUDE.md (project, directory, user), what's shared and what isn't, and how conflicts between rules at different levels are resolved.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "CLAUDE.md isn't a single file: there are three levels, each with a different scope. Confusing the correct level is one of the most common mistakes in teams — and one of the most tested topics in the exam."
+            },
+            {
+              "type": "table",
+              "headers": ["Level", "Location", "Scope", "Versioned?", "Who sees it?"],
+              "rows": [
+                ["Project", "CLAUDE.md (repo root)", "The whole project", "Yes — in git", "The whole team"],
+                ["Directory", "payments/CLAUDE.md, backend/CLAUDE.md, etc.", "Only that directory and its subdirectories", "Yes — in git", "The whole team (when working in that dir)"],
+                ["User", "~/.claude/CLAUDE.md", "All of the developer's projects", "No — lives on the personal machine", "Only that developer"]
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "The most common mistake: team rules in ~/.claude/CLAUDE.md",
+              "content": "If you put a team rule (e.g. 'always sign commits with GPG') in `~/.claude/CLAUDE.md`, it only applies on **your** machine. The rest of the team will never see it. Team rules must go in the project's `CLAUDE.md`, committed to the repository."
+            },
+            {
+              "type": "compare",
+              "left": {
+                "head": "~/.claude/CLAUDE.md (personal)",
+                "rows": [
+                  { "key": "What it's for", "value": "Personal developer preferences: favorite editor, shortcuts, response tone" },
+                  { "key": "Example", "value": "\"Always respond in Spanish\" or \"I prefer explanations with analogies\"" },
+                  { "key": "Never put here", "value": "Team conventions, architecture constraints, security rules" }
+                ]
+              },
+              "right": {
+                "head": "Project CLAUDE.md (shared)",
+                "rows": [
+                  { "key": "What it's for", "value": "Team conventions: code style, commit process, technical constraints" },
+                  { "key": "Example", "value": "\"Use tabs for indentation\" or \"Never push directly to main\"" },
+                  { "key": "Always put here", "value": "Anything that must apply uniformly across the team" }
+                ]
+              }
+            },
+            {
+              "type": "text",
+              "content": "**Directory inheritance**: Claude loads the CLAUDE.md files from every directory from the root down to the file it's editing. If you're in `backend/payments/`, Claude loads: CLAUDE.md (root) → backend/CLAUDE.md → backend/payments/CLAUDE.md.\n\n**Precedence**: when there's a conflict between a directory CLAUDE.md and one at a higher level, the more specific one (the one closest to the edited file) takes precedence. If the root says 'use tabs' and backend/ says 'use spaces', 'use spaces' wins in backend/."
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "CLAUDE.md and .claude/rules/ can coexist",
+              "content": "They're not mutually exclusive. CLAUDE.md is well suited for general project context (system description, tech stack, global conventions). `.claude/rules/` is better for instructions that need conditional loading by glob. Large projects use both together."
+            },
+            {
+              "type": "callout",
+              "variant": "tip",
+              "title": "A CLAUDE.md change only takes effect after git pull",
+              "content": "CLAUDE.md is read from disk at the start of every session. If you update the file and commit it, teammates who haven't done `git pull` still see the previous version. When a teammate reports that Claude isn't following the new rules, the first thing to check is whether they have the updated version of the file."
+            }
+          ]
+        },
+        {
+          "id": "comandos-personalizados",
+          "title": "Custom commands (/command)",
+          "summary": "How to create, place, and parameterize team and individual custom commands. $ARGUMENTS, @path, and when to use each level.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Custom commands are Markdown files invoked with `/filename`. They're the most direct way to turn passive conventions (\"Claude should do X before every PR\") into active, repeatable workflows."
+            },
+            {
+              "type": "compare",
+              "left": {
+                "head": ".claude/commands/ (project)",
+                "rows": [
+                  { "key": "Location", "value": ".claude/commands/review-pr.md in the repo" },
+                  { "key": "Versioning", "value": "Committed to git — the whole team has it" },
+                  { "key": "When to use", "value": "Team workflows: /review-pr, /deploy, /changelog, /commit" }
+                ]
+              },
+              "right": {
+                "head": "~/.claude/commands/ (personal)",
+                "rows": [
+                  { "key": "Location", "value": "~/.claude/commands/my-workflow.md in your home" },
+                  { "key": "Versioning", "value": "Only on your machine — private" },
+                  { "key": "When to use", "value": "Personal workflows that don't apply to the team" }
+                ]
+              }
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "The classic mistake: a command that only works for its author",
+              "content": "If a command is in `~/.claude/commands/review-pr.md` instead of `.claude/commands/review-pr.md`, it only exists on the author's machine. When the rest of the team clones the repo, the command doesn't exist. The rule: if a command is for the team, it must live in `.claude/commands/` and be committed."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": ".claude/commands/review-pr.md — with $ARGUMENTS",
+              "content": "# Pull Request Review\n\nReview PR #$ARGUMENTS following our standards:\n\n1. Verify all tests pass\n2. Review edge case coverage\n3. Confirm the code follows .claude/rules/ conventions\n4. Verify the PR has a description and associated Jira tickets\n5. Look for obvious security vulnerabilities\n\nReturn a summary with: ✅ approved / ⚠️ notes / 🔴 blocking"
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "$ARGUMENTS: the text the user types after the command",
+              "content": "When invoking `/review-pr 482`, the string `482` replaces `$ARGUMENTS`. This enables parameterized commands with no extra code. For multiple positional arguments, you can use `$0`, `$1`, `$2`, etc. (0-indexed)."
+            },
+            {
+              "type": "code",
+              "lang": "markdown",
+              "label": ".claude/commands/deploy.md — with @path to share logic",
+              "content": "# Deploy to staging\n\n@.claude/fragments/pre-checks.md\n\nOnce checks pass, run the deploy to $ARGUMENTS (environment):\n\n```bash\nnpm run deploy -- --env=$ARGUMENTS\n```\n\nNotify on Slack with the result."
+            },
+            {
+              "type": "callout",
+              "variant": "tip",
+              "title": "@path: composition without duplication",
+              "content": "`@path/to/file.md` loads that file's content inside the command. It lets you extract reusable fragments (pre-checks, formatting templates, checklists) that multiple commands share. If the referenced file doesn't exist, the command fails to parse."
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "Imports in CLAUDE.md: the same syntax, a different context",
+              "content": "The same `@path/to/file.md` mechanism is used inside a CLAUDE.md to import external files and keep it modular — for example, importing only the standards file relevant to each package in a monorepo, instead of a single monolithic CLAUDE.md with every package's conventions. The official docs title this section \"Import additional files,\" but the syntax itself never includes the word \"import\" — it's the same `@path` as in custom commands, not a special `@import` token."
+            }
+          ]
+        },
+        {
+          "id": "plan-mode-y-ci",
+          "title": "Plan Mode and headless CI",
+          "summary": "When to use Plan Mode vs. direct execution, and the three essential flags for integrating Claude Code into CI pipelines: -p, --output-format json, and --max-turns.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "Plan Mode and headless mode are two ways of adapting Claude Code to different contexts: one for making decisions before acting, the other for running without human intervention."
+            },
+            {
+              "type": "compare",
+              "left": {
+                "head": "Plan Mode",
+                "rows": [
+                  { "key": "What it does", "value": "Claude reasons, designs a strategy, and presents the plan — without executing any action yet" },
+                  { "key": "When to use it", "value": "Large changes (multiple files), architectural refactors, or when the developer isn't sure of the right approach" },
+                  { "key": "When NOT to use it", "value": "Simple, well-scoped tasks — it adds latency and tokens with no real benefit" },
+                  { "key": "How to activate it", "value": "Shift+Tab in the CLI (toggle), or explicitly instruct Claude to present the plan first" }
+                ]
+              },
+              "right": {
+                "head": "Direct execution",
+                "rows": [
+                  { "key": "What it does", "value": "Claude acts immediately: edits files, runs commands, iterates until done" },
+                  { "key": "When to use it", "value": "Contained, well-defined tasks: fixing a bug in one file, renaming a function, adding a test" },
+                  { "key": "When NOT to use it", "value": "High-risk changes spanning many files, or where the approach isn't clear" },
+                  { "key": "By default", "value": "It's the default mode — Plan Mode is the exception, not the rule" }
+                ]
+              }
+            },
+            {
+              "type": "text",
+              "content": "**Headless CI** — To integrate Claude Code into automated pipelines (GitHub Actions, Jenkins, etc.) there are three flags that form the standard trio:"
+            },
+            {
+              "type": "table",
+              "headers": ["Flag", "What it does", "What happens without it"],
+              "rows": [
+                ["-p / --print", "Non-interactive mode: accepts the prompt as an argument and exits", "Claude Code waits for keyboard input — the CI job hangs indefinitely"],
+                ["--output-format json", "Structured JSON output instead of plain text", "Downstream scripts can't reliably parse the output"],
+                ["--json-schema <schema>", "Forces the output JSON to conform to a specific schema, not just 'be valid JSON'", "The JSON can be syntactically correct but missing fields or shaped in a way the downstream script doesn't expect"],
+                ["--max-turns N", "Hard limit on agentic loop iterations", "The loop can iterate indefinitely on a persistent error — CI job timeout"]
+              ]
+            },
+            {
+              "type": "code",
+              "lang": "bash",
+              "label": "CI integration — standard invocation",
+              "content": "# The minimal trio for CI:\nclaude -p \"Review the files changed in this PR and report quality issues\" \\\n  --output-format json \\\n  --max-turns 20\n\n# With CLAUDE.md available to maintain team conventions:\n# (The repo's CLAUDE.md loads automatically if it's in the working directory)"
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "-p is the most forgotten flag — and the one that blocks everything",
+              "content": "The most common mistake in CI integrations is omitting `-p`. Without it, Claude Code runs in interactive mode and the job waits for keyboard input until it times out. If a Claude Code CI job hangs with no visible errors, the first thing to check is whether `-p` is in the command."
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "Granular permissions in CI: allow vs. ask",
+              "content": "In CI, read-only commands like `grep`, `cat`, or `git diff` should be configured as `allow` (no confirmation) so the job flows. Critical write operations like `git commit` or `git push` should be configured as `ask`, requiring human approval — especially for merges to main, which should never be fully automated."
+            }
+          ]
+        },
+        {
+          "id": "refinamiento-iterativo",
+          "title": "Iterative refinement: examples, tests, and the interview pattern",
+          "summary": "Three techniques to progressively improve output when a prose instruction isn't enough: concrete input/output examples, test-driven iteration, and the interview pattern where Claude asks before implementing.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "When a prose description of what's needed produces inconsistent results across attempts, the problem is almost never that Claude \"didn't understand\" — it's that the instruction admits more than one valid interpretation. Three techniques converge on resolving that ambiguity in different ways."
+            },
+            {
+              "type": "cards",
+              "items": [
+                {
+                  "title": "📋 Concrete input/output examples",
+                  "body": "Showing 2-3 input/expected-output pairs is more effective than describing the transformation in words. It removes interpretation ambiguity: instead of \"normalize the dates,\" showing \"'15/03/2025' → '2025-03-15'\" leaves only one possible behavior."
+                },
+                {
+                  "title": "🧪 Test-driven iteration",
+                  "body": "Write the test suite first (expected cases, edge cases, performance requirements), then iterate by sharing concrete failures with Claude. Each test failure is a precise instruction of what to fix — much more specific than \"it doesn't work right.\""
+                },
+                {
+                  "title": "🎤 Interview pattern",
+                  "body": "Before implementing something in a domain with non-obvious decisions (cache invalidation strategy, failure modes, business edge cases), ask Claude to first ask questions instead of assuming. It surfaces design considerations the developer hadn't anticipated, before a single line of code is written."
+                }
+              ]
+            },
+            {
+              "type": "code",
+              "lang": "text",
+              "label": "Interview pattern — how to invoke it",
+              "content": "Before implementing the caching system for the product catalog,\nask me the questions you need about invalidation, TTL, consistency\nacross replicas, and failure behavior — don't assume anything yet.\n\n# Claude responds with questions like:\n# - What happens if two requests update the same product simultaneously?\n# - Should the cache invalidate immediately, or is a TTL of a few minutes acceptable?\n# - What behavior is expected if the cache service doesn't respond: fall back to the DB or error?\n#\n# Only after those answers does Claude have the context to design it well."
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "When to group issues and when to resolve them one by one",
+              "content": "If several detected issues interact with each other (fixing one potentially breaks another), it's better to describe them all together in a single message so Claude resolves them in a coordinated way. If they're independent of each other, iterating one at a time lets you verify each fix before continuing, avoiding a large change that's hard to review or revert."
+            }
+          ]
+        },
+        {
+          "id": "reglas-tabla-comparativa",
+          "title": "Rules, Skills, and CLAUDE.md: when to use each",
+          "summary": "Quick reference table for deciding which mechanism to use based on the type of instruction.",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "The three mechanisms cover different use cases. Choosing the right one determines when instructions apply and with what attention weight."
+            },
+            {
+              "type": "table",
+              "headers": ["Feature", "No frontmatter", "With paths:", "Skill"],
+              "rows": [
+                ["When does it load?", "Always, at the start", "When touching a matching file", "When invoked"],
+                ["Activation type", "Automatic", "Mechanical · glob", "Semantic · request"],
+                ["Position in context", "At the start ✓", "At the start ✓", "Mid-conversation"],
+                ["System level (~/.claude/)", "✓ Works", "✗ Known bug", "N/A"],
+                ["Project level (.claude/)", "✓ Works", "✓ Works", "✓ Works"],
+                ["Ideal use", "Universal standards", "Per-layer conventions", "Workflows"],
+                ["Example", "\"Always strict TypeScript\"", "\"In src/api/**: validate with Zod\"", "\"Do a full code review\""]
+              ]
+            },
+            {
+              "type": "callout",
+              "variant": "info",
+              "title": "Rules vs CLAUDE.md",
+              "content": "CLAUDE.md is the traditional instructions file — it's still valid. The `.claude/rules/` folder is the structured way to organize those same instructions as the project grows. You can use them together: CLAUDE.md for general project context and `.claude/rules/` for segmented instructions."
+            },
+            {
+              "type": "callout",
+              "variant": "tip",
+              "title": "Position in context matters",
+              "content": "Rules (with or without frontmatter) enter **at the start of context** when activated — they get high attention throughout the session. Skills enter mid-conversation and can lose attention in long sessions. For critical instructions that must never be forgotten, use rules, not skills."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
