@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
-[![Idioma](https://img.shields.io/badge/idioma-espa%C3%B1ol%20%2B%20ingl%C3%A9s%20parcial-red)](#)
+[![Idioma](https://img.shields.io/badge/idioma-espa%C3%B1ol%20%2B%20ingl%C3%A9s-brightgreen)](#)
 
 🇬🇧 [Read this in English](README.en.md)
 
