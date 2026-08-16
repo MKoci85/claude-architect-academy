@@ -4,10 +4,8 @@ import fs from 'fs';
 import path from 'path';
 import { buildIndexes } from './scripts/build-index.mjs';
 
-// Regenera public/data/{lang}/index-lite.json (índice liviano para carga
-// inicial + búsqueda, ver scripts/build-index.mjs) al arrancar el dev server
-// o al hacer build, y en dev cada vez que cambia algún JSON de contenido —
-// así los autores de contenido nunca tienen que correrlo a mano.
+const GENERATED = ['index.json', 'search-index.json'];
+
 function dataIndexPlugin() {
   const dataDir = path.resolve(__dirname, 'public/data');
   return {
@@ -22,7 +20,7 @@ function dataIndexPlugin() {
         const normalized = file.split(path.sep).join('/');
         if (normalized.startsWith(dataDir.split(path.sep).join('/')) &&
             normalized.endsWith('.json') &&
-            !normalized.endsWith('index-lite.json')) {
+            !GENERATED.some((f) => normalized.endsWith(`/${f}`))) {
           buildIndexes();
         }
       });

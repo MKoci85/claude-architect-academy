@@ -2,6 +2,7 @@ const UI_STRINGS = {
   es: {
     searchPlaceholder: 'Buscar artículos…',
     searchLabel: 'Buscar',
+    skipToContent: 'Saltar al contenido',
     clearSearch: 'Limpiar búsqueda',
     noSearchResults: (q) => `Sin resultados para “${q}”`,
     switchTheme: 'Cambiar tema',
@@ -26,6 +27,7 @@ const UI_STRINGS = {
   en: {
     searchPlaceholder: 'Search articles…',
     searchLabel: 'Search',
+    skipToContent: 'Skip to content',
     clearSearch: 'Clear search',
     noSearchResults: (q) => `No results for “${q}”`,
     switchTheme: 'Switch theme',

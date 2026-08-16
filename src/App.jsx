@@ -1,6 +1,7 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTheme } from './hooks/useTheme';
 import { useLanguage } from './i18n/useLanguage';
+import { useHashRoute } from './hooks/useHashRoute';
 import { useWikiData } from './hooks/useWikiData';
 import { TopBar } from './components/TopBar';
 import { HomeView } from './components/HomeView';
@@ -9,8 +10,21 @@ import { ExercisesView } from './components/ExercisesView';
 
 export default function App() {
   const [theme, toggleTheme] = useTheme();
-  const [lang, toggleLang] = useLanguage();
-  const wiki = useWikiData(lang);
+  const [lang, toggleLang, setLang] = useLanguage();
+  const [route, navigate] = useHashRoute(lang);
+  const wiki = useWikiData(lang, route, navigate);
+
+  useEffect(() => {
+    if (route.lang !== lang) setLang(route.lang);
+  }, [route.lang, lang, setLang]);
+
+  useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+
+  useEffect(() => {
+    if (!window.location.hash) navigate({ lang, view: 'home' }, { replace: true });
+  }, [lang, navigate]);
 
   const handleToggleLang = useCallback(() => {
     wiki.handleToggleLang(toggleLang);
@@ -43,7 +57,7 @@ export default function App() {
           collections={wiki.collections}
           articles={wiki.displayedArticles}
           activeCollection={wiki.activeCollection}
-          onCollection={wiki.setActiveCollection}
+          onCollection={wiki.goHomeToCollection}
           onArticle={wiki.openArticle}
           onOpenCollection={wiki.openCollection}
           search={wiki.search}

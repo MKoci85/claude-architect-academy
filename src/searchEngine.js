@@ -16,8 +16,11 @@ function subsectionText(sub) {
   }).join(' ');
 }
 
-// Construir índice de búsqueda desde las colecciones
-function buildSearchIndex(collections) {
+function articleKey(article) {
+  return `${article.sourceFile}#${article.articleIndex}`;
+}
+
+function buildSearchIndex(collections, searchDocs) {
   const index = [];
 
   if (!Array.isArray(collections)) return index;
@@ -29,8 +32,12 @@ function buildSearchIndex(collections) {
       if (!Array.isArray(section.articles)) return;
 
       section.articles.forEach((article) => {
+        const texts = searchDocs ? searchDocs.get(articleKey(article)) : null;
         index.push({
           ...article,
+          subsections: texts
+            ? (article.subsections || []).map((sub, i) => ({ ...sub, text: texts[i] || '' }))
+            : article.subsections,
           collectionTitle: collection.title,
           sectionTitle: section.title,
         });
@@ -100,11 +107,8 @@ function search(query, searchIndex) {
           score += 20;
           matches.inSubsection = true;
         }
-        // El índice liviano (generado en build) ya trae `text` precalculado;
-        // si llega un subsection con blocks completos (p. ej. datos aún no
-        // migrados), lo calculamos al vuelo como antes.
-        const text = sub.text !== undefined ? sub.text : subsectionText(sub);
-        if (text.toLowerCase().includes(q)) {
+        const text = sub.text !== undefined ? sub.text : (sub.blocks || sub.content ? subsectionText(sub) : '');
+        if (text && text.toLowerCase().includes(q)) {
           score += 10;
           matches.inContent = true;
           if (!snippet) {

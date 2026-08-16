@@ -8,13 +8,13 @@ export function ExercisesView({ data, activeIndex, onSelect, onHome, lang }) {
     return (
       <div className="exercises-scope">
         <div className="article-layout">
-          <div className="article-view">
+          <main id="content" className="article-view">
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div className="skeleton" style={{ height: 14, width: 120 }} />
               <div className="skeleton" style={{ height: 32, width: '70%' }} />
               <div className="skeleton" style={{ height: 16, width: '90%' }} />
             </div>
-          </div>
+          </main>
         </div>
       </div>
     );
@@ -44,7 +44,7 @@ export function ExercisesView({ data, activeIndex, onSelect, onHome, lang }) {
           </nav>
         </aside>
 
-        <div className="article-view">
+        <main id="content" className="article-view">
           <div className="breadcrumb">
             <button className="breadcrumb-btn breadcrumb-home" onClick={onHome}>{t.home}</button>
             <IconChevronRight />
@@ -57,10 +57,10 @@ export function ExercisesView({ data, activeIndex, onSelect, onHome, lang }) {
           {ex.subsections && ex.subsections.length > 0 ? (
             <div>
               {ex.subsections.map((sub, i) => (
-                <div key={i} className="sub-group">
-                  {sub.title && <div className="subsection-title">{sub.title}</div>}
+                <section key={i} className="sub-group">
+                  {sub.title && <h2 className="subsection-title">{sub.title}</h2>}
                   <SubsectionContent sub={sub} />
-                </div>
+                </section>
               ))}
             </div>
           ) : (
@@ -69,7 +69,7 @@ export function ExercisesView({ data, activeIndex, onSelect, onHome, lang }) {
               <p>{t.resolutionComingSoon}</p>
             </div>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );

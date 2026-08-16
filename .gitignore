@@ -7,5 +7,6 @@ dist
 .DS_Store
 Thumbs.db
 
-# Generado por scripts/build-index.mjs al arrancar dev/build (ver vite.config.js)
-public/data/*/index-lite.json
+# Generados por scripts/build-index.mjs al arrancar dev/build (ver vite.config.js)
+public/data/*/index.json
+public/data/*/search-index.json

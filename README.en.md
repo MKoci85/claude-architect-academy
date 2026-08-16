@@ -42,7 +42,8 @@ The site has a language switcher (ES/EN) in the top bar. The English translation
 | Module | Description |
 |---|---|
 | **Curated collections** | 15 collections / 27 content files — Claude Code and Claude API — with sections, articles, and rich blocks (text, code, callouts, tables, steps, stats, comparisons) |
-| **Full-text search** | Relevance scoring across titles, summaries, and body — with 280ms debounce |
+| **Full-text search** | Relevance scoring across titles, summaries, and body — with 280ms debounce; the text index downloads only on the first keystroke |
+| **Shareable URLs** | Hash routing: every article, collection, and exercise has its own URL, with a working back button |
 | **Light / dark theme** | Automatic system preference detection, persistent toggle |
 | **Practical exercises** | 4 extensive exercises solved step by step the way a senior solutions architect would approach them, with complete code and a dedicated common-mistakes-and-antipatterns section per exercise |
 | **Practice exam** | Pool of 265 questions (multiple-choice and multiple-response) with official domain weights, 120-minute timer, and results report |
@@ -181,6 +182,8 @@ public/
   data/
     es/                   → Complete content in Spanish (source of truth)
       content.json        → Master collection index (ES)
+      index.json          → [generated] metadata for the initial load (~21KB gz)
+      search-index.json   → [generated] search text, fetched lazily (~135KB gz)
       ejercicios.json     → The 4 solved practical exercises, in Spanish
       *.json               → One collection per file
     en/                   → English translation
@@ -193,6 +196,7 @@ public/
 
 src/
   App.jsx           → App shell: composes the hooks and routes between the top-level views
+  hooks/useHashRoute.js → Hash routing (shareable URLs, back button)
   searchEngine.js   → Full-text search engine with scoring
   styles.css        → Tailwind directives + CSS custom properties for light/dark theme
   i18n/, hooks/, constants/, utils/, data/, components/
@@ -211,7 +215,13 @@ The language switcher (ES/EN button in the top bar) toggles which folder (`data/
 - **Tailwind CSS** — Utility styling
 - **highlight.js** — Syntax highlighting for code blocks
 
-No backend, no database, no build step for content: everything resolves by fetching static JSON at runtime, which makes adding or fixing content as simple as editing a file and refreshing the page.
+No backend and no database: everything resolves by fetching static JSON, which makes adding or fixing content as simple as editing a file and refreshing the page. Content loads in three tiers — metadata at startup (~21KB gz), the search text only if the user searches, and each article's body only when opened — so the first load never drags in the ~3.7MB of full content.
+
+The two indexes (`index.json` and `search-index.json`) are generated automatically when the dev server starts or on build; they are neither hand-edited nor version-controlled.
+
+### Accessibility
+
+Real heading hierarchy, landmarks (`<main>`, `<header>`, `<nav>`), skip link, visible focus, and `prefers-reduced-motion` honored.
 
 ---
 
@@ -220,7 +230,7 @@ No backend, no database, no build step for content: everything resolves by fetch
 1. Create or edit a JSON file in `public/data/es/` following the collection schema (see [CLAUDE.md](CLAUDE.md) for the full schema and per-file conventions) — Spanish is the source of truth, written there first.
 2. Register it in `public/data/es/content.json`.
 3. *(Optional)* Translate to English: create `public/data/en/<english-filename>.json` (the filename is translated too, never reuse the Spanish name) with the identical schema and structure (same `id`s, same block order), translating only text — never code, model IDs, or CLI flags. Register it in `public/data/en/content.json`. Skipping this step means that collection simply won't appear in English mode — that's expected behavior, not a bug.
-4. No rebuild required — files load at runtime.
+4. No manual step required: the indexes (`index.json` and `search-index.json`) regenerate when the dev server starts, when you save a content JSON while it's running, or on `npm run build`.
 
 Before writing new content about the Claude Code CLI, Agent SDK, or MCP protocol, verify exact syntax against live documentation instead of recalling it from memory — see the technical-accuracy conventions in `CLAUDE.md`.
 

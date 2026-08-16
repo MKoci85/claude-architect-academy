@@ -42,7 +42,8 @@ El sitio tiene un selector de idioma (ES/EN) en la barra superior. La traducció
 | Módulo | Descripción |
 |---|---|
 | **Colecciones curadas** | 15 colecciones / 27 archivos de contenido — Claude Code y API de Claude — con secciones, artículos y bloques enriquecidos (texto, código, callouts, tablas, steps, stats, comparativas) |
-| **Búsqueda full-text** | Puntuación por relevancia en títulos, resúmenes y cuerpo — con debounce de 280 ms |
+| **Búsqueda full-text** | Puntuación por relevancia en títulos, resúmenes y cuerpo — con debounce de 280 ms; el índice de texto se descarga solo al primer tipeo |
+| **URLs compartibles** | Routing por hash: cada artículo, colección y ejercicio tiene su propia URL, con botón atrás funcional |
 | **Tema claro / oscuro** | Detección automática de preferencia del sistema, alternancia persistente |
 | **Ejercicios prácticos** | 4 ejercicios extensos resueltos paso a paso como los abordaría un arquitecto de soluciones senior, con código completo y una sección dedicada de errores comunes y anti-patrones por ejercicio |
 | **Examen de práctica** | Pool de 265 preguntas (opción múltiple y multi-respuesta) con pesos oficiales por dominio, temporizador de 120 min e informe de resultados |
@@ -181,6 +182,8 @@ public/
   data/
     es/                   → Contenido completo en español (fuente de verdad)
       content.json        → Índice maestro de colecciones (ES)
+      index.json          → [generado] metadata para la carga inicial (~21KB gz)
+      search-index.json   → [generado] texto para el buscador, se pide en lazy (~135KB gz)
       ejercicios.json     → Los 4 ejercicios prácticos resueltos, en español
       *.json               → Una colección por archivo
     en/                   → Traducción al inglés
@@ -193,6 +196,7 @@ public/
 
 src/
   App.jsx           → Shell de la app: compone los hooks y rutea entre las vistas principales
+  hooks/useHashRoute.js → Routing por hash (URLs compartibles, botón atrás)
   searchEngine.js   → Motor de búsqueda full-text con sistema de puntuación
   styles.css        → Directivas Tailwind + propiedades CSS para tema claro/oscuro
   i18n/, hooks/, constants/, utils/, data/, components/
@@ -211,7 +215,13 @@ El selector de idioma (botón ES/EN en la barra superior) alterna qué carpeta (
 - **Tailwind CSS** — Estilos utilitarios
 - **highlight.js** — Resaltado de sintaxis en bloques de código
 
-No hay backend, base de datos ni build step para el contenido: todo se resuelve fetcheando JSON estático en runtime, lo que hace que agregar o corregir contenido sea tan simple como editar un archivo y refrescar la página.
+No hay backend ni base de datos: todo se resuelve fetcheando JSON estático, lo que hace que agregar o corregir contenido sea tan simple como editar un archivo y refrescar la página. El contenido se carga en tres niveles — metadata al arrancar (~21KB gz), el texto del buscador solo si el usuario busca, y el cuerpo de cada artículo recién al abrirlo — así la primera carga no arrastra los ~3,7MB de contenido completo.
+
+Los dos índices (`index.json` y `search-index.json`) se generan solos al arrancar el dev server o al hacer build; no se editan a mano ni se versionan.
+
+### Accesibilidad
+
+Jerarquía real de encabezados, landmarks (`<main>`, `<header>`, `<nav>`), skip link, foco visible y `prefers-reduced-motion` respetado.
 
 ---
 
@@ -220,7 +230,7 @@ No hay backend, base de datos ni build step para el contenido: todo se resuelve 
 1. Crear o editar un archivo JSON en `public/data/es/` siguiendo el esquema de colecciones (ver [CLAUDE.md](CLAUDE.md) para el schema completo y las convenciones por archivo) — español es la fuente de verdad, se escribe ahí primero.
 2. Registrarlo en `public/data/es/content.json`.
 3. *(Opcional)* Traducir al inglés: crear `public/data/en/<nombre-en-inglés>.json` (el nombre del archivo también se traduce, no se reutiliza el nombre en español) con idéntico schema y estructura (mismos `id`, mismo orden de bloques), traduciendo solo texto — nunca código, IDs de modelo ni flags de CLI. Registrarlo en `public/data/en/content.json`. Si se omite este paso, esa colección simplemente no aparece en modo inglés — es el comportamiento esperado, no un bug.
-4. No se requiere rebuild — los archivos se cargan en runtime.
+4. No se requiere paso manual: los índices (`index.json` y `search-index.json`) se regeneran al arrancar el dev server, al guardar un JSON de contenido con el server andando, o con `npm run build`.
 
 Antes de escribir contenido nuevo sobre CLI de Claude Code, Agent SDK o protocolo MCP, verificá la sintaxis exacta contra documentación viva en vez de recordarla de memoria — ver las convenciones de precisión técnica en `CLAUDE.md`.
 

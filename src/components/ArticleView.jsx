@@ -4,6 +4,7 @@ import { collectionBadge } from '../constants/collections';
 import { IconChevronRight } from './icons';
 import { SubsectionContent } from './SubsectionContent';
 import { Block } from './blocks';
+import { scrollBehavior } from '../utils/motion';
 
 export function ArticleView({ article, sectionArticles, groupedSections, onArticle, onCollection, onHome, highlightTarget, lang }) {
   const t = useUI(lang);
@@ -27,7 +28,7 @@ export function ArticleView({ article, sectionArticles, groupedSections, onArtic
     const { subsectionIndex } = highlightTarget;
     const el = document.getElementById(`subsection-${subsectionIndex}`);
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.scrollIntoView({ behavior: scrollBehavior(), block: 'center' });
     }
     setFlashIndex(subsectionIndex);
     const timer = setTimeout(() => setFlashIndex(null), 2000);
@@ -37,14 +38,14 @@ export function ArticleView({ article, sectionArticles, groupedSections, onArtic
   if (!article) {
     return (
       <div className="article-layout">
-        <div className="article-view">
+        <main id="content" className="article-view">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <div className="skeleton" style={{ height: 14, width: 120 }} />
             <div className="skeleton" style={{ height: 32, width: '70%' }} />
             <div className="skeleton" style={{ height: 16, width: '90%' }} />
             <div className="skeleton" style={{ height: 16, width: '80%' }} />
           </div>
-        </div>
+        </main>
       </div>
     );
   }
@@ -118,7 +119,7 @@ export function ArticleView({ article, sectionArticles, groupedSections, onArtic
       {renderSidebar()}
 
       {/* Article content */}
-      <div className="article-view">
+      <main id="content" className="article-view">
         <div className="breadcrumb">
           <button className="breadcrumb-btn breadcrumb-home" onClick={onHome}>{t.home}</button>
           <IconChevronRight />
@@ -144,19 +145,20 @@ export function ArticleView({ article, sectionArticles, groupedSections, onArtic
             <div className="section-label">{t.content}</div>
             <div>
               {article.subsections.map((sub, i) => (
-                <div
+                <section
                   key={i}
                   id={`subsection-${i}`}
                   className={`sub-group ${flashIndex === i ? 'sub-group-flash' : ''}`}
+                  aria-labelledby={sub.title ? `subsection-${i}-title` : undefined}
                 >
-                  {sub.title && <div className="subsection-title">{sub.title}</div>}
+                  {sub.title && <h2 id={`subsection-${i}-title`} className="subsection-title">{sub.title}</h2>}
                   <SubsectionContent sub={sub} highlightTerm={flashIndex === i ? highlightTarget?.term : null} />
-                </div>
+                </section>
               ))}
             </div>
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 }

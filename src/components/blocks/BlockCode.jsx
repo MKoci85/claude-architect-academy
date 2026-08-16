@@ -5,6 +5,9 @@ import bash from 'highlight.js/lib/languages/bash';
 import python from 'highlight.js/lib/languages/python';
 import yaml from 'highlight.js/lib/languages/yaml';
 import markdown from 'highlight.js/lib/languages/markdown';
+import javascript from 'highlight.js/lib/languages/javascript';
+import typescript from 'highlight.js/lib/languages/typescript';
+import plaintext from 'highlight.js/lib/languages/plaintext';
 
 hljs.registerLanguage('json', json);
 hljs.registerLanguage('bash', bash);
@@ -12,8 +15,15 @@ hljs.registerLanguage('shell', bash);
 hljs.registerLanguage('python', python);
 hljs.registerLanguage('yaml', yaml);
 hljs.registerLanguage('markdown', markdown);
+hljs.registerLanguage('javascript', javascript);
+hljs.registerLanguage('js', javascript);
+hljs.registerLanguage('typescript', typescript);
+hljs.registerLanguage('ts', typescript);
+hljs.registerLanguage('plaintext', plaintext);
+hljs.registerLanguage('text', plaintext);
 
 const TERMINAL_LANGS = new Set(['bash', 'shell', 'sh']);
+hljs.registerLanguage('sh', bash);
 
 export function BlockCode({ block }) {
   const lang = block.lang || block.language || '';
@@ -40,7 +50,7 @@ export function BlockCode({ block }) {
           {block.label}
         </div>
       )}
-      <pre className="block-code">
+      <pre className="block-code" tabIndex={0}>
         {html
           ? <code dangerouslySetInnerHTML={{ __html: html }} />
           : <code>{content}</code>

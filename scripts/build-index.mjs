@@ -1,10 +1,20 @@
-// Genera public/data/{lang}/index-lite.json a partir de content.json y las
-// colecciones completas. El índice liviano tiene la misma forma de árbol que
-// consumía App.jsx antes (collections -> sections -> articles), pero cada
-// subsection pierde sus `blocks` (código, cards, tablas, etc.) y en su lugar
-// lleva `text` (texto plano precalculado, para el buscador). Cada artículo
-// lleva `sourceFile` para que el cliente sepa qué archivo completo pedir
-// cuando el usuario efectivamente abre ese artículo.
+// Genera DOS artefactos por idioma a partir de content.json y las colecciones
+// completas:
+//
+//   index.json        → solo metadata (collections -> sections -> articles con
+//                       id/title/summary/sourceFile/articleIndex y los títulos
+//                       de subsección). Es lo único que se descarga al cargar
+//                       la app: alcanza para pintar el home y navegar.
+//   search-index.json → el texto plano precalculado de cada subsección, que es
+//                       el 90% del peso. Se pide en lazy recién cuando el
+//                       usuario tipea en el buscador por primera vez.
+//
+// La separación existe porque el texto de búsqueda pesa ~380KB crudos contra
+// ~40KB de metadata: mandarlo todo junto en la carga inicial hacía que el
+// "índice liviano" pesara más del doble que el bundle JS entero.
+//
+// Cada artículo lleva `sourceFile` para que el cliente sepa qué archivo
+// completo pedir cuando el usuario efectivamente abre ese artículo.
 //
 // Se ejecuta automáticamente al arrancar `npm run dev` / `npm run build`
 // (ver vite.config.js) y también puede correrse a mano:
@@ -41,15 +51,26 @@ function liteArticles(articles, sourceFile, startIndex = 0) {
     articleIndex: startIndex + i,
     subsections: (a.subsections || []).map((sub) => ({
       title: sub.title || null,
-      text: subsectionText(sub),
     })),
   }));
+}
+
+function searchEntries(articles, sourceFile, startIndex = 0, out = []) {
+  (articles || []).forEach((a, i) => {
+    out.push({
+      key: `${sourceFile}#${startIndex + i}`,
+      texts: (a.subsections || []).map((sub) => subsectionText(sub)),
+    });
+  });
+  return out;
 }
 
 function buildLang(lang) {
   const langDir = path.join(DATA_ROOT, lang);
   const index = readJson(path.join(langDir, 'content.json'));
   if (!index || !Array.isArray(index.collections)) return;
+
+  const searchDocs = [];
 
   const collections = index.collections
     .map((entry) => {
@@ -58,11 +79,13 @@ function buildLang(lang) {
           .map((item) => {
             const data = readJson(path.join(langDir, item.file));
             if (!data) return null; // sin traducción disponible en este idioma
+            const articles = data.sections?.flatMap((s) => s.articles) || [];
+            searchEntries(articles, item.file, 0, searchDocs);
             return {
               title: item.title || data.title,
               description: item.description,
               sourceFile: item.file,
-              articles: liteArticles(data.sections?.flatMap((s) => s.articles) || [], item.file),
+              articles: liteArticles(articles, item.file),
             };
           })
           .filter(Boolean);
@@ -85,13 +108,15 @@ function buildLang(lang) {
         let runningIndex = 0;
         const sections = (data.sections || []).map((s) => {
           const arts = liteArticles(s.articles || [], entry.file, runningIndex);
+          searchEntries(s.articles || [], entry.file, runningIndex, searchDocs);
           runningIndex += (s.articles || []).length;
           return { title: s.title, sourceFile: entry.file, articles: arts };
         });
         return {
-          ...data,
+          id: data.id,
           title: data.title || entry.title,
           summary: data.summary || data.description || entry.summary || entry.description,
+          isSuper: false,
           sections,
         };
       }
@@ -100,18 +125,20 @@ function buildLang(lang) {
     })
     .filter(Boolean);
 
-  const outFile = path.join(langDir, 'index-lite.json');
-  // Sin indentación: es el único archivo que se descarga siempre al cargar
-  // la app, así que se prioriza tamaño sobre legibilidad. No se edita a mano.
-  fs.writeFileSync(outFile, JSON.stringify({ collections }));
-  return outFile;
+  const indexFile = path.join(langDir, 'index.json');
+  fs.writeFileSync(indexFile, JSON.stringify({ collections }));
+
+  const searchFile = path.join(langDir, 'search-index.json');
+  fs.writeFileSync(searchFile, JSON.stringify({ docs: searchDocs }));
+
+  return [indexFile, searchFile];
 }
 
 export function buildIndexes() {
   const written = [];
   for (const lang of LANGS) {
     const out = buildLang(lang);
-    if (out) written.push(out);
+    if (out) written.push(...out);
   }
   return written;
 }

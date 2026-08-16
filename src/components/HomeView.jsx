@@ -10,7 +10,7 @@ export function HomeView({ collections, articles, activeCollection, onCollection
   const isHome = activeCollection === 'Todos' && !search.trim();
 
   return (
-    <>
+    <main id="content">
       {isHome && (
         <div className="home-hero">
           <div className="home-hero-eyebrow">{t.heroEyebrow}</div>
@@ -49,13 +49,13 @@ export function HomeView({ collections, articles, activeCollection, onCollection
           ) : (
             <div className="cards-grid">
               {articles.map(article => (
-                <ArticleCard key={article.id} article={article} onClick={onArticle} />
+                <ArticleCard key={`${article.sourceFile}#${article.articleIndex}`} article={article} onClick={onArticle} />
               ))}
             </div>
           )}
         </>
       )}
     </div>
-    </>
+    </main>
   );
 }

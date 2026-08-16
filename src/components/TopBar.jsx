@@ -39,7 +39,8 @@ export function TopBar({ search, onSearch, searchResults, onResultClick, theme, 
   const showEmpty = !!search.trim() && searchResults !== null && Array.isArray(searchResults) && searchResults.length === 0;
 
   return (
-    <div className="topbar">
+    <header className="topbar">
+      <a href="#content" className="skip-link">{t.skipToContent}</a>
       <button className="topbar-logo" onClick={onLogoClick} title={t.home}>
         Claude <IconHome />
       </button>
@@ -53,9 +54,12 @@ export function TopBar({ search, onSearch, searchResults, onResultClick, theme, 
           onKeyDown={handleKey}
           onFocus={() => { if (searchResults && searchResults.length > 0 && search.trim()) setOpen(true); }}
           placeholder={t.searchPlaceholder}
+          type="text"
+          role="combobox"
           aria-label={t.searchLabel}
           aria-expanded={open}
-          aria-haspopup="listbox"
+          aria-controls="search-listbox"
+          aria-autocomplete="list"
         />
         {search && (
           <button
@@ -67,13 +71,13 @@ export function TopBar({ search, onSearch, searchResults, onResultClick, theme, 
 
         {/* Dropdown */}
         {(open || showEmpty) && (
-          <div className="search-dropdown" role="listbox">
+          <div className="search-dropdown" role="listbox" id="search-listbox">
             {showEmpty ? (
               <div className="search-empty">{t.noSearchResults(search)}</div>
             ) : (
               (Array.isArray(searchResults) ? searchResults : []).slice(0, 8).map(article => (
                 <button
-                  key={article.id}
+                  key={`${article.sourceFile}#${article.articleIndex}`}
                   className="search-result-item"
                   role="option"
                   onClick={() => handleSelect(article)}
@@ -109,6 +113,6 @@ export function TopBar({ search, onSearch, searchResults, onResultClick, theme, 
       <a className="exam-btn" href="/practice" target="_blank" rel="noopener noreferrer">
         {t.exam}
       </a>
-    </div>
+    </header>
   );
 }
