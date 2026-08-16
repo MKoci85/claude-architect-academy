@@ -192,9 +192,12 @@ public/
     examen_cca_f_en.json  → Pool of 265 exam questions, grouped by domain
 
 src/
-  App.jsx           → All UI, routing, state, and block renderers (~1060 lines)
+  App.jsx           → App shell: composes the hooks and routes between the top-level views
   searchEngine.js   → Full-text search engine with scoring
   styles.css        → Tailwind directives + CSS custom properties for light/dark theme
+  i18n/, hooks/, constants/, utils/, data/, components/
+                    → UI, state, i18n, and block renderers, split by concern
+                      (see CLAUDE.md for the file-by-file breakdown)
 ```
 
 The language switcher (ES/EN button in the top bar) toggles which folder (`data/es/` or `data/en/`) is used to fetch `content.json` and each collection. If a collection or sub-item has no equivalent file in `en/`, it **doesn't appear** in English mode — there's no silent fallback to Spanish and no placeholders.

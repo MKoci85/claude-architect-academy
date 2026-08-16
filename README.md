@@ -192,9 +192,12 @@ public/
     examen_cca_f_en.json  → Pool de 265 preguntas del examen, agrupadas por dominio
 
 src/
-  App.jsx           → Toda la UI, ruteo, estado y renderizadores de bloques (~1060 líneas)
+  App.jsx           → Shell de la app: compone los hooks y rutea entre las vistas principales
   searchEngine.js   → Motor de búsqueda full-text con sistema de puntuación
   styles.css        → Directivas Tailwind + propiedades CSS para tema claro/oscuro
+  i18n/, hooks/, constants/, utils/, data/, components/
+                    → UI, estado, i18n y renderizadores de bloques, separados por responsabilidad
+                      (ver CLAUDE.md para el detalle archivo por archivo)
 ```
 
 El selector de idioma (botón ES/EN en la barra superior) alterna qué carpeta (`data/es/` o `data/en/`) se usa para el fetch de `content.json` y de cada colección. Si una colección o sub-item no tiene su archivo equivalente en `en/`, **no aparece** en el modo inglés — no hay fallback silencioso al español ni placeholders.
