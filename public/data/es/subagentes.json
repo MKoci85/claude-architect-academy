@@ -111,7 +111,7 @@
                 ["model", "string", "No", "Modelo a usar: sonnet, opus, haiku o inherit. Si se omite, hereda el modelo del agente padre. Usar Haiku para tareas de búsqueda/exploración ahorra costos significativos."],
                 ["memory", "string", "No", "Fuente de memoria para el subagente: user (memoria de usuario), project (CLAUDE.md del proyecto), local. Disponible en ambos SDKs (TypeScript y Python)."],
                 ["skills", "string[]", "No", "Lista de Skills a precargar en el contexto del subagente al arrancar. Las Skills no listadas acá no se precargan, pero siguen siendo invocables a través de la tool Skill si el subagente las necesita."],
-                ["mcpServers", "array", "No", "Servidores MCP disponibles para este subagente, por nombre o configuración inline. Permite dar acceso a herramientas externas específicas (Slack, Gmail, bases de datos, etc.)."]
+                ["mcpServers", "array", "No", "Servidores MCP adicionales para este subagente, por nombre de referencia (a uno ya configurado en la sesión) o config inline. No reemplaza los MCP heredados vía tools — los suma, y un servidor inline queda aislado del contexto del padre: se conecta al arrancar el subagente y se desconecta al terminar."]
               ]
             },
             {
@@ -159,7 +159,7 @@
                 "items": [
                   "Su propio system prompt (AgentDefinition.prompt) y el string del prompt de la herramienta Agent",
                   "El CLAUDE.md del proyecto (cargado vía settingSources)",
-                  "Las definiciones de herramientas (heredadas del padre, o el subconjunto en tools)",
+                  "Las definiciones de herramientas — incluidas las herramientas MCP, si tools se omite hereda TODAS las del padre; si se especifica, solo el subconjunto listado",
                   "La fuente de memoria configurada (memory)"
                 ]
               },
@@ -168,10 +168,15 @@
                 "items": [
                   "El historial de conversación del padre ni sus resultados de herramientas",
                   "El system prompt del agente padre",
-                  "Las Skills del padre precargadas en contexto (las que no estén en AgentDefinition.skills no se precargan, aunque siguen siendo invocables a demanda vía la tool Skill)",
-                  "Los servidores MCP del padre (a menos que se configuren en mcpServers)"
+                  "Las Skills del padre precargadas en contexto (las que no estén en AgentDefinition.skills no se precargan, aunque siguen siendo invocables a demanda vía la tool Skill)"
                 ]
               }
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "mcpServers no reemplaza lo heredado — da acceso a servidores adicionales, aislados de la sesión del padre",
+              "content": "Por default (sin `tools` ni `mcpServers`), el subagente hereda TODAS las herramientas del padre, MCP incluidas — no arranca sin acceso a MCP como podría sugerir el nombre del campo. `mcpServers` sirve para otra cosa: darle al subagente servidores MCP que ni siquiera están conectados en la sesión del padre (por nombre de referencia o config inline), con su propio ciclo de vida — un servidor definido inline se conecta cuando arranca el subagente y se desconecta cuando termina, sin que sus tool descriptions ensucien el contexto de la conversación principal. Por eso un subagente puede terminar con MÁS servidores MCP que el padre (los propios vía mcpServers, sumados a los heredados) o con MENOS (si tools restringe cuáles MCP tools puede usar, con patrones como mcp__server o mcp__*). La fuente correcta (Anthropic, docs.claude.com/agent-sdk/subagents) es la tabla \"What subagents inherit\": ahí figura tools, no mcpServers, como el campo que gobierna la herencia por default."
             },
             {
               "type": "callout",

@@ -149,6 +149,12 @@
                   "type": "code",
                   "language": "python",
                   "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# 1. primera llamada: Claude decide usar la tool\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500, tools=[tool_clima],\n    messages=[{\"role\": \"user\", \"content\": \"¿Cómo está el clima en Rosario?\"}],\n)\n# response.stop_reason == \"tool_use\"\n# response.content[0].type == \"tool_use\"\n# response.content[0].name == \"obtener_clima\"\n# response.content[0].input == {\"ciudad\": \"Rosario\"}\n\ntool_use_block = next(b for b in response.content if b.type == \"tool_use\")\nresultado_real = \"18°C, parcialmente nublado\"  # ejecución real de la función\n\nmensajes = [\n    {\"role\": \"user\", \"content\": \"¿Cómo está el clima en Rosario?\"},\n    {\"role\": \"assistant\", \"content\": response.content},\n    {\n        \"role\": \"user\",\n        \"content\": [{\n            \"type\": \"tool_result\",\n            \"tool_use_id\": tool_use_block.id,\n            \"content\": resultado_real,\n        }],\n    },\n]\n\n# 2. segunda llamada: Claude genera la respuesta final\nrespuesta_final = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=300, tools=[tool_clima], messages=mensajes\n)"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Orden de los bloques: tool_result siempre primero",
+                  "content": "En el mensaje `user` que contiene el resultado, los bloques `tool_result` deben ir primero en el array `content` — cualquier texto adicional tiene que ir después de todos los `tool_result`, nunca antes. Un `content` como `[{\"type\": \"text\", ...}, {\"type\": \"tool_result\", ...}]` devuelve un error 400. Además, el mensaje `tool_result` debe seguir inmediatamente al mensaje `assistant` con el `tool_use` correspondiente, sin mensajes intermedios."
                 }
               ]
             },

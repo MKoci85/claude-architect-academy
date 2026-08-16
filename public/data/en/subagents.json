@@ -111,7 +111,7 @@
                 ["model", "string", "No", "Model to use: sonnet, opus, haiku, or inherit. If omitted, inherits the parent agent's model. Using Haiku for search/exploration tasks saves significant cost."],
                 ["memory", "string", "No", "Memory source for the subagent: user (user memory), project (project's CLAUDE.md), local. Available in both SDKs (TypeScript and Python)."],
                 ["skills", "string[]", "No", "List of Skills to preload into the subagent's context on startup. Skills not listed here aren't preloaded, but remain invocable via the Skill tool if the subagent needs them."],
-                ["mcpServers", "array", "No", "MCP servers available to this subagent, by name or inline configuration. Allows granting access to specific external tools (Slack, Gmail, databases, etc.)."]
+                ["mcpServers", "array", "No", "Additional MCP servers for this subagent, by name reference (to one already configured in the session) or inline config. Doesn't replace MCP servers inherited via tools — it adds to them, and an inline server stays isolated from the parent's context: it connects when the subagent starts and disconnects when it finishes."]
               ]
             },
             {
@@ -159,7 +159,7 @@
                 "items": [
                   "Its own system prompt (AgentDefinition.prompt) and the prompt string from the Agent tool call",
                   "The project's CLAUDE.md (loaded via settingSources)",
-                  "The tool definitions (inherited from the parent, or the subset in tools)",
+                  "The tool definitions — MCP tools included: if tools is omitted, the subagent inherits ALL of the parent's, MCP servers included; if specified, only the listed subset",
                   "The configured memory source (memory)"
                 ]
               },
@@ -168,10 +168,15 @@
                 "items": [
                   "The parent's conversation history or its tool results",
                   "The parent agent's system prompt",
-                  "The parent's Skills preloaded in context (any not listed in AgentDefinition.skills aren't preloaded, though they remain invocable on demand via the Skill tool)",
-                  "The parent's MCP servers (unless configured in mcpServers)"
+                  "The parent's Skills preloaded in context (any not listed in AgentDefinition.skills aren't preloaded, though they remain invocable on demand via the Skill tool)"
                 ]
               }
+            },
+            {
+              "type": "callout",
+              "variant": "warning",
+              "title": "mcpServers doesn't replace what's inherited — it grants extra servers, isolated from the parent's session",
+              "content": "By default (no tools or mcpServers set), the subagent inherits ALL of the parent's tools, MCP included — it doesn't start with zero MCP access despite what the field name might suggest. mcpServers does something different: it gives the subagent MCP servers that aren't even connected in the parent's session (by name reference or inline config), with their own lifecycle — an inline server connects when the subagent starts and disconnects when it finishes, so its tool descriptions never clutter the main conversation's context. That's why a subagent can end up with MORE MCP servers than the parent (its own via mcpServers, on top of the inherited ones) or FEWER (if tools restricts which MCP tools it can use, via patterns like mcp__server or mcp__*). The authoritative source (Anthropic, docs.claude.com/agent-sdk/subagents) is the \"What subagents inherit\" table: it lists tools, not mcpServers, as the field governing default inheritance."
             },
             {
               "type": "callout",

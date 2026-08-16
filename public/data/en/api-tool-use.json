@@ -149,6 +149,12 @@
                   "type": "code",
                   "language": "python",
                   "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# 1. first call: Claude decides to use the tool\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500, tools=[weather_tool],\n    messages=[{\"role\": \"user\", \"content\": \"What's the weather like in Rosario?\"}],\n)\n# response.stop_reason == \"tool_use\"\n# response.content[0].type == \"tool_use\"\n# response.content[0].name == \"get_weather\"\n# response.content[0].input == {\"city\": \"Rosario\"}\n\ntool_use_block = next(b for b in response.content if b.type == \"tool_use\")\nactual_result = \"18°C, partly cloudy\"  # actual function execution\n\nmessages = [\n    {\"role\": \"user\", \"content\": \"What's the weather like in Rosario?\"},\n    {\"role\": \"assistant\", \"content\": response.content},\n    {\n        \"role\": \"user\",\n        \"content\": [{\n            \"type\": \"tool_result\",\n            \"tool_use_id\": tool_use_block.id,\n            \"content\": actual_result,\n        }],\n    },\n]\n\n# 2. second call: Claude generates the final response\nfinal_response = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=300, tools=[weather_tool], messages=messages\n)"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Block order: tool_result always comes first",
+                  "content": "In the `user` message that carries the result, `tool_result` blocks must come first in the `content` array — any additional text has to come after all `tool_result` blocks, never before. A `content` shaped like `[{\"type\": \"text\", ...}, {\"type\": \"tool_result\", ...}]` returns a 400 error. The `tool_result` message must also immediately follow the `assistant` message with the matching `tool_use`, with no messages in between."
                 }
               ]
             },
