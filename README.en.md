@@ -6,8 +6,11 @@
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vitejs.dev)
 [![Language](https://img.shields.io/badge/language-spanish%20%2B%20english-brightgreen)](#)
+[![Demo](https://img.shields.io/badge/demo-live-success)](https://claude-architect-academy-jet.vercel.app)
 
 🇪🇸 [Leer esto en español](README.md)
+
+**🔗 Live site:** [claude-architect-academy-jet.vercel.app](https://claude-architect-academy-jet.vercel.app)
 
 ---
 
