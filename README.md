@@ -119,7 +119,7 @@ Disponible en `/practice`. Replica la logística y distribución por dominios de
 
 - **60 preguntas** aleatorias extraídas de un pool de 265, categorizado por dominio
 - **Distribución ponderada** que respeta los pesos oficiales de cada área
-- **Opción múltiple y multi-respuesta** — el simulador garantiza, como decisión pedagógica propia (no una característica documentada del examen real), un piso de ~22% de preguntas multi-respuesta por dominio en cada intento, para asegurar exposición suficiente a ese formato
+- **Opción múltiple y multi-respuesta** — el simulador garantiza, como decisión pedagógica propia (no una característica documentada del examen real), un piso de ~30% de preguntas multi-respuesta por dominio en cada intento, para asegurar exposición suficiente a ese formato
 - **Temporizador** de 120 minutos (2 min/pregunta)
 - **Informe de rendimiento** por dominio al finalizar
 - **Mapa de navegación** para saltar entre preguntas
@@ -169,12 +169,13 @@ El banco de preguntas está en inglés (formato del examen real) y evalúa crite
 > - **Explicitly report the conflict to the orchestrator, including both values and their sources, without resolving it.** ✓
 > - Omit the conflicting metric and proceed with the remaining analysis.
 
-**Multi-respuesta** — *Context Management and Reliability*
+**Multi-respuesta** — *Agentic Architecture and Orchestration* (las preguntas multi-respuesta usan 5 opciones, no 4, para bajar la probabilidad de acertar al azar y dejar lugar a un distractor adicional)
 > A team is debugging an agentic loop that sometimes terminates prematurely and sometimes spins through dozens of unproductive tool calls. The current implementation stops as soon as the assistant's response contains any plain text content, and separately hard-caps execution at 5 iterations regardless of `stop_reason`. Which two changes correctly align this loop with the intended pattern? *(select 2)*
 > - **Stop checking for text content as a completion signal — a valid `tool_use` turn can legitimately include explanatory text alongside the tool call.** ✓
 > - **Make `stop_reason === "end_turn"` the primary termination signal, while keeping a generous iteration cap in place as a safety-net fallback against runaway loops.** ✓
 > - Replace the iteration cap with a token budget cap, since tokens are a more precise unit than turns.
 > - Keep the text-content check but raise the iteration cap to 20 to reduce premature termination.
+> - Make `stop_reason === "tool_use"` the primary termination signal, since it also represents Claude finishing its turn and is therefore a valid stopping point.
 
 ---
 

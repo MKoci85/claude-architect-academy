@@ -48,7 +48,7 @@ const DOMAINS = [
 
 const EXAM_COUNTS = {1:16, 2:12, 3:11, 4:12, 5:9};
 const EXAM_LENGTH = Object.values(EXAM_COUNTS).reduce((a,b)=>a+b,0);
-const MIN_MULTI_RATIO = 0.22;
+const MIN_MULTI_RATIO = 0.30;
 const TOTAL_SECONDS = 120*60;
 
 function domainName(id){return DOMAINS.find(d=>d.id===id).name;}

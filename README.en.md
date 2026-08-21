@@ -119,7 +119,7 @@ Available at `/practice`. Replicates the logistics and domain distribution of th
 
 - **60 random questions** drawn from a pool of 265, categorized by domain
 - **Weighted distribution** matching each area's official weight
-- **Multiple-choice and multiple-response** — as a pedagogical choice of this simulator (not a documented feature of the real exam), it guarantees a floor of ~22% multiple-response questions per domain on each attempt, to ensure sufficient exposure to that format
+- **Multiple-choice and multiple-response** — as a pedagogical choice of this simulator (not a documented feature of the real exam), it guarantees a floor of ~30% multiple-response questions per domain on each attempt, to ensure sufficient exposure to that format
 - **120-minute timer** (2 min/question)
 - **Performance report** by domain at the end
 - **Navigation map** to jump between questions
@@ -169,12 +169,13 @@ The question bank is in English (the real exam's format) and tests decision-maki
 > - **Explicitly report the conflict to the orchestrator, including both values and their sources, without resolving it.** ✓
 > - Omit the conflicting metric and proceed with the remaining analysis.
 
-**Multiple-response** — *Context Management and Reliability*
+**Multiple-response** — *Agentic Architecture and Orchestration* (multiple-response questions use 5 options, not 4, to lower the odds of a random guess and leave room for an extra distractor)
 > A team is debugging an agentic loop that sometimes terminates prematurely and sometimes spins through dozens of unproductive tool calls. The current implementation stops as soon as the assistant's response contains any plain text content, and separately hard-caps execution at 5 iterations regardless of `stop_reason`. Which two changes correctly align this loop with the intended pattern? *(select 2)*
 > - **Stop checking for text content as a completion signal — a valid `tool_use` turn can legitimately include explanatory text alongside the tool call.** ✓
 > - **Make `stop_reason === "end_turn"` the primary termination signal, while keeping a generous iteration cap in place as a safety-net fallback against runaway loops.** ✓
 > - Replace the iteration cap with a token budget cap, since tokens are a more precise unit than turns.
 > - Keep the text-content check but raise the iteration cap to 20 to reduce premature termination.
+> - Make `stop_reason === "tool_use"` the primary termination signal, since it also represents Claude finishing its turn and is therefore a valid stopping point.
 
 ---
 
