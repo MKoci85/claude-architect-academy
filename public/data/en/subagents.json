@@ -107,7 +107,7 @@
               "rows": [
                 ["description", "string", "Yes", "Natural-language description of when to use this subagent. Claude reads it to decide whether to delegate. The most critical field: a vague description means Claude never invokes the agent."],
                 ["prompt", "string", "Yes", "The subagent's system prompt. Defines its role, expertise, restrictions, and behavior. Completely independent from the parent agent's system prompt."],
-                ["tools", "string[]", "No", "Array of allowed tool names. If omitted, the subagent inherits all of the parent's. If specified, it can only use those. Never include Agent — subagents cannot launch other subagents."],
+                ["tools", "string[]", "No", "Array of allowed tool names. If omitted, the subagent inherits all of the parent's. If specified, it can only use those. Including Agent lets the subagent launch its own subagents (up to 3 levels deep by default) — a deliberate design choice, not something the system blocks on its own."],
                 ["model", "string", "No", "Model to use: sonnet, opus, haiku, or inherit. If omitted, inherits the parent agent's model. Using Haiku for search/exploration tasks saves significant cost."],
                 ["memory", "string", "No", "Memory source for the subagent: user (user memory), project (project's CLAUDE.md), local. Available in both SDKs (TypeScript and Python)."],
                 ["skills", "string[]", "No", "List of Skills to preload into the subagent's context on startup. Skills not listed here aren't preloaded, but remain invocable via the Skill tool if the subagent needs them."],
@@ -117,8 +117,8 @@
             {
               "type": "callout",
               "variant": "warning",
-              "title": "Golden rule: no Agent in the subagent's tools",
-              "content": "Subagents cannot launch their own subagents. The hierarchy is always flat: one parent, multiple children. Never include `Agent` in a subagent's tools array — if you do, the subagent will try to invoke subagents and fail."
+              "title": "Subagents CAN nest — up to 3 levels by default",
+              "content": "Contrary to what's often assumed, subagents can launch their own subagents: official docs confirm nesting up to 3 layers deep by default if `Agent` is available in their `tools`. The hierarchy isn't necessarily flat. If you want a specific subagent to be unable to delegate, don't include `Agent` in its `tools` array (or use `disallowedTools`) — that's a deliberate design choice, not a system limitation."
             }
           ]
         },
@@ -212,28 +212,27 @@
         {
           "id": "sub-005",
           "title": "The built-in subagents",
-          "summary": "The five subagents Claude Code includes by default: Explore (Haiku), Plan, General Purpose, Claude Code Guide, and Statusline Setup.",
+          "summary": "The subagents Claude Code officially documents as built-in by default: Explore, Plan, General Purpose, and Claude Code Guide.",
           "blocks": [
             {
               "type": "text",
-              "content": "Claude Code includes five built-in subagents that are invoked automatically. You don't need to configure them or call them explicitly — Claude decides when to use them."
+              "content": "Claude Code includes several built-in subagents that are invoked automatically. You don't need to configure them or call them explicitly — Claude decides when to use them. (An internal \"Statusline Setup\" agent exists in practice for configuring the statusline, but it doesn't appear in the official built-in subagents reference alongside the others — treat it as unconfirmed if you need to cite it precisely.)"
             },
             {
               "type": "table",
               "headers": ["Agent", "Model", "Tools", "When it's invoked"],
               "rows": [
-                ["🔍 Explore", "Haiku", "Read-only", "When Claude needs to search files, grep for symbols, or locate definitions without making changes. Fast and cheap for pure exploration."],
+                ["🔍 Explore", "Capped at Opus (Claude API)", "Read-only", "When Claude needs to search files, grep for symbols, or locate definitions without making changes. Runs with a model cap (Opus max on the Claude API), not fixed to a cheap model."],
                 ["📋 Plan", "Inherited", "Read-only", "Inside the /plan command. Investigates the codebase before designing the strategy: reads files, explores code, and identifies critical pieces. Cannot make changes — only observes and reports."],
                 ["⚙️ General Purpose", "Inherited", "All", "Fallback subagent for tasks that need more than just reading. If something needs exploration AND modification, this is the one. Claude invokes it when no specific agent fits better."],
-                ["📚 Claude Code Guide", "Inherited", "Read + Web", "Specialized help agent. If you ask how to configure MCP servers or what a flag does, Claude delegates here instead of searching the web. Knows the CLI, the Agent SDK, and the API."],
-                ["🖥️ Statusline Setup", "Haiku", "Limited", "Internal agent that manages terminal statusline configuration. Rarely seen acting directly — works behind the scenes during initialization."]
+                ["📚 Claude Code Guide", "Inherited", "Read + Web", "Specialized help agent. If you ask how to configure MCP servers or what a flag does, Claude delegates here instead of searching the web. Knows the CLI, the Agent SDK, and the API."]
               ]
             },
             {
               "type": "callout",
               "variant": "tip",
               "title": "Cost optimization with models",
-              "content": "Built-in read-only agents (like Explore) use Haiku by default, significantly cheaper than Sonnet or Opus. Apply this logic to your custom subagents: use Haiku for search and exploration, Sonnet for reasoning tasks, and Opus only when the complexity justifies it."
+              "content": "Explore runs with a model cap (Opus max on the Claude API) rather than a fixed cheap model — don't assume built-in automatically means \"cheap.\" For your own custom subagents you do have full control: use Haiku for search and exploration, Sonnet for reasoning tasks, and Opus only when the complexity justifies it."
             }
           ]
         },
@@ -361,12 +360,12 @@
                   "body": "A long system prompt consumes the subagent's context tokens, leaving less room for actual work. Rule of thumb: describe the role in 1-2 sentences, list the process in 5-8 steps, and the output format in 3-5 bullet points. Total: under 500 tokens is ideal. If you need more, consider whether the subagent is doing too much — maybe it should be split into two."
                 },
                 {
-                  "title": "Never include Agent in a subagent's tools",
-                  "body": "Subagents cannot launch their own subagents. The hierarchy is always flat: main agent → subagents. If you include `Agent` in a subagent's tools, it will try to delegate and fail. For deeper hierarchies, the main agent must orchestrate multiple subagents manually in sequence."
+                  "title": "Subagent nesting is real — decide it on purpose",
+                  "body": "Subagents can launch their own subagents: official docs allow up to 3 levels of depth by default when `Agent` is in their `tools`. It isn't a forcibly flat hierarchy. If for your use case you'd rather a subagent not be able to delegate (say, to bound cost or unpredictable behavior), deliberately exclude `Agent` from its `tools` array — don't assume the system blocks it on its own."
                 },
                 {
-                  "title": "Watch out for subagent over-use in Claude Opus 4.6",
-                  "body": "According to official documentation, Claude Opus 4.6 has a strong preference for subagents and may launch them in situations where a direct tool call would be faster. For example, it might launch a subagent for code exploration when a direct grep would suffice. If you see excessive use, add explicit instructions to the main agent's system prompt about when to use and when not to use subagents."
+                  "title": "Watch out for subagent over-use",
+                  "body": "In practice, some models show more willingness to delegate to subagents than necessary, launching them in situations where a direct tool call would be faster — for example, a subagent for code exploration when a direct grep would suffice. If you see excessive use, add explicit instructions to the main agent's system prompt about when to use and when not to use subagents; combined with the nesting limit (up to 3 levels by default), it's the main lever for controlling over-delegation."
                 },
                 {
                   "title": "Context must be explicit in the invocation prompt",
@@ -382,7 +381,7 @@
               "type": "callout",
               "variant": "tip",
               "title": "Checklist before shipping to production",
-              "content": "✓ The description explains exactly when to use it\n✓ The prompt has a clear role, defined process, and output format\n✓ The tools are the minimum necessary — no excess or deficit\n✓ Agent isn't in the subagent's tools array\n✓ The chosen model fits the task's complexity\n✓ The system prompt is under 500 tokens\n✓ You tested invoking it explicitly by name before relying on automatic invocation\n✓ Your subagents' descriptions don't overlap with each other"
+              "content": "✓ The description explains exactly when to use it\n✓ The prompt has a clear role, defined process, and output format\n✓ The tools are the minimum necessary — no excess or deficit\n✓ You deliberately decided whether this subagent can delegate to others (Agent in tools) or not — not left to default\n✓ The chosen model fits the task's complexity\n✓ The system prompt is under 500 tokens\n✓ You tested invoking it explicitly by name before relying on automatic invocation\n✓ Your subagents' descriptions don't overlap with each other"
             }
           ]
         },
@@ -437,17 +436,17 @@
               "type": "code",
               "lang": "bash",
               "label": "--resume <session-name>: continuing a previous investigation",
-              "content": "# First session, explicitly named\nclaude --name auth-migration \"Investigate how to migrate the auth system from JWT to sessions\"\n\n# Days later, resume exactly that session with all its context\nclaude --resume auth-migration \"I already applied the change in the middleware, continue with the endpoints\""
+              "content": "# First session, explicitly named\nclaude -n \"auth-migration\" \"Investigate how to migrate the auth system from JWT to sessions\"\n\n# Days later, resume that session by name or session-id, with all its context\nclaude --resume auth-migration \"I already applied the change in the middleware, continue with the endpoints\""
             },
             {
               "type": "callout",
               "icon": "🔀",
-              "content": "**fork_session** creates an independent branch from an already-done analysis point, without modifying the original session — the concept is real and useful, though it doesn't appear documented under that exact name in the Agent SDK's current public documentation (which does confirm `--resume <sessionId>` as the mechanism for continuing a session). Treat the name `fork_session` as indicative of the concept, not a verified parameter; confirm the exact name in the SDK reference before using it in real code. Conceptually, it's the right mechanism when you need to compare two divergent approaches (two refactor strategies, two candidate libraries) that share the same initial codebase analysis but then take different paths — forking avoids repeating the initial exploration in each branch."
+              "content": "**`/fork`** (or the `--fork-session` flag combined with `--resume`/`--continue`) creates an independent copy of the session at a given point, without modifying the original — unlike an earlier version of this content, the name is now confirmed in the official CLI documentation (it isn't `fork_session`, which was an indicative, unverified name). It's the right mechanism when you need to compare two divergent approaches (two refactor strategies, two candidate libraries) that share the same initial codebase analysis but then take different paths — forking avoids repeating the initial exploration in each branch."
             },
             {
               "type": "compare",
               "left": {
-                "title": "--resume <session-name>",
+                "title": "--resume <session-id-or-name>",
                 "rows": [
                   { "key": "What it does", "value": "Continues the same session, linearly, where it left off" },
                   { "key": "When to use it", "value": "The prior context is still valid and you just need to keep going" },
@@ -455,7 +454,7 @@
                 ]
               },
               "right": {
-                "title": "fork_session",
+                "title": "/fork (or --fork-session)",
                 "rows": [
                   { "key": "What it does", "value": "Creates an independent copy of the state at a given point; the original stays intact" },
                   { "key": "When to use it", "value": "You need to explore 2+ different approaches from the same starting point, without one contaminating the other" },

@@ -221,11 +221,11 @@
                     "rows": [
                       {
                         "key": "Mecanismo",
-                        "value": "Tool con schema tipado + tool_choice: {type: 'tool', name: 'extract_invoice'}"
+                        "value": "Tool con schema tipado, `strict: true`, + tool_choice: {type: 'tool', name: 'extract_invoice'}"
                       },
                       {
                         "key": "Resultado",
-                        "value": "El API rechaza respuestas que no cumplan el schema. 0% de errores de formato."
+                        "value": "Con `strict: true` el API garantiza que la respuesta cumple el schema exactamente. 0% de errores de formato."
                       }
                     ]
                   }
@@ -233,13 +233,13 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "tools = [{\n    \"name\": \"extract_invoice\",\n    \"description\": \"Extrae los campos clave de una factura.\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"vendor_name\":  { \"type\": \"string\" },\n            \"invoice_date\": { \"type\": \"string\", \"format\": \"date\" },\n            \"total_amount\": { \"type\": \"number\" },\n            \"currency\":     { \"type\": \"string\", \"enum\": [\"USD\", \"EUR\", \"GBP\", \"ARS\"] }\n        },\n        \"required\": [\"vendor_name\", \"invoice_date\", \"total_amount\", \"currency\"]\n    }\n}]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    tools=tools,\n    tool_choice={\"type\": \"tool\", \"name\": \"extract_invoice\"},\n    messages=[{\"role\": \"user\", \"content\": f\"Factura:\\n{texto_factura}\"}],\n)\n\nresultado = response.content[0].input  # dict ya validado por el API"
+                  "code": "tools = [{\n    \"name\": \"extract_invoice\",\n    \"description\": \"Extrae los campos clave de una factura.\",\n    \"strict\": True,  # garantiza que el output cumpla el schema exactamente\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"vendor_name\":  { \"type\": \"string\" },\n            \"invoice_date\": { \"type\": \"string\", \"format\": \"date\" },\n            \"total_amount\": { \"type\": \"number\" },\n            \"currency\":     { \"type\": \"string\", \"enum\": [\"USD\", \"EUR\", \"GBP\", \"ARS\"] }\n        },\n        \"required\": [\"vendor_name\", \"invoice_date\", \"total_amount\", \"currency\"]\n    }\n}]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    tools=tools,\n    tool_choice={\"type\": \"tool\", \"name\": \"extract_invoice\"},\n    messages=[{\"role\": \"user\", \"content\": f\"Factura:\\n{texto_factura}\"}],\n)\n\nresultado = response.content[0].input  # dict ya validado por el API"
                 },
                 {
                   "type": "callout",
                   "style": "info",
                   "title": "Enum para campos categóricos",
-                  "content": "Un campo `priority: string` acepta 'high', 'High', 'urgent', 'p1' — todas variantes distintas que rompen el sistema destino. Tiparlo como `enum: ['low', 'medium', 'high', 'critical']` elimina esa variación a nivel de schema, no de prompt."
+                  "content": "Un campo `priority: string` acepta 'high', 'High', 'urgent', 'p1' — todas variantes distintas que rompen el sistema destino. Tiparlo como `enum: ['low', 'medium', 'high', 'critical']` elimina esa variación a nivel de schema, no de prompt. La garantía de 0% de errores de formato depende de declarar el tool con `strict: true` — sin ese flag, el schema guía fuertemente al modelo pero no está garantizado al 100%."
                 }
               ]
             },
@@ -417,11 +417,11 @@
                     "rows": [
                       {
                         "key": "Primera query",
-                        "value": "Procesa el contrato y lo cachea. Sin descuento."
+                        "value": "Procesa el contrato y lo cachea (cache write). Cuesta ~25% más que el precio base de esos tokens, no simplemente el precio normal."
                       },
                       {
                         "key": "Queries 2–10",
-                        "value": "Reutilizan el prefijo cacheado. ~70% de reducción en costo y latencia."
+                        "value": "Reutilizan el prefijo cacheado. Un cache hit cuesta ~10% del precio normal de esos tokens de entrada (~90% de reducción de costo) y reduce la latencia notablemente."
                       }
                     ]
                   }
@@ -463,7 +463,7 @@
                     {
                       "icon": "⏱️",
                       "title": "TTL del caché",
-                      "description": "El caché ephemeral dura aproximadamente 5 minutos de inactividad. Para sesiones más largas, el sistema puede reprocessar si el caché expiró; el costo vuelve al valor normal para esa llamada."
+                      "description": "El caché ephemeral dura aproximadamente 5 minutos, contados desde el inicio de cada request que lo toca (no desde la última respuesta). Para sesiones más largas, el sistema puede reprocesar si el caché expiró; el costo vuelve al valor normal para esa llamada."
                     }
                   ]
                 }
@@ -509,7 +509,7 @@
                       },
                       {
                         "key": "Por qué",
-                        "value": "Son recuperaciones de punto (point retrieval), no razonamiento multi-step. El costo se triplica sin ganancia de calidad."
+                        "value": "Son recuperaciones de punto (point retrieval), no razonamiento multi-step. Los tokens de thinking se cobran como tokens de salida — más gasto sin ganancia de calidad."
                       },
                       {
                         "key": "Regla general",

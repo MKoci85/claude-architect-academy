@@ -107,7 +107,7 @@
               "rows": [
                 ["description", "string", "Sí", "Descripción en lenguaje natural de cuándo usar este subagente. Claude la lee para decidir si delega. Campo más crítico: una descripción vaga significa que Claude nunca invoca el agente."],
                 ["prompt", "string", "Sí", "El system prompt del subagente. Define su rol, expertise, restricciones y comportamiento. Completamente independiente del system prompt del agente padre."],
-                ["tools", "string[]", "No", "Array de nombres de herramientas permitidas. Si se omite, el subagente hereda todas las del padre. Si se especifica, solo puede usar esas. Nunca incluyas Agent — los subagentes no pueden lanzar otros subagentes."],
+                ["tools", "string[]", "No", "Array de nombres de herramientas permitidas. Si se omite, el subagente hereda todas las del padre. Si se especifica, solo puede usar esas. Incluir Agent permite que el subagente lance sus propios subagentes (hasta 3 niveles de profundidad por defecto) — es una decisión de diseño explícita, no algo que el sistema bloquee solo."],
                 ["model", "string", "No", "Modelo a usar: sonnet, opus, haiku o inherit. Si se omite, hereda el modelo del agente padre. Usar Haiku para tareas de búsqueda/exploración ahorra costos significativos."],
                 ["memory", "string", "No", "Fuente de memoria para el subagente: user (memoria de usuario), project (CLAUDE.md del proyecto), local. Disponible en ambos SDKs (TypeScript y Python)."],
                 ["skills", "string[]", "No", "Lista de Skills a precargar en el contexto del subagente al arrancar. Las Skills no listadas acá no se precargan, pero siguen siendo invocables a través de la tool Skill si el subagente las necesita."],
@@ -117,8 +117,8 @@
             {
               "type": "callout",
               "variant": "warning",
-              "title": "Regla de oro: sin Agent en las herramientas del subagente",
-              "content": "Los subagentes no pueden lanzar sus propios subagentes. La jerarquía siempre es plana: un padre, múltiples hijos. Nunca incluyas `Agent` en el array de tools de un subagente — si lo hacés, el subagente intentará invocar subagentes y fallará."
+              "title": "Los subagentes SÍ pueden anidar — hasta 3 niveles por defecto",
+              "content": "A diferencia de lo que suele asumirse, los subagentes pueden lanzar sus propios subagentes: la doc oficial confirma anidamiento de hasta 3 capas por defecto si `Agent` está disponible en sus `tools`. La jerarquía no es necesariamente plana. Si querés forzar que un subagente en particular no delegue, no incluyas `Agent` en su array de `tools` (o usá `disallowedTools`) — es una decisión de diseño explícita, no una limitación del sistema."
             }
           ]
         },
@@ -212,28 +212,27 @@
         {
           "id": "sub-005",
           "title": "Los subagentes built-in",
-          "summary": "Los cinco subagentes que Claude Code incluye por defecto: Explore (Haiku), Plan, General Purpose, Claude Code Guide y Statusline Setup.",
+          "summary": "Los subagentes que Claude Code incluye por defecto y documenta oficialmente: Explore, Plan, General Purpose y Claude Code Guide.",
           "blocks": [
             {
               "type": "text",
-              "content": "Claude Code incluye cinco subagentes built-in que se invocan automáticamente. No necesitás configurarlos ni llamarlos explícitamente — Claude decide cuándo usarlos."
+              "content": "Claude Code incluye varios subagentes built-in que se invocan automáticamente. No necesitás configurarlos ni llamarlos explícitamente — Claude decide cuándo usarlos. (Un \"Statusline Setup\" interno existe en la práctica para configurar el statusline, pero no aparece documentado en la referencia oficial de subagentes built-in junto a los demás — tratalo como no confirmado si necesitás citarlo con precisión.)"
             },
             {
               "type": "table",
               "headers": ["Agente", "Modelo", "Herramientas", "Cuándo se invoca"],
               "rows": [
-                ["🔍 Explore", "Haiku", "Solo lectura", "Cuando Claude necesita buscar archivos, hacer grep de símbolos o localizar definiciones sin hacer cambios. Rápido y económico para exploración pura."],
+                ["🔍 Explore", "Tope: Opus (Claude API)", "Solo lectura", "Cuando Claude necesita buscar archivos, hacer grep de símbolos o localizar definiciones sin hacer cambios. Corre con un techo de modelo (Opus como máximo en la Claude API), no fijo en un modelo económico."],
                 ["📋 Plan", "Heredado", "Solo lectura", "Dentro del comando /plan. Investiga el codebase antes de diseñar la estrategia: lee archivos, explora código e identifica piezas críticas. No puede hacer cambios — solo observa y reporta."],
                 ["⚙️ General Purpose", "Heredado", "Todas", "Subagente fallback para tareas que requieren más que solo lectura. Si algo necesita exploración Y modificación, este es el indicado. Claude lo invoca cuando ningún agente específico es mejor."],
-                ["📚 Claude Code Guide", "Heredado", "Read + Web", "Agente de ayuda especializado. Si preguntás cómo configurar servidores MCP o qué hace un flag, Claude delega aquí en vez de buscar en la web. Conoce la CLI, el Agent SDK y la API."],
-                ["🖥️ Statusline Setup", "Haiku", "Limitadas", "Agente interno que gestiona la configuración del statusline del terminal. Raramente se ve en acción directa — trabaja entre bastidores durante la inicialización."]
+                ["📚 Claude Code Guide", "Heredado", "Read + Web", "Agente de ayuda especializado. Si preguntás cómo configurar servidores MCP o qué hace un flag, Claude delega aquí en vez de buscar en la web. Conoce la CLI, el Agent SDK y la API."]
               ]
             },
             {
               "type": "callout",
               "variant": "tip",
               "title": "Optimización de costos con modelos",
-              "content": "Los agentes de solo lectura built-in (como Explore) usan Haiku por defecto, significativamente más económico que Sonnet u Opus. Aplicá esta lógica a tus subagentes personalizados: usá Haiku para búsqueda y exploración, Sonnet para tareas de razonamiento, y Opus solo cuando la complejidad lo justifique."
+              "content": "Explore corre con un techo de modelo (Opus como máximo en la Claude API) en lugar de un modelo fijo económico — no asumas que built-in significa automáticamente \"barato\". Para tus propios subagentes personalizados sí tenés control total: usá Haiku para búsqueda y exploración, Sonnet para tareas de razonamiento, y Opus solo cuando la complejidad lo justifique."
             }
           ]
         },
@@ -361,12 +360,12 @@
                   "body": "Un system prompt largo consume los tokens de contexto del subagente, dejando menos espacio para el trabajo real. Regla general: describí el rol en 1-2 oraciones, listá el proceso en 5-8 pasos, y el formato de salida en 3-5 puntos. Total: menos de 500 tokens es lo ideal. Si necesitás más, evaluá si el subagente está haciendo demasiado — quizá debería dividirse en dos."
                 },
                 {
-                  "title": "Nunca incluyas Agent en las herramientas de un subagente",
-                  "body": "Los subagentes no pueden lanzar sus propios subagentes. La jerarquía siempre es plana: agente principal → subagentes. Si incluís `Agent` en las herramientas de un subagente, intentará delegar y fallará. Para jerarquías más profundas, el agente principal debe orquestar múltiples subagentes manualmente en secuencia."
+                  "title": "El anidamiento de subagentes es real — decidilo a propósito",
+                  "body": "Los subagentes pueden lanzar sus propios subagentes: la doc oficial permite hasta 3 niveles de profundidad por defecto cuando `Agent` está en sus `tools`. No es una jerarquía forzosamente plana. Si para tu caso de uso preferís que un subagente no pueda delegar (por ejemplo, para acotar costo o comportamiento impredecible), excluí `Agent` de su array de `tools` deliberadamente — no asumas que el sistema lo bloquea solo."
                 },
                 {
-                  "title": "Cuidado con el over-uso de subagentes en Claude Opus 4.6",
-                  "body": "Según la documentación oficial, Claude Opus 4.6 tiene una fuerte preferencia por los subagentes y puede lanzarlos en situaciones donde una tool call directa sería más rápida. Por ejemplo, puede lanzar un subagente para exploración de código cuando un grep directo sería suficiente. Si ves uso excesivo, agregá instrucciones explícitas al system prompt del agente principal sobre cuándo usar y cuándo no usar subagentes."
+                  "title": "Cuidado con el over-uso de subagentes",
+                  "body": "En la práctica, algunos modelos muestran más disposición a delegar en subagentes de la necesaria, lanzándolos en situaciones donde una tool call directa sería más rápida — por ejemplo, un subagente para exploración de código cuando un grep directo alcanzaría. Si ves uso excesivo, agregá instrucciones explícitas al system prompt del agente principal sobre cuándo usar y cuándo no usar subagentes; combinado con el límite de anidamiento (hasta 3 niveles por defecto), es la principal palanca de control ante over-delegation."
                 },
                 {
                   "title": "El contexto debe ser explícito en el prompt de invocación",
@@ -382,7 +381,7 @@
               "type": "callout",
               "variant": "tip",
               "title": "Checklist antes de lanzar en producción",
-              "content": "✓ La description explica exactamente cuándo usarlo\n✓ El prompt tiene rol claro, proceso definido y formato de salida\n✓ Las herramientas son el mínimo necesario — sin exceso ni déficit\n✓ Agent no está en el array de tools del subagente\n✓ El modelo elegido es apropiado para la complejidad de la tarea\n✓ El system prompt tiene menos de 500 tokens\n✓ Probaste invocarlo explícitamente por nombre antes de confiar en la invocación automática\n✓ Las descriptions de tus subagentes no se superponen entre sí"
+              "content": "✓ La description explica exactamente cuándo usarlo\n✓ El prompt tiene rol claro, proceso definido y formato de salida\n✓ Las herramientas son el mínimo necesario — sin exceso ni déficit\n✓ Decidiste a propósito si este subagente puede delegar en otros (Agent en tools) o no — no lo dejaste por default\n✓ El modelo elegido es apropiado para la complejidad de la tarea\n✓ El system prompt tiene menos de 500 tokens\n✓ Probaste invocarlo explícitamente por nombre antes de confiar en la invocación automática\n✓ Las descriptions de tus subagentes no se superponen entre sí"
             }
           ]
         },
@@ -437,17 +436,17 @@
               "type": "code",
               "lang": "bash",
               "label": "--resume <session-name>: continuar una investigación previa",
-              "content": "# Primera sesión, nombrada explícitamente\nclaude --name migracion-auth \"Investigá cómo migrar el sistema de auth de JWT a sesiones\"\n\n# Días después, retomar exactamente esa sesión con todo su contexto\nclaude --resume migracion-auth \"Ya apliqué el cambio en el middleware, seguí con los endpoints\""
+              "content": "# Primera sesión, nombrada explícitamente\nclaude -n \"migracion-auth\" \"Investigá cómo migrar el sistema de auth de JWT a sesiones\"\n\n# Días después, retomar esa sesión por nombre o session-id, con todo su contexto\nclaude --resume migracion-auth \"Ya apliqué el cambio en el middleware, seguí con los endpoints\""
             },
             {
               "type": "callout",
               "icon": "🔀",
-              "content": "**fork_session** crea una rama independiente a partir de un punto de análisis ya hecho, sin modificar la sesión original — el concepto es real y útil, aunque no aparece documentado con ese nombre exacto en la documentación pública actual del Agent SDK (que sí confirma `--resume <sessionId>` como mecanismo de continuar una sesión). Tratá el nombre `fork_session` como orientativo del concepto, no como un parámetro verificado; confirmá el nombre exacto en la referencia del SDK antes de usarlo en código real. Conceptualmente, es el mecanismo correcto cuando hay que comparar dos enfoques divergentes (dos estrategias de refactor, dos librerías candidatas) que comparten el mismo análisis inicial del codebase pero después toman caminos distintos — bifurcar evita repetir la exploración inicial en cada rama."
+              "content": "**`/fork`** (o el flag `--fork-session` combinado con `--resume`/`--continue`) crea una copia independiente de la sesión en un punto dado, sin modificar la original — a diferencia de una versión anterior de este contenido, el nombre sí está confirmado en la documentación oficial del CLI (no es `fork_session`, que era un nombre orientativo sin verificar). Es el mecanismo correcto cuando hay que comparar dos enfoques divergentes (dos estrategias de refactor, dos librerías candidatas) que comparten el mismo análisis inicial del codebase pero después toman caminos distintos — bifurcar evita repetir la exploración inicial en cada rama."
             },
             {
               "type": "compare",
               "left": {
-                "title": "--resume <session-name>",
+                "title": "--resume <session-id-o-nombre>",
                 "rows": [
                   { "key": "Qué hace", "value": "Continúa la misma sesión, linealmente, donde quedó" },
                   { "key": "Cuándo usarlo", "value": "El contexto previo sigue siendo válido y solo hace falta seguir avanzando" },
@@ -455,7 +454,7 @@
                 ]
               },
               "right": {
-                "title": "fork_session",
+                "title": "/fork (o --fork-session)",
                 "rows": [
                   { "key": "Qué hace", "value": "Crea una copia independiente del estado en un punto dado; la original queda intacta" },
                   { "key": "Cuándo usarlo", "value": "Se necesita explorar 2+ enfoques distintos desde el mismo punto de partida, sin que uno contamine al otro" },

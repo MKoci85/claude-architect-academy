@@ -221,11 +221,11 @@
                     "rows": [
                       {
                         "key": "Mechanism",
-                        "value": "Tool with typed schema + tool_choice: {type: 'tool', name: 'extract_invoice'}"
+                        "value": "Tool with typed schema, `strict: true`, + tool_choice: {type: 'tool', name: 'extract_invoice'}"
                       },
                       {
                         "key": "Result",
-                        "value": "The API rejects responses that don't comply with the schema. 0% format errors."
+                        "value": "With `strict: true` the API guarantees the response matches the schema exactly. 0% format errors."
                       }
                     ]
                   }
@@ -233,13 +233,13 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "tools = [{\n    \"name\": \"extract_invoice\",\n    \"description\": \"Extracts the key fields from an invoice.\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"vendor_name\":  { \"type\": \"string\" },\n            \"invoice_date\": { \"type\": \"string\", \"format\": \"date\" },\n            \"total_amount\": { \"type\": \"number\" },\n            \"currency\":     { \"type\": \"string\", \"enum\": [\"USD\", \"EUR\", \"GBP\", \"ARS\"] }\n        },\n        \"required\": [\"vendor_name\", \"invoice_date\", \"total_amount\", \"currency\"]\n    }\n}]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    tools=tools,\n    tool_choice={\"type\": \"tool\", \"name\": \"extract_invoice\"},\n    messages=[{\"role\": \"user\", \"content\": f\"Invoice:\\n{invoice_text}\"}],\n)\n\nresult = response.content[0].input  # dict already validated by the API"
+                  "code": "tools = [{\n    \"name\": \"extract_invoice\",\n    \"description\": \"Extracts the key fields from an invoice.\",\n    \"strict\": True,  # guarantees the output matches the schema exactly\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"vendor_name\":  { \"type\": \"string\" },\n            \"invoice_date\": { \"type\": \"string\", \"format\": \"date\" },\n            \"total_amount\": { \"type\": \"number\" },\n            \"currency\":     { \"type\": \"string\", \"enum\": [\"USD\", \"EUR\", \"GBP\", \"ARS\"] }\n        },\n        \"required\": [\"vendor_name\", \"invoice_date\", \"total_amount\", \"currency\"]\n    }\n}]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    tools=tools,\n    tool_choice={\"type\": \"tool\", \"name\": \"extract_invoice\"},\n    messages=[{\"role\": \"user\", \"content\": f\"Invoice:\\n{invoice_text}\"}],\n)\n\nresult = response.content[0].input  # dict already validated by the API"
                 },
                 {
                   "type": "callout",
                   "style": "info",
                   "title": "Enums for categorical fields",
-                  "content": "A `priority: string` field accepts 'high', 'High', 'urgent', 'p1' — all distinct variants that break the destination system. Typing it as `enum: ['low', 'medium', 'high', 'critical']` removes that variation at the schema level, not the prompt level."
+                  "content": "A `priority: string` field accepts 'high', 'High', 'urgent', 'p1' — all distinct variants that break the destination system. Typing it as `enum: ['low', 'medium', 'high', 'critical']` removes that variation at the schema level, not the prompt level. The 0% format-error guarantee depends on declaring the tool with `strict: true` — without that flag, the schema strongly guides the model but isn't 100% guaranteed."
                 }
               ]
             },
@@ -417,11 +417,11 @@
                     "rows": [
                       {
                         "key": "First query",
-                        "value": "Processes the contract and caches it. No discount."
+                        "value": "Processes the contract and caches it (cache write). Costs ~25% more than the base price for those tokens, not simply the normal price."
                       },
                       {
                         "key": "Queries 2–10",
-                        "value": "Reuse the cached prefix. ~70% reduction in cost and latency."
+                        "value": "Reuse the cached prefix. A cache hit costs ~10% of the normal price for those input tokens (~90% cost reduction) and noticeably reduces latency."
                       }
                     ]
                   }
@@ -463,7 +463,7 @@
                     {
                       "icon": "⏱️",
                       "title": "Cache TTL",
-                      "description": "The ephemeral cache lasts approximately 5 minutes of inactivity. For longer sessions, the system may reprocess if the cache expired; cost returns to normal for that call."
+                      "description": "The ephemeral cache lasts approximately 5 minutes, counted from the start of each request that touches it (not from the last response). For longer sessions, the system may reprocess if the cache expired; cost returns to normal for that call."
                     }
                   ]
                 }
@@ -509,7 +509,7 @@
                       },
                       {
                         "key": "Why",
-                        "value": "These are point retrievals, not multi-step reasoning. Cost triples with no quality gain."
+                        "value": "These are point retrievals, not multi-step reasoning. Thinking tokens are billed as output tokens — extra spend with no quality gain."
                       },
                       {
                         "key": "General rule",
