@@ -171,12 +171,12 @@
                 {
                   "type": "code",
                   "lang": "bash",
-                  "content": "# Abrir el panel de gestión MCP (también maneja OAuth 2.1)\n/mcp\n\n# Habilitar / deshabilitar un servidor en esta sesión\n/mcp enable playwright\n/mcp disable playwright\n\n# Habilitar / deshabilitar todos\n/mcp enable all\n/mcp disable all"
+                  "content": "# Abrir el panel de gestión MCP (también maneja OAuth)\n/mcp"
                 },
                 {
                   "type": "callout",
                   "kind": "info",
-                  "content": "El comando `/mcp` también guía el flujo OAuth 2.1 para servidores remotos que requieren autenticación."
+                  "content": "`/mcp` abre un panel interactivo, no un comando con subcomandos de texto: no existen `/mcp enable <servidor>` ni `/mcp disable all` como sintaxis. Para deshabilitar un servidor sin borrar su configuración, se lo togglea desde ese panel — queda listado igual, marcado como deshabilitado. El panel también guía el flujo OAuth para servidores remotos que requieren autenticación."
                 }
               ]
             },

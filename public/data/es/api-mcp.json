@@ -134,8 +134,8 @@
                       "Herramientas de desarrollo locales: acceso a archivos del proyecto, Claude Code, Claude Desktop."
                     ],
                     [
-                      "HTTP (SSE / streaming)",
-                      "El servidor corre remoto, como cualquier servicio web.",
+                      "Streamable HTTP",
+                      "El servidor corre remoto, como cualquier servicio web. Es el transporte HTTP vigente en la spec — reemplazó a SSE, que quedó deprecado.",
                       "Servicios compartidos por múltiples clientes o usuarios a la vez. Requiere autenticación, típicamente OAuth."
                     ]
                   ]
@@ -330,18 +330,24 @@
               "blocks": [
                 {
                   "type": "text",
-                  "content": "Además del flujo cliente/servidor puro, la Messages API admite declarar servidores MCP remotos directamente en el request, vía el parámetro mcp_servers, delegando en Anthropic la tarea de invocar las herramientas del servidor durante la conversación."
+                  "content": "Además del flujo cliente/servidor puro, la Messages API admite declarar servidores MCP remotos directamente en el request, vía el parámetro mcp_servers (beta, header `mcp-client-2025-11-20`), delegando en Anthropic la tarea de invocar las herramientas del servidor durante la conversación. La configuración de qué tools habilitar vive aparte, como un objeto mcp_toolset dentro del array tools — no dentro de cada servidor."
                 },
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.beta.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=800,\n    messages=[{\"role\": \"user\", \"content\": \"¿Cuánto stock queda del SKU ABC-123?\"}],\n    mcp_servers=[{\n        \"type\": \"url\",\n        \"url\": \"https://mi-servidor-mcp.miempresa.com/sse\",\n        \"name\": \"inventario\",\n        \"authorization_token\": \"TOKEN_OBTENIDO_POR_OAUTH\",\n        \"tool_configuration\": {\n            \"enabled\": True,\n            \"allowed_tools\": [\"consultar_stock\"],  # whitelist de tools\n        },\n    }],\n)"
+                  "code": "response = client.beta.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=800,\n    messages=[{\"role\": \"user\", \"content\": \"¿Cuánto stock queda del SKU ABC-123?\"}],\n    mcp_servers=[{\n        \"type\": \"url\",\n        \"url\": \"https://mi-servidor-mcp.miempresa.com/mcp\",\n        \"name\": \"inventario\",\n        \"authorization_token\": \"TOKEN_OBTENIDO_POR_OAUTH\",\n    }],\n    tools=[{\n        \"type\": \"mcp_toolset\",\n        \"mcp_server_name\": \"inventario\",\n        \"default_config\": {\"enabled\": False},  # todo deshabilitado por defecto\n        \"configs\": {\n            \"consultar_stock\": {\"enabled\": True},  # allowlist explícita\n        },\n    }],\n    betas=[\"mcp-client-2025-11-20\"],\n)"
                 },
                 {
                   "type": "callout",
                   "style": "info",
                   "title": "mcp_toolset para control granular",
-                  "content": "Para escenarios con muchas herramientas repartidas entre varios servidores, mcp_toolset permite habilitar o deshabilitar herramientas individualmente y diferir su carga hasta que realmente se necesiten, en lugar de exponerlas todas desde el primer turno."
+                  "content": "mcp_toolset (dentro de tools, no de mcp_servers) permite habilitar o deshabilitar herramientas individualmente por nombre — vía default_config y configs — y diferir su carga con defer_loading, en lugar de exponerlas todas desde el primer turno. Cada servidor en mcp_servers debe estar referenciado por exactamente un mcp_toolset."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Versión anterior deprecada",
+                  "content": "El beta header mcp-client-2025-04-04 (donde la configuración de tools vivía como tool_configuration.allowed_tools dentro de cada entrada de mcp_servers) está deprecado. Cualquier código o ejemplo que use tool_configuration corresponde a esa versión anterior — migrar a mcp-client-2025-11-20 con el patrón de mcp_toolset mostrado arriba."
                 }
               ]
             },
