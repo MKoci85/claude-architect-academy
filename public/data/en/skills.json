@@ -1204,6 +1204,62 @@
               "content": "**About subagents:** Subagents are not a replacement for skills. A skill can run inside a subagent (with `context: fork`), but that's an implementation detail. The main decision is: do I need to isolate this work's context? If yes, use `context: fork`."
             }
           ]
+        },
+        {
+          "id": "ski-027",
+          "title": "Comparison: Built-in Tools vs. Custom Tools vs. Skills vs. MCP Servers",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "The comparison above (rules vs. skills vs. subagents) answers \"when does the knowledge load?\" This is a different question: given four distinct ways to give Claude a new capability, which one fits which case? All four can coexist in the same project — they aren't rungs of one hierarchy, they're tools for different problems."
+            },
+            {
+              "type": "table",
+              "headers": [
+                "Characteristic",
+                "Built-in Tool",
+                "Custom Tool",
+                "Skill",
+                "MCP Server"
+              ],
+              "rows": [
+                [
+                  "What it is",
+                  "A tool Anthropic already implemented (bash, code execution, web search, computer use)",
+                  "Your own function, defined with a JSON schema in the request's `tools` array",
+                  "A markdown procedure Claude follows — not code the API executes",
+                  "An external server, in its own process, exposing tools/resources/prompts via the MCP protocol"
+                ],
+                [
+                  "Who runs the logic",
+                  "Anthropic (server tools) or your environment (client tools like bash/text editor)",
+                  "Your own code, on your own infrastructure",
+                  "Claude itself, interpreting the instructions",
+                  "The MCP server's process, inside or outside your infrastructure"
+                ],
+                [
+                  "When it fits",
+                  "The capability you need already exists as a server tool — no reason to reimplement it",
+                  "You need to integrate your own API or database, with full control over the schema and validation",
+                  "You need to guide HOW Claude does something (a procedure, a convention), not give it access to an external system",
+                  "You need to reuse the same integration across multiple clients or agents, or connect to a server that already exists in the MCP ecosystem"
+                ],
+                [
+                  "Where it lives",
+                  "In the API, activated with a flag or a tool type in the request",
+                  "In your code, alongside the rest of the agent's definition",
+                  "A file in `.claude/skills/`, versioned in the repo",
+                  "A separate process, connected over stdio or HTTP — potentially without touching your application code at all"
+                ]
+              ]
+            },
+            {
+              "type": "callout",
+              "style": "info",
+              "title": "The axis that separates them: new capability vs. guidance on an existing one",
+              "content": "Built-in tools, custom tools, and MCP servers give Claude access to something it didn't have before — running code, calling an external system. A Skill gives no new capability at all: Claude could already write code or text without it. What it adds is instruction on how to do that well in your specific context. Conflating the two axes is the most common mistake: writing a skill to \"give access to the Stripe API\" when what's needed is a tool (custom or via MCP), or building an MCP server just to enforce a style convention that a skill would have solved with no extra infrastructure."
+            }
+          ]
         }
       ]
     }

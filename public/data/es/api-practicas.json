@@ -34,6 +34,109 @@
                   "code": "import Anthropic from \"@anthropic-ai/sdk\";\n\nconst client = new Anthropic();\n\nconst stream = await client.messages.stream({\n  model: \"claude-opus-4-8\",\n  max_tokens: 1024,\n  messages: [{role: \"user\", content: \"Cuéntame un chiste\"}]\n});\n\nfor await (const chunk of stream) {\n  if (chunk.type === \"content_block_delta\") {\n    process.stdout.write(chunk.delta.text);\n  }\n}"
                 }
               ]
+            },
+            {
+              "title": "Por qué es SSE y no WebSockets",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El streaming de la Messages API es Server-Sent Events (SSE) sobre HTTP, no WebSockets. La diferencia no es de detalle: son dos primitivas de transporte distintas, para dos problemas distintos."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "SSE (lo que usa Claude)",
+                    "rows": [
+                      { "key": "Dirección", "value": "Unidireccional: servidor → cliente" },
+                      { "key": "Transporte", "value": "HTTP normal, una sola response de larga duración" },
+                      { "key": "Encaja con", "value": "Un request que dispara una respuesta larga: exactamente la forma de un mensaje a Claude" }
+                    ]
+                  },
+                  "right": {
+                    "head": "WebSockets",
+                    "rows": [
+                      { "key": "Dirección", "value": "Bidireccional: ambos lados envían en cualquier momento" },
+                      { "key": "Transporte", "value": "Conexión persistente separada, con su propio handshake" },
+                      { "key": "Encaja con", "value": "Mensajería en tiempo real donde el cliente también empuja datos sin haber hecho un request nuevo — chat multiusuario, colaboración en vivo" }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Cuándo sí entra un WebSocket en una app con Claude",
+                  "content": "No para hablar con la API de Anthropic — ahí siempre es HTTP + SSE. Un WebSocket aparece en la capa entre tu backend y el navegador del usuario final, cuando la aplicación necesita empujar eventos hacia el cliente que no son la respuesta de un request suyo (notificaciones de otros usuarios, estado compartido de una sesión colaborativa). En ese caso, el patrón típico es: tu servidor consume el SSE de Claude y reemite esos mismos chunks a través del WebSocket que ya mantiene abierto con el navegador."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Gestión de costos",
+          "subsections": [
+            {
+              "title": "La Usage & Cost Admin API",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Además del conteo de tokens que devuelve cada response (`usage.input_tokens`, `usage.output_tokens`), Anthropic expone una Admin API dedicada para monitorear consumo y costo a nivel de toda la organización: los mismos datos que se ven en las páginas Usage y Cost de Claude Console, pero programables. Requiere credenciales de Admin API — una API key de workspace normal no alcanza."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Endpoint", "Para qué sirve"],
+                  "rows": [
+                    ["`GET /v1/organizations/usage_report/messages`", "Consumo de tokens por bucket de tiempo (1m/1h/1d), filtrable y agrupable por modelo, workspace, API key, service tier, o `speed` (fast mode)"],
+                    ["`GET /v1/organizations/cost_report`", "Costo en USD, agrupable por workspace o por descripción — con granularidad diaria únicamente"]
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "bash",
+                  "code": "curl \"https://api.anthropic.com/v1/organizations/usage_report/messages?\\\nstarting_at=2026-01-01T00:00:00Z&\\\nending_at=2026-01-08T00:00:00Z&\\\ngroup_by[]=model&\\\nbucket_width=1d\" \\\n  -H \"anthropic-version: 2023-06-01\" \\\n  -H \"x-api-key: $ANTHROPIC_ADMIN_KEY\""
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Code execution no aparece en el endpoint de usage",
+                  "content": "El costo de code execution solo se ve en el Cost Report, agrupado bajo la descripción \"Code Execution Usage\" — el Usage Report no lo incluye. Del mismo modo, Priority Tier se ve en usage (filtrando `service_tier=priority`) pero no en el Cost Report, que usa un modelo de facturación distinto."
+                }
+              ]
+            },
+            {
+              "title": "Casos de uso reales",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🧾",
+                      "title": "Reconciliación de costos",
+                      "description": "Contrastar el registro interno de uso contra la facturación real de Anthropic para finanzas."
+                    },
+                    {
+                      "icon": "📉",
+                      "title": "Chargebacks por workspace",
+                      "description": "Agrupar por `workspace_id` para distribuir el costo entre equipos que comparten una misma organización."
+                    },
+                    {
+                      "icon": "🎯",
+                      "title": "Eficiencia de prompt caching",
+                      "description": "Los datos separan tokens de entrada cacheados vs. no cacheados — permite medir si el caching está funcionando como se espera, no solo asumirlo."
+                    },
+                    {
+                      "icon": "🔔",
+                      "title": "Alertas de presupuesto",
+                      "description": "Un job periódico contra el Usage Report puede disparar una alerta cuando el consumo supera un umbral, antes de que llegue la factura."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Frescura de los datos y polling",
+                  "content": "Los datos de uso y costo aparecen típicamente dentro de los 5 minutos posteriores a que se completa el request. La frecuencia de polling recomendada es una vez por minuto para uso sostenido — para dashboards que necesitan actualizarse más seguido, cachear el resultado en vez de aumentar la frecuencia de polling."
+                }
+              ]
             }
           ]
         },

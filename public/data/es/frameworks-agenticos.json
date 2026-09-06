@@ -1,0 +1,319 @@
+{
+  "title": "Frameworks Agénticos de Terceros",
+  "description": "Strands Agents, LangGraph y PydanticAI: qué problema resuelve cada uno frente a construir directo sobre el SDK o la API de un solo proveedor.",
+  "sections": [
+    {
+      "title": "Frameworks agénticos de terceros",
+      "articles": [
+        {
+          "id": "frameworks-por-que",
+          "title": "El problema que resuelven frente a un SDK propietario",
+          "summary": "Qué gana un equipo al construir sobre un framework agéntico de terceros en vez de ir directo sobre el SDK o la API de un solo proveedor de modelos",
+          "subsections": [
+            {
+              "title": "Portabilidad, orquestación explícita, o menos ceremonial",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El Claude Agent SDK (cubierto en su propio artículo dentro de API de Claude) resuelve bien el caso de construir un agente sobre Claude específicamente. Los frameworks de terceros existen para tres necesidades que un SDK atado a un proveedor no cubre igual de bien: portabilidad entre modelos, control explícito sobre la topología de un sistema multi-agente, o menos código ceremonial para un agente simple. No son reemplazos del SDK de Anthropic — son herramientas para cuando esas necesidades pesan más que la integración nativa con la plataforma de un solo proveedor."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🔀",
+                      "title": "Portabilidad entre modelos",
+                      "description": "Un framework agnóstico permite cambiar de proveedor (o correr el mismo agente sobre varios) sin reescribir la orquestación — al costo de no aprovechar features específicas de un modelo en particular."
+                    },
+                    {
+                      "icon": "🕸️",
+                      "title": "Orquestación explícita",
+                      "description": "Para sistemas multi-agente donde la topología, los checkpoints y los puntos de intervención humana son requisitos del producto, un framework basado en grafos hace esa estructura visible en vez de implícita en el código."
+                    },
+                    {
+                      "icon": "⚡",
+                      "title": "Menos código ceremonial",
+                      "description": "Para un agente acotado con pocas herramientas, algunos frameworks minimizan el boilerplate necesario para llegar a un loop de tool-calling funcional."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Un ejemplo compartido",
+                  "content": "Un equipo que ya construyó un agente de soporte sobre el Claude Agent SDK y ahora necesita agregar un segundo modelo (por costo, disponibilidad regional, o preferencia de un cliente enterprise) es el caso típico donde portabilidad pesa más que integración profunda — y donde un framework de terceros empieza a tener sentido frente a seguir extendiendo la integración nativa."
+                }
+              ]
+            },
+            {
+              "title": "No reemplaza la decisión de arquitectura",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Adoptar un framework —cualquiera de los tres, o el SDK de Anthropic— es una decisión de capa de implementación. No resuelve por sí sola las preguntas de diseño de qué patrón de orquestación usar para una tarea concreta, que se deciden antes y a nivel de arquitectura, no de tooling."
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Patrón",
+                    "Cuándo aplica",
+                    "Requiere del framework"
+                  ],
+                  "rows": [
+                    [
+                      "Prompt chaining",
+                      "Pasos secuenciales donde cada uno depende del anterior",
+                      "Nada especial — cualquier framework encadena llamadas"
+                    ],
+                    [
+                      "Routing",
+                      "Clasificar la entrada y despachar a un flujo especializado distinto",
+                      "Un mecanismo de decisión temprana antes de invocar el flujo elegido"
+                    ],
+                    [
+                      "Parallelization",
+                      "Subtareas independientes y ya conocidas de antemano",
+                      "Ejecución concurrente — trivial en la mayoría de los frameworks"
+                    ],
+                    [
+                      "Orchestrator-workers",
+                      "Un modelo decide dinámicamente en qué subtareas dividir el trabajo",
+                      "Orquestación explícita (LangGraph) o el loop nativo del SDK de Anthropic"
+                    ],
+                    [
+                      "Evaluator-optimizer",
+                      "Un segundo paso de modelo evalúa y refina la salida del primero",
+                      "Un checkpoint intermedio — más natural en frameworks con estado durable como LangGraph"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Ningún framework reemplaza la decisión de arquitectura",
+                  "content": "Elegir un framework no resuelve las preguntas de diseño ya cubiertas en Agentes y Workflows (cuándo paralelizar, cuándo usar orchestrator-workers, cuándo escalar a humano) — cualquier framework, incluido el SDK de Anthropic, es la capa de implementación de una decisión que se toma antes, no en su lugar."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "frameworks-strands",
+          "title": "Strands Agents (AWS)",
+          "summary": "El framework model-driven de AWS: el modelo decide el loop, no un grafo explícito escrito a mano",
+          "subsections": [
+            {
+              "title": "Paradigma model-driven",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Strands Agents es un SDK open-source de AWS con un paradigma \"code-first, model-driven\": el modelo controla el loop de decisión de qué herramienta usar y cuándo, en vez de que el desarrollador codifique esa lógica en un grafo explícito. El resultado es que un agente funcional de tool-calling puede escribirse en pocas líneas de código. Soporta Python y TypeScript, y por defecto apunta a Amazon Bedrock — aunque no está limitado a ese proveedor."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Nace del uso interno en AWS",
+                  "content": "Amazon presenta Strands Agents como el mismo framework que varios equipos de producto dentro de AWS ya usaban internamente para construir agentes, liberado después como proyecto open-source — no es un SDK diseñado desde cero para consumo externo."
+                }
+              ]
+            },
+            {
+              "title": "Cuándo tiene sentido",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El caso de uso natural",
+                  "content": "Tareas acotadas orientadas a herramientas, con un presupuesto de comportamiento ya definido externamente (guardrails, límites de acciones) — el caso donde minimizar ceremonial pesa más que tener control explícito sobre cada transición de estado."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Acoplamiento práctico a Bedrock",
+                  "content": "Aunque el modelo-driven loop en teoría es agnóstico de proveedor, el camino de menor fricción y mejor documentado es sobre Amazon Bedrock. Usarlo con otro proveedor de modelos es posible pero implica más configuración manual — algo a tener en cuenta si la portabilidad entre proveedores es justamente el motivo por el que se está evaluando un framework de terceros."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "frameworks-langgraph",
+          "title": "LangGraph (LangChain)",
+          "summary": "Orquestación explícita basada en grafos, con checkpoints y puntos de intervención humana como ciudadanos de primera clase",
+          "subsections": [
+            {
+              "title": "Paradigma basado en grafos",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "LangGraph, del equipo de LangChain, modela un sistema de agentes como un grafo de estados explícito: la topología y las transiciones entre nodos son visibles en el código, no una consecuencia implícita de que el modelo decida qué hacer. Es primariamente para Python."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🗺️",
+                      "title": "Topología visible",
+                      "description": "El flujo entre nodos y el ruteo condicional se declaran explícitamente, en vez de emerger del razonamiento del modelo en cada paso."
+                    },
+                    {
+                      "icon": "💾",
+                      "title": "Checkpoints durables",
+                      "description": "El estado del grafo puede persistirse y retomarse — útil para workflows largos que necesitan sobrevivir un reinicio o una pausa."
+                    },
+                    {
+                      "icon": "🧑",
+                      "title": "Human-in-the-loop nativo",
+                      "description": "Los puntos donde un humano debe aprobar o intervenir se modelan como parte del grafo, no como un parche externo al loop del agente."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Cuándo tiene sentido",
+                  "content": "Flujos donde recuperación ante fallos, auditoría de cada transición, y ramificación explícita son requisitos del producto — no solo un detalle de implementación. El costo es más código que un enfoque model-driven para el mismo caso simple."
+                }
+              ]
+            },
+            {
+              "title": "LangGraph Platform y el ecosistema LangChain",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "LangGraph puede usarse de forma standalone, pero también se integra con LangGraph Platform (el servicio hosteado de LangChain para desplegar, versionar y observar grafos en producción) y con LangSmith para trazabilidad de cada ejecución. Adoptar LangGraph no obliga a adoptar ese ecosistema completo, pero es lo que lo diferencia de un framework puramente de librería: hay un camino directo hacia infraestructura operativa administrada si el proyecto crece más allá de un script."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "El costo real no es solo código, es carga cognitiva",
+                  "content": "Modelar explícitamente cada nodo y transición sirve para flujos con ramificación genuina, pero para un agente de tool-calling simple (una herramienta, pocas decisiones) puede ser más estructura de la que el problema necesita — el mismo caso donde Strands Agents o el SDK de Anthropic sin capas adicionales llegan más rápido a producción."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "frameworks-pydanticai",
+          "title": "PydanticAI",
+          "summary": "Inyección de dependencias, outputs tipados y ejecución durable con poco código, para agentes únicos o sistemas chicos embebidos en un servicio Python",
+          "subsections": [
+            {
+              "title": "Tipado y menos código, no orquestación de grafos",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "PydanticAI, del equipo de Pydantic, prioriza un eje distinto al de LangGraph: en vez de exponer una topología explícita, da inyección de dependencias, outputs con tipado fuerte (aprovechando el mismo Pydantic que ya se usa para validación de datos en Python) y ejecución durable, con una superficie de código considerablemente menor."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Cuándo tiene sentido",
+                  "content": "Agentes únicos o sistemas multi-agente chicos que viven embebidos dentro de un servicio Python ya existente, donde el tipado fuerte de los outputs importa más que modelar explícitamente una topología de grafo — el caso opuesto en énfasis a LangGraph, aunque ambos resuelven problemas de orquestación agéntica."
+                }
+              ]
+            },
+            {
+              "title": "Validación de outputs como primera clase",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La ventaja distintiva de PydanticAI frente a los otros dos frameworks es que la validación de la salida del modelo usa el mismo mecanismo (`BaseModel` de Pydantic) que ya se usa en el resto de un servicio Python para validar requests, respuestas de API o filas de base de datos. Un output mal formado del modelo se detecta con el mismo tipo de error que un payload HTTP inválido, en vez de necesitar un parser ad-hoc de JSON."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Menor superficie, menos garantías de infraestructura",
+                  "content": "Al no traer una capa de orquestación con checkpoints durables como LangGraph, un sistema multi-agente construido en PydanticAI que necesite sobrevivir un reinicio o auditar cada transición tiene que resolver eso por fuera del framework — la simplicidad tiene esa contrapartida."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "frameworks-comparacion",
+          "title": "Tabla de decisión",
+          "summary": "Cuatro opciones, cuatro ejes de énfasis distintos — la elección depende de qué restricción pesa más en el proyecto concreto",
+          "subsections": [
+            {
+              "title": "Comparación directa",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": [
+                    "Framework",
+                    "Mantenedor",
+                    "Paradigma",
+                    "Mejor para"
+                  ],
+                  "rows": [
+                    [
+                      "Claude Agent SDK",
+                      "Anthropic",
+                      "Loop agéntico integrado a la plataforma de Claude",
+                      "Construir sobre Claude específicamente, con gestión de contexto y herramientas ya resueltas"
+                    ],
+                    [
+                      "Strands Agents",
+                      "AWS",
+                      "Model-driven, el modelo controla el loop",
+                      "Tareas acotadas con mínimo ceremonial, especialmente en stack AWS/Bedrock"
+                    ],
+                    [
+                      "LangGraph",
+                      "LangChain",
+                      "Grafo de estados explícito",
+                      "Flujos donde auditoría, checkpoints y aprobación humana son requisito del producto"
+                    ],
+                    [
+                      "PydanticAI",
+                      "Pydantic",
+                      "Tipado fuerte + inyección de dependencias",
+                      "Agentes chicos embebidos en un servicio Python ya existente"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Portabilidad tiene un costo, no es gratis",
+                  "content": "Un framework agnóstico de proveedor evita atarse a un solo modelo, pero eso mismo le impide aprovechar mecanismos específicos de un proveedor sin trabajo adicional — por ejemplo, el manejo nativo de subagentes, hooks y permisos que el Claude Agent SDK ya resuelve de forma integrada. La elección no es \"cuál es mejor\" en abstracto, sino qué restricción (portabilidad vs. integración profunda vs. control explícito de topología vs. tipado) pesa más en el proyecto concreto."
+                }
+              ]
+            },
+            {
+              "title": "Preguntas para decidir en un caso concreto",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "¿El proyecto necesita correr sobre más de un proveedor de modelos?",
+                      "description": "Si la respuesta es sí (multi-cloud, requisito de cliente enterprise, contingencia ante rate limits), descartá empezar directo con el SDK de Anthropic — cualquiera de los tres frameworks de terceros aplica."
+                    },
+                    {
+                      "title": "¿La topología del sistema multi-agente necesita ser auditable paso a paso?",
+                      "description": "Si hace falta checkpoint, recuperación ante fallo y aprobación humana como parte del flujo, LangGraph es el candidato natural por su modelo de grafo explícito."
+                    },
+                    {
+                      "title": "¿El agente vive embebido en un servicio Python que ya usa Pydantic?",
+                      "description": "Si el resto del backend ya valida datos con Pydantic, PydanticAI reutiliza esa inversión en vez de introducir un mecanismo de validación paralelo."
+                    },
+                    {
+                      "title": "¿El objetivo es minimizar código para una tarea acotada, especialmente en stack AWS?",
+                      "description": "Strands Agents es la opción de menor ceremonial, con la salvedad de que su integración más fluida es con Bedrock."
+                    },
+                    {
+                      "title": "¿Ninguna de las anteriores pesa más que la integración nativa?",
+                      "description": "Quedarse con el Claude Agent SDK: gestión de contexto, permisos, hooks y subagentes ya resueltos de forma integrada, sin la capa de abstracción adicional de un framework de terceros."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -1204,6 +1204,62 @@
               "content": "**Sobre subagentes:** Los subagentes no son un reemplazo de skills. Una skill puede ejecutarse en un subagente (con `context: fork`), pero eso es un detalles implementativo. La decisión principal es: ¿necesito aislar el contexto de este trabajo? Si sí, usa `context: fork`."
             }
           ]
+        },
+        {
+          "id": "ski-027",
+          "title": "Comparación: Built-in Tools vs. Custom Tools vs. Skills vs. MCP Servers",
+          "blocks": [
+            {
+              "type": "text",
+              "content": "La comparación de arriba (reglas vs. skills vs. subagentes) responde \"¿cuándo se activa el conocimiento?\". Esta es una pregunta distinta: dadas cuatro formas distintas de darle a Claude una capacidad nueva, ¿cuál corresponde a cada caso? Las cuatro pueden convivir en el mismo proyecto — no son escalones de una jerarquía, son herramientas para problemas distintos."
+            },
+            {
+              "type": "table",
+              "headers": [
+                "Característica",
+                "Built-in Tool",
+                "Custom Tool",
+                "Skill",
+                "MCP Server"
+              ],
+              "rows": [
+                [
+                  "Qué es",
+                  "Herramienta ya implementada por Anthropic (bash, code execution, web search, computer use)",
+                  "Función propia, definida con un JSON schema en el array `tools` del request",
+                  "Procedimiento en markdown que Claude sigue — no es código que la API ejecute",
+                  "Servidor externo, en su propio proceso, que expone tools/resources/prompts vía el protocolo MCP"
+                ],
+                [
+                  "Quién ejecuta la lógica",
+                  "Anthropic (server tools) o tu entorno (client tools como bash/text editor)",
+                  "Tu propio código, en tu infraestructura",
+                  "Claude mismo, interpretando las instrucciones",
+                  "El proceso del servidor MCP, dentro o fuera de tu infraestructura"
+                ],
+                [
+                  "Cuándo conviene",
+                  "La capacidad que necesitás ya existe como server tool — no hay razón para reimplementarla",
+                  "Necesitás integrar tu propia API o base de datos, con control total sobre el schema y la validación",
+                  "Necesitás guiar CÓMO Claude hace algo (un procedimiento, una convención), no darle acceso a un sistema externo",
+                  "Necesitás reusar la misma integración entre múltiples clientes o agentes, o conectarte a un servidor que ya existe en el ecosistema MCP"
+                ],
+                [
+                  "Dónde vive",
+                  "En la API, activada con un flag o un tipo de tool en el request",
+                  "En tu código, junto al resto de la definición del agente",
+                  "Archivo en `.claude/skills/`, versionado en el repo",
+                  "Proceso separado, conectado por stdio o HTTP — potencialmente sin tocar tu código de aplicación"
+                ]
+              ]
+            },
+            {
+              "type": "callout",
+              "style": "info",
+              "title": "El eje que las separa: capacidad nueva vs. guía sobre una capacidad existente",
+              "content": "Built-in tools, custom tools y MCP servers le dan a Claude acceso a algo que antes no tenía — ejecutar código, llamar a un sistema externo. Una Skill no le da ninguna capacidad nueva: Claude ya podía escribir código o texto sin ella. Lo que aporta es instrucción sobre cómo hacerlo bien en tu contexto específico. Confundir ambos ejes es el error más común: escribir una skill para \"darle acceso a la API de Stripe\" cuando lo que hace falta es una tool (custom o vía MCP), o construir un MCP server solo para imponer una convención de estilo que una skill resolvía sin infraestructura adicional."
+            }
+          ]
         }
       ]
     }

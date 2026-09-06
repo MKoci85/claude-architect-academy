@@ -39,6 +39,12 @@ function practiceRoutePlugin() {
           res.end(fs.readFileSync(file));
           return;
         }
+        if (req.url === '/practice2' || req.url === '/practice2/') {
+          const file = path.resolve(__dirname, 'public/practice2/index.html');
+          res.setHeader('Content-Type', 'text/html');
+          res.end(fs.readFileSync(file));
+          return;
+        }
         next();
       });
     },

@@ -1,0 +1,455 @@
+{
+  "title": "Claude Agent SDK",
+  "sections": [
+    {
+      "title": "Claude Agent SDK",
+      "articles": [
+        {
+          "id": "sdk-que-es",
+          "title": "Claude Code's engine, packaged as a library",
+          "summary": "Why the Claude Agent SDK isn't a Messages API wrapper, but Claude Code embeddable in your own application",
+          "subsections": [
+            {
+              "title": "Not just another way to call the API",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The Claude Agent SDK exposes the same agentic engine the Claude Code CLI uses — context management, tool execution, permissions, automatic compaction, hooks — to embed it directly into a Python or TypeScript application. It isn't a convenience layer over `POST /v1/messages`: it's Claude Code packaged as a library, with the entire harness that makes it autonomous already solved."
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Layer",
+                    "What it solves",
+                    "What you still have to build"
+                  ],
+                  "rows": [
+                    [
+                      "Direct Messages API",
+                      "One call to Claude, no state between turns",
+                      "The whole loop: parsing `tool_use` blocks, executing, returning `tool_result`, retries, context limits, compaction"
+                    ],
+                    [
+                      "Claude Agent SDK",
+                      "The full agentic loop, embedded in your process",
+                      "Your application's logic around the agent — the loop itself is already solved"
+                    ],
+                    [
+                      "Claude Code (CLI)",
+                      "The same engine as the SDK, but as an interactive terminal tool",
+                      "Nothing — it's for direct human use, not for embedding in another system"
+                    ],
+                    [
+                      "Managed Agents",
+                      "Anthropic-hosted infrastructure: sandbox, persistent memory, without operating servers yourself",
+                      "Less control over the execution environment, in exchange for not operating it yourself"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Quick rule of thumb",
+                  "content": "A single stateless call? Messages API. An autonomous agent with persistent context, running inside your own infrastructure? Agent SDK. The same thing without operating the infrastructure yourself? Managed Agents. Direct interactive human use in a terminal? Claude Code as-is."
+                }
+              ]
+            },
+            {
+              "title": "Python and TypeScript, with near-total parity",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The SDK ships as two independent packages — one for Python, one for TypeScript/Node.js — exposing the same conceptual surface (`query()`, `options`, message types, hooks, subagents). Neither wraps the other: each is a native implementation in its own language, meant to integrate with the rest of that application's code without a translation layer."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "They aren't 100% identical",
+                  "content": "The TypeScript SDK picks up certain events and options before the Python one does — for example, some hook types or direct access to the initial `session_id` (`message.session_id`) are simpler in TypeScript, while in Python they're nested inside `message.data`. Check the specific SDK's reference before porting code between the two rather than assuming full parity."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sdk-instalacion",
+          "title": "Packages and requirements",
+          "summary": "The real package names for Python and TypeScript, and how both bundle the Claude Code binary with no separate install",
+          "subsections": [
+            {
+              "title": "Python and TypeScript",
+              "blocks": [
+                {
+                  "type": "code",
+                  "language": "bash",
+                  "code": "# Python (requires 3.10+)\npip install claude-agent-sdk\n\n# TypeScript / Node.js\nnpm install @anthropic-ai/claude-agent-sdk"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The CLI ships bundled",
+                  "content": "Both packages bundle the native Claude Code binary — most installs don't need to install the CLI separately or already have it present on the system."
+                }
+              ]
+            },
+            {
+              "title": "Authentication",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The SDK reuses the same credential mechanism as Claude Code: a Claude API key via the `ANTHROPIC_API_KEY` environment variable, or whatever session Claude Code already has configured on that machine. It doesn't introduce a separate authentication system of its own."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sdk-arquitectura",
+          "title": "The agentic loop the SDK handles for you",
+          "summary": "query() as the entry point, and what a custom loop over the Messages API gets solved automatically",
+          "subsections": [
+            {
+              "title": "query(): the entry point",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The main function is `query(prompt, options)`, which returns an async generator of messages. Internally it runs the full cycle: Claude evaluates the situation, requests tool calls, receives the results, and repeats until done — without your code having to manually parse `tool_use` blocks or hand-build the next turn with `tool_result`."
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "What the SDK handles automatically",
+                    "How it's controlled"
+                  ],
+                  "rows": [
+                    [
+                      "Context accumulation across turns, no reset",
+                      "Implicit — no need to rebuild history on every call"
+                    ],
+                    [
+                      "Compaction as context approaches the limit",
+                      "Automatic"
+                    ],
+                    [
+                      "Per-tool permissions",
+                      "`allowedTools` (auto-approves) / `disallowedTools` (blocks)"
+                    ],
+                    [
+                      "Overall permission strategy",
+                      "`permissionMode`: `default`, `plan`, `dontAsk`, `bypassPermissions`, among others"
+                    ],
+                    [
+                      "Limits to prevent runaway sessions",
+                      "`maxTurns`, `maxBudgetUsd`"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "`bypassPermissions` is a real SDK value, not a recommendation",
+                  "content": "It's one of the documented `permissionMode` values — it auto-approves any tool call that reaches that step in the evaluation chain (see the permissions pipeline in this site's Permissions section). Using it carries the same risk as disabling any approval gate: it's an explicit design decision for cases where the environment is already isolated or the risk is acceptable, not a default to reach for without thinking."
+                }
+              ]
+            },
+            {
+              "title": "The five stream message types",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The async generator returned by `query()` emits typed messages. Telling them apart is what lets you react to each stage of the loop — showing progress, logging cost, detecting the final result — instead of treating everything as plain text."
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Type",
+                    "When it's emitted",
+                    "Key fields"
+                  ],
+                  "rows": [
+                    [
+                      "SystemMessage",
+                      "At session start and on lifecycle events (subtypes `init`, `compact_boundary`, `informational`, `worker_shutting_down`)",
+                      "Vary by `subtype`"
+                    ],
+                    [
+                      "AssistantMessage",
+                      "After every Claude response, including the final one with no tool calls",
+                      "`content`: text blocks and tool calls"
+                    ],
+                    [
+                      "UserMessage",
+                      "After a tool runs, when its result goes back to the model",
+                      "`content` with the tool results"
+                    ],
+                    [
+                      "StreamEvent",
+                      "Only if `includePartialMessages` (TS) / `include_partial_messages` (Python) is enabled",
+                      "Raw API streaming events: text deltas, tool input chunks"
+                    ],
+                    [
+                      "ResultMessage",
+                      "When the loop ends — always the last message",
+                      "`result`, `session_id`, `total_cost_usd`, `num_turns`, `subtype` (`success`, `error_max_turns`, `error_max_budget_usd`, `error_during_execution`, `error_max_structured_output_retries`)"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Access differs slightly between SDKs",
+                  "content": "Python distinguishes messages with `isinstance(message, AssistantMessage)` and reaches `message.content` directly. TypeScript checks `message.type === \"assistant\"` and the content sits one level deeper, at `message.message.content`."
+                }
+              ]
+            },
+            {
+              "title": "Hooks and session continuity",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The SDK supports the same hooks as the Claude Code CLI — `PreToolUse`, `PostToolUse`, `UserPromptSubmit`, `Stop`, `SubagentStart`, `SubagentStop`, `PreCompact` — configured as callbacks in `options.hooks` instead of as external scripts in `settings.json`. They run in the host application's process, not inside the agent's context window, so they don't consume context tokens."
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Session mechanism",
+                    "How it's triggered",
+                    "What it's for"
+                  ],
+                  "rows": [
+                    [
+                      "Continue",
+                      "`continue_conversation=True` (Python) / `continue: true` (TS)",
+                      "Resume the most recent session without tracking its ID"
+                    ],
+                    [
+                      "Resume",
+                      "`resume: session_id` in `options`",
+                      "Resume a specific saved session, even from another machine if a custom `sessionStore` is used"
+                    ],
+                    [
+                      "Fork",
+                      "`fork_session=True` together with `resume: session_id`",
+                      "Create a new branch of the session without altering the original"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sdk-herramientas",
+          "title": "What the SDK ships with by default",
+          "summary": "The SDK doesn't start empty: it includes an already-implemented tool set, restrictable via allowedTools",
+          "subsections": [
+            {
+              "title": "Default tool set",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": [
+                    "Category",
+                    "Tools"
+                  ],
+                  "rows": [
+                    [
+                      "Files",
+                      "Read, Write, Edit"
+                    ],
+                    [
+                      "Search",
+                      "Glob, Grep"
+                    ],
+                    [
+                      "Execution",
+                      "Bash"
+                    ],
+                    [
+                      "Web",
+                      "WebSearch, WebFetch"
+                    ],
+                    [
+                      "Orchestration",
+                      "Agent (subagents), Skill, AskUserQuestion, TaskCreate, TaskUpdate"
+                    ],
+                    [
+                      "Discovery",
+                      "ToolSearch — loads MCP tools on demand instead of all upfront"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Restricting the set with allowedTools / disallowedTools",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "They're restricted with `options.allowedTools` (an array of strings), which supports wildcards like `\"mcp__server-name__*\"` to enable every tool from a specific MCP server at once. `options.disallowedTools` does the opposite: it blocks specific tools without having to re-enumerate the rest of the allowed set."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Nothing gets added automatically",
+                  "content": "The default set doesn't grow automatically when an MCP server connects — its tools become available but stay subject to the same `allowedTools`/`disallowedTools` rules as the SDK's native tools."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sdk-mcp-subagentes",
+          "title": "Connecting MCP servers and defining subagents programmatically",
+          "summary": "Three ways to connect MCP from the SDK, and why the programmatic subagent definition is already covered in depth elsewhere on this site",
+          "subsections": [
+            {
+              "title": "Three ways to connect MCP",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": [
+                    "Form",
+                    "When"
+                  ],
+                  "rows": [
+                    [
+                      "stdio",
+                      "Local MCP server, as a child process"
+                    ],
+                    [
+                      "HTTP / SSE",
+                      "Remote server"
+                    ],
+                    [
+                      "SDK MCP server (in-process)",
+                      "The server runs inside the same process, no separate subprocess — useful for exposing your own functions as MCP tools without the overhead of an external process"
+                    ]
+                  ]
+                },
+                {
+                  "type": "text",
+                  "content": "Configured in `options.mcpServers`."
+                }
+              ]
+            },
+            {
+              "title": "AgentDefinition: the real fields",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Programmatic subagent definitions via `AgentDefinition` go beyond name, prompt, and tools. The main fields:"
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Field",
+                    "Required",
+                    "What it does"
+                  ],
+                  "rows": [
+                    [
+                      "description",
+                      "Yes",
+                      "Tells the parent agent when to invoke this subagent automatically"
+                    ],
+                    [
+                      "prompt",
+                      "Yes",
+                      "The subagent's system prompt"
+                    ],
+                    [
+                      "tools",
+                      "No",
+                      "If omitted, inherits every tool available to subagents"
+                    ],
+                    [
+                      "disallowedTools",
+                      "No",
+                      "Excludes specific tools, with support for MCP patterns (`mcp__server__*`)"
+                    ],
+                    [
+                      "model",
+                      "No",
+                      "An alias (`'sonnet'`, `'opus'`, `'inherit'`) or a full model ID"
+                    ],
+                    [
+                      "skills",
+                      "No",
+                      "Preloads specific skills when the subagent starts"
+                    ],
+                    [
+                      "memory",
+                      "No",
+                      "Memory source: `'user'`, `'project'`, or `'local'`"
+                    ],
+                    [
+                      "mcpServers",
+                      "No",
+                      "MCP servers available to that specific subagent"
+                    ],
+                    [
+                      "maxTurns",
+                      "No",
+                      "Turn limit for the subagent"
+                    ],
+                    [
+                      "background",
+                      "No",
+                      "Whether it runs as a non-blocking task (default: `true`)"
+                    ],
+                    [
+                      "effort",
+                      "No",
+                      "Reasoning level: `'low'`, `'medium'`, `'high'`, `'xhigh'`, `'max'`"
+                    ],
+                    [
+                      "permissionMode",
+                      "No",
+                      "Controls the tool permission mode for that subagent"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Also covered in the Subagents section",
+                  "content": "General subagent behavior (automatic invocation by description, only a summary returning to the parent) is already documented with examples in this site's Subagents section — this covers specifically the `AgentDefinition` fields as configured from the SDK."
+                }
+              ]
+            },
+            {
+              "title": "Isolation, parallelism, and concurrency limits",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Each subagent runs in its own conversation, isolated from the parent's — it starts fresh unless `fork` is used. Intermediate results from the subagent never leave that isolated conversation; only the final response returns to the parent, as the result of the tool call that invoked it. When several tasks are independent of each other, subagents run in parallel and the whole set finishes in the time of the slowest one, not the sum of all of them."
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Environment variable",
+                    "Default",
+                    "What it limits"
+                  ],
+                  "rows": [
+                    [
+                      "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS",
+                      "20",
+                      "How many subagents can run in parallel at once"
+                    ],
+                    [
+                      "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH",
+                      "3",
+                      "How many nesting levels a subagent that spawns further subagents can reach"
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

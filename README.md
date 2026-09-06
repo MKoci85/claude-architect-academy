@@ -23,6 +23,7 @@
 - [Inicio rápido](#inicio-rápido)
 - [Ejercicios prácticos](#ejercicios-prácticos)
 - [Examen de práctica CCAR-F](#examen-de-práctica-ccar-f)
+- [Examen de práctica CCDV-F](#examen-de-práctica-ccdv-f)
 - [Estructura del proyecto](#estructura-del-proyecto)
 - [Stack](#stack)
 - [Agregar contenido](#agregar-contenido)
@@ -179,6 +180,39 @@ El banco de preguntas está en inglés (formato del examen real) y evalúa crite
 
 ---
 
+## Examen de práctica CCDV-F
+
+Disponible en `/practice2`, como simulador independiente del de CCAR-F (motor idéntico, pool y blueprint propios). Cubre la certificación hermana **Claude Certified Developer – Foundations**, dirigida a developers que construyen e integran aplicaciones con Claude — no a arquitectos que deciden tradeoffs de diseño de alto nivel.
+
+- **53 preguntas** aleatorias extraídas de un pool de 150, categorizado por dominio
+- **120 minutos**, puntaje de aprobación 720/1.000, mismo formato de opción múltiple y multi-respuesta con piso de ~30% multi-respuesta por dominio
+- El examen real de CCDV-F **no usa el mecanismo de 6 escenarios / 4 al azar** de CCAR-F — agrupa directamente por dominio, así que este simulador reproduce esa lógica sin aproximación
+
+### Dominios del examen
+
+| Dominio | Peso |
+|---|---|
+| Applications and Integration | 33.1% |
+| Model Selection and Optimization | 16.8% |
+| Agents and Workflows | 14.7% |
+| Prompt and Context Engineering | 11.0% |
+| Tools and MCPs | 10.6% |
+| Security and Safety | 8.1% |
+| Claude Code | 3.1% |
+| Eval, Testing, and Debugging | 2.6% |
+
+### Ejemplo de pregunta
+
+**Multi-respuesta** — *Applications and Integration*
+> A requirements document for a new Claude-based document-review tool lists five statements. Select the two that are infrastructure (non-functional) requirements rather than functional requirements. *(select 2)*
+> - The system must extract the effective date, parties, and termination clause from each uploaded contract.
+> - **All uploaded contract data must be encrypted at rest and never leave the customer's chosen cloud region.** ✓
+> - The system must flag contracts missing a termination clause for human review.
+> - **The system must support a sustained throughput of 500 documents per hour without request failures.** ✓
+> - The system must return extracted fields as a JSON object matching a specified schema.
+
+---
+
 ## Estructura del proyecto
 
 ```
@@ -195,8 +229,11 @@ public/
       exercises.json      → Los 4 ejercicios prácticos, en inglés (no registrado en content.json, igual que su par en es/)
       *.json               → Un archivo por cada colección traducida, con nombre en inglés (ej. introduccion.json → introduction.json)
   practice/
-    index.html            → Página standalone del examen (sin dependencia del bundle principal, interfaz en inglés)
-    examen_cca_f_en.json  → Pool de 265 preguntas del examen, agrupadas por dominio
+    index.html            → Página standalone del examen CCAR-F (sin dependencia del bundle principal, interfaz en inglés)
+    examen_cca_f_en.json  → Pool de 265 preguntas del examen CCAR-F, agrupadas por dominio
+  practice2/
+    index.html               → Página standalone del examen CCDV-F — mismo motor que practice/, blueprint de 8 dominios propio
+    examen_ccdv_f_en.json     → Pool de 150 preguntas del examen CCDV-F, agrupadas por dominio
 
 src/
   App.jsx           → Shell de la app: compone los hooks y rutea entre las vistas principales

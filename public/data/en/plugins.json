@@ -1,0 +1,514 @@
+{
+  "title": "Plugins",
+  "description": "How to package, distribute, and install Claude Code extensions: manifest, marketplaces, dependencies, and scope management.",
+  "sections": [
+    {
+      "title": "Plugins",
+      "articles": [
+        {
+          "id": "plugins-que-es",
+          "title": "A self-contained, versionable, shareable directory",
+          "summary": "What a plugin can package and when it's worth converting .claude/ configuration into one",
+          "subsections": [
+            {
+              "title": "From standalone configuration to a plugin",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A Claude Code plugin is a self-contained directory that packages extensions to distribute them as a single versioned unit, instead of configuring each piece separately in `.claude/`. Official docs recommend the opposite of what intuition suggests: start with standalone configuration in `.claude/` to iterate quickly, and only convert it into a plugin once it's ready to share."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🧩",
+                      "title": "Namespacing",
+                      "description": "A plugin's skills are invoked as `/plugin-name:skill-name`, avoiding name collisions between different plugins."
+                    },
+                    {
+                      "icon": "📦",
+                      "title": "Composable",
+                      "description": "A single plugin can bundle skills, agents, hooks, MCP servers, LSP servers, monitors, themes, and workflows all at once."
+                    },
+                    {
+                      "icon": "🔁",
+                      "title": "Versionable",
+                      "description": "It has its own metadata manifest and can be published to a marketplace, unlike a `.claude/settings.json` file that isn't versioned as an independent unit."
+                    }
+                  ]
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Can package",
+                    "Role"
+                  ],
+                  "rows": [
+                    [
+                      "Skills",
+                      "The modern way to extend behavior — Claude invokes them automatically"
+                    ],
+                    [
+                      "Agents",
+                      "Specialized subagents"
+                    ],
+                    [
+                      "Hooks",
+                      "Handlers for session lifecycle events"
+                    ],
+                    [
+                      "MCP servers",
+                      "Connection to external tools and data via Model Context Protocol"
+                    ],
+                    [
+                      "LSP servers",
+                      "Code intelligence — requires the language server binary to already be installed on the machine"
+                    ],
+                    [
+                      "Monitors",
+                      "Background processes that deliver notifications"
+                    ],
+                    [
+                      "Commands",
+                      "Legacy way to extend behavior — skills is the modern replacement"
+                    ],
+                    [
+                      "Themes / Workflows",
+                      "Experimental features"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "When it's worth making the jump to a plugin",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The official recommendation to start in `.claude/` and only migrate once it's ready to share has a concrete reason: while content lives loose in `.claude/`, every iteration is just editing a file and testing again. Packaging it into a plugin too early adds the manifest, versioning, and eventually a marketplace — coordination costs that aren't worth paying while behavior is still being tuned."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The signal that it's time to migrate",
+                  "content": "When a second person or a second repo needs the same skill, hook, or MCP server, keeping loose copies in each `.claude/` means a fix made in one place never reaches the other. A versioned plugin with a marketplace solves that: update once, propagate to everyone who installed it."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "plugins-manifiesto",
+          "title": "Structure of .claude-plugin/plugin.json",
+          "summary": "The one required field, semver versioning, and how manifest paths replace or merge with default locations",
+          "subsections": [
+            {
+              "title": "Manifest fields",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The manifest lives at `.claude-plugin/plugin.json` inside the plugin directory. The only required field is `name` (kebab-case) — it doubles as the unique identifier and as the namespace prefix for its skills."
+                },
+                {
+                  "type": "code",
+                  "language": "json",
+                  "code": "{\n  \"name\": \"my-plugin\",\n  \"description\": \"My custom plugin\",\n  \"version\": \"1.0.0\"\n}"
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Optional field",
+                    "Purpose"
+                  ],
+                  "rows": [
+                    [
+                      "displayName",
+                      "Human-readable name in the plugin manager (falls back to `name` if missing)"
+                    ],
+                    [
+                      "version",
+                      "Semver (`major.minor.patch`). If omitted, Claude Code derives it from the git SHA or the source command"
+                    ],
+                    [
+                      "author / homepage / repository / license",
+                      "Distribution metadata"
+                    ],
+                    [
+                      "skills / agents / hooks / mcpServers / lspServers",
+                      "Custom paths for each content type — see below"
+                    ],
+                    [
+                      "defaultEnabled",
+                      "If `false`, the plugin starts disabled until the user manually enables it"
+                    ],
+                    [
+                      "dependencies",
+                      "Other required plugins — see the dependencies section"
+                    ],
+                    [
+                      "userConfig",
+                      "Interactive configuration schema the user fills in on install"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Replaces or merges depending on the field",
+                  "content": "A path in `skills`, `mcpServers`, or `lspServers` adds to the default location instead of replacing it; a path in `commands` or `agents` instead fully replaces the search in its default location. `hooks` has its own merge rules. If a field is left out entirely, Claude Code looks in that content type's default location inside the plugin."
+                }
+              ]
+            },
+            {
+              "title": "Default locations per content type",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": [
+                    "Content type",
+                    "Default location inside the plugin"
+                  ],
+                  "rows": [
+                    [
+                      "Skills",
+                      "skills/"
+                    ],
+                    [
+                      "Agents",
+                      "agents/"
+                    ],
+                    [
+                      "Hooks",
+                      "hooks/hooks.json"
+                    ],
+                    [
+                      "MCP servers",
+                      ".mcp.json (at the plugin root)"
+                    ],
+                    [
+                      "LSP servers",
+                      ".lsp.json (at the plugin root)"
+                    ],
+                    [
+                      "Commands (legacy)",
+                      "commands/"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Paths are relative to the plugin's directory, not the project's",
+                  "content": "Any path declared in `plugin.json` (custom or default) resolves relative to the plugin's own root, not the project it ends up installed in — an easy detail to get wrong if you copy a path while thinking of the project's `.claude/` layout instead of the plugin's own."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "plugins-marketplaces",
+          "title": "Plugin catalogs and how to install from them",
+          "summary": "The structure of marketplace.json, the seven source types a plugin can use, and the commands to add a marketplace and install",
+          "subsections": [
+            {
+              "title": "marketplace.json",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A marketplace is a catalog — a `marketplace.json` file listing available plugins. The user adds it once and then installs individual plugins from it."
+                },
+                {
+                  "type": "code",
+                  "language": "json",
+                  "code": "{\n  \"name\": \"my-marketplace\",\n  \"owner\": { \"name\": \"My Org\" },\n  \"plugins\": [\n    { \"name\": \"plugin-one\", \"source\": \"./plugins/plugin-one\" }\n  ]\n}"
+                },
+                {
+                  "type": "table",
+                  "headers": [
+                    "Source type",
+                    "When to use it"
+                  ],
+                  "rows": [
+                    [
+                      "Relative path (`\"./plugins/x\"`)",
+                      "The plugin lives in the same repo as the marketplace"
+                    ],
+                    [
+                      "GitHub (`{source: \"github\", repo: \"owner/repo\"}`)",
+                      "The most common case for public plugins"
+                    ],
+                    [
+                      "Generic git (`{source: \"url\", url: \"...\"}`)",
+                      "Repos outside GitHub (GitLab, self-hosted)"
+                    ],
+                    [
+                      "Git with subdirectory (`git-subdir`)",
+                      "The plugin is a subdirectory inside a larger repo (sparse clone)"
+                    ],
+                    [
+                      "npm (`{source: \"npm\", package: \"...\"}`)",
+                      "Distributing the plugin as an npm package"
+                    ],
+                    [
+                      "ZIP archive over HTTPS (`archive`)",
+                      "Direct distribution with integrity verification via `sha256`"
+                    ],
+                    [
+                      "Command (`command`)",
+                      "The plugin is generated dynamically by running a command — never auto-installed as a dependency, see below"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Commands",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": [
+                    "Command",
+                    "Effect"
+                  ],
+                  "rows": [
+                    [
+                      "`/plugin marketplace add <source>`",
+                      "Registers a marketplace from the session"
+                    ],
+                    [
+                      "`claude plugin marketplace add <source>`",
+                      "Same, from the terminal"
+                    ],
+                    [
+                      "`/plugin marketplace list` / `remove <name>` / `update <name>`",
+                      "List, remove, or refresh the catalog"
+                    ],
+                    [
+                      "`/plugin install <plugin>@<marketplace>`",
+                      "Installs a specific plugin"
+                    ],
+                    [
+                      "`claude plugin install <plugin>@<marketplace> --scope user|project|local`",
+                      "Installs while explicitly pinning the scope"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Two official Anthropic marketplaces",
+                  "content": "`claude-plugins-official` (curated by Anthropic, registered automatically) and `anthropics/claude-plugins-community` (community, added manually with `/plugin marketplace add anthropics/claude-plugins-community`). Any other marketplace is third-party — see the security section below before adding one."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "plugins-dependencias",
+          "title": "Dependencies between plugins",
+          "summary": "How they're declared, what happens when one is missing, the cross-marketplace restriction, and the bundling pattern for team packages",
+          "subsections": [
+            {
+              "title": "Declaring and resolving versions",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A plugin can declare dependencies on other plugins in its manifest's `dependencies` field, using standard semver ranges (`~2.1.0`, `^2.0`, `>=1.4`)."
+                },
+                {
+                  "type": "code",
+                  "language": "json",
+                  "code": "{\n  \"name\": \"deploy-kit\",\n  \"version\": \"3.1.0\",\n  \"dependencies\": [\n    \"audit-logger\",\n    { \"name\": \"secrets-vault\", \"version\": \"~2.1.0\" }\n  ]\n}"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The exception that breaks auto-install",
+                  "content": "When you install a plugin, its dependencies are resolved and installed automatically — except when a dependency uses a `command` source. In that case the user has to install it manually first; Claude Code never runs that source implicitly as part of resolving another plugin's dependencies."
+                },
+                {
+                  "type": "text",
+                  "content": "If a dependency is missing, Claude Code disables the plugin and reports the `dependency-unsatisfied` error — both on load and when trying to enable it, along with instructions to install the missing dependency."
+                }
+              ]
+            },
+            {
+              "title": "Cross-marketplace restriction and bundling",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "For security, a plugin can't depend on another one published in a different marketplace unless the source marketplace explicitly allows it via `allowCrossMarketplaceDependenciesOn`. This prevents an untrusted marketplace from injecting dependencies toward arbitrary packages in another catalog."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "A plugin can be nothing but a dependency bundle",
+                  "content": "A plugin with no content of its own, made entirely of a `dependencies` array, works as a team package: installing it installs the whole set at once. For version resolution to work, releases must be tagged in git as `{plugin-name}--v{version}` (e.g. `deploy-kit--v3.1.0`), typically via `claude plugin tag --push`."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "plugins-gestion",
+          "title": "Enabling, disabling, and picking the right scope",
+          "summary": "Lifecycle management commands for an installed plugin, and the scope table that already governs the rest of Claude Code's configuration",
+          "subsections": [
+            {
+              "title": "Management commands",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": [
+                    "Command",
+                    "Effect"
+                  ],
+                  "rows": [
+                    [
+                      "`/plugin list` (`--enabled` / `--disabled`)",
+                      "Lists installed plugins, filterable by status"
+                    ],
+                    [
+                      "`/plugin enable <plugin>@<marketplace>`",
+                      "Enables a disabled plugin"
+                    ],
+                    [
+                      "`/plugin disable <plugin>@<marketplace>`",
+                      "Disables it. If another plugin depends on this one, the command is rejected and suggests disabling the whole chain"
+                    ],
+                    [
+                      "`/plugin uninstall <plugin>@<marketplace>` (`--prune`)",
+                      "Uninstalls it; `--prune` also clears associated persistent data"
+                    ],
+                    [
+                      "`/reload-plugins` (`--force`)",
+                      "Reloads plugins without restarting the session; `--force` forces prompt cache invalidation"
+                    ]
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "The same four scopes as the rest of the configuration",
+              "blocks": [
+                {
+                  "type": "table",
+                  "headers": [
+                    "Scope",
+                    "File",
+                    "Reach"
+                  ],
+                  "rows": [
+                    [
+                      "user",
+                      "~/.claude/settings.json",
+                      "All of the user's projects"
+                    ],
+                    [
+                      "project",
+                      ".claude/settings.json",
+                      "The whole team, committed to the repo"
+                    ],
+                    [
+                      "local",
+                      ".claude/settings.local.json",
+                      "Only that user on that project, gitignored"
+                    ],
+                    [
+                      "managed",
+                      "Organization configuration",
+                      "Enforced by an admin, read-only for the user"
+                    ]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Consistent with the rest of this site",
+                  "content": "It's the same scope hierarchy already documented in Permissions and in the hooks source table (user / project / local / plugin) — installing a plugin with `--scope project` instead of `user` is the difference between \"only on my machine\" and \"the whole team gets it when they clone the repo.\""
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "plugins-seguridad",
+          "title": "Trust, sandboxing, and what isn't guaranteed",
+          "summary": "Why installing a plugin from a third-party marketplace is a trust decision, not an operation verified by Anthropic",
+          "subsections": [
+            {
+              "title": "Trust levels, not verification levels",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "claude-plugins-official",
+                    "rows": [
+                      {
+                        "key": "Curation",
+                        "value": "Anthropic decides which plugins to include"
+                      },
+                      {
+                        "key": "Verification",
+                        "value": "No documented cryptographic signing or manual audit"
+                      }
+                    ]
+                  },
+                  "right": {
+                    "head": "claude-plugins-community / third-party",
+                    "rows": [
+                      {
+                        "key": "Curation",
+                        "value": "Community goes through automated security screening; third-party marketplaces, none"
+                      },
+                      {
+                        "key": "Verification",
+                        "value": "Anthropic explicitly documents that it doesn't control or verify that the MCP servers, files, or other software bundled in a plugin work as advertised"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "No OS sandbox",
+                  "content": "Plugins don't run inside an OS sandbox — unlike Managed Agents, which do. A plugin can make network requests with no restriction imposed by the plugin mechanism itself. Installing one is, in terms of risk surface, equivalent to running third-party code with your own permissions."
+                }
+              ]
+            },
+            {
+              "title": "Other documented restrictions",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🔒",
+                      "title": "Workspace trust",
+                      "description": "Plugins with project-level skill-dir scope only load after the user explicitly trusts the workspace."
+                    },
+                    {
+                      "icon": "📡",
+                      "title": "MCP at project scope",
+                      "description": "Requires explicit approval per server — it doesn't auto-enable just by cloning the repo."
+                    },
+                    {
+                      "icon": "🚫",
+                      "title": "Monitors at project scope",
+                      "description": "Don't load at all, for security reasons — only available at the user scope."
+                    },
+                    {
+                      "icon": "🏢",
+                      "title": "strictPluginOnlyCustomization",
+                      "description": "An organization-level setting that forces every skill, agent, hook, and MCP server to come only from managed plugins — blocking individual customization via the user's own `.claude/`."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

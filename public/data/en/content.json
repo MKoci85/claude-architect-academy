@@ -23,6 +23,11 @@
       "file": "permissions.json"
     },
     {
+      "title": "Plugins",
+      "description": "Manifest, marketplaces, dependencies between plugins, and scope management",
+      "file": "plugins.json"
+    },
+    {
       "title": "Hooks",
       "description": "Claude Code's hooks system and the technical fundamentals of stdio",
       "isSuper": true,
@@ -55,6 +60,21 @@
       "title": "MCP",
       "description": "Model Context Protocol: commands, scopes, transports, Tool Search, and security",
       "file": "mcp.json"
+    },
+    {
+      "title": "Security and Privacy",
+      "description": "Jailbreak defense, PII and data leakage prevention, Usage Policy, IAM, and enterprise security processes",
+      "file": "ai-security.json"
+    },
+    {
+      "title": "Software Engineering Fundamentals",
+      "description": "Requirements, SDLC, REST/JSON/async as generic fundamentals, version control, and refactoring as a methodology",
+      "file": "software-engineering-fundamentals.json"
+    },
+    {
+      "title": "Third-Party Agentic Frameworks",
+      "description": "Strands Agents, LangGraph, and PydanticAI: what each one solves compared to the Claude Agent SDK",
+      "file": "agentic-frameworks.json"
     },
     {
       "title": "Concepts",
@@ -136,6 +156,11 @@
           "title": "Advanced Capabilities",
           "file": "api-advanced.json",
           "description": "MCP Connector, Extended Thinking, Files API, Managed Agents"
+        },
+        {
+          "title": "Claude Agent SDK",
+          "file": "api-agent-sdk.json",
+          "description": "Installation, agentic loop architecture, built-in tools, and when to use it vs. the direct Messages API or Managed Agents"
         },
         {
           "title": "Claude on Vertex AI",

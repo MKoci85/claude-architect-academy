@@ -23,6 +23,11 @@
       "file": "permisos.json"
     },
     {
+      "title": "Plugins",
+      "description": "Manifiesto, marketplaces, dependencias entre plugins y gestión de scope",
+      "file": "plugins.json"
+    },
+    {
       "title": "Hooks",
       "description": "El sistema de hooks de Claude Code y los fundamentos técnicos de stdio",
       "isSuper": true,
@@ -55,6 +60,21 @@
       "title": "MCP",
       "description": "Model Context Protocol: comandos, scopes, transportes, Tool Search y seguridad",
       "file": "mcp.json"
+    },
+    {
+      "title": "Seguridad y Privacidad",
+      "description": "Jailbreak defense, PII y prevención de fuga de datos, Usage Policy, IAM y procesos de seguridad empresarial",
+      "file": "seguridad-ia.json"
+    },
+    {
+      "title": "Fundamentos de Ingeniería de Software",
+      "description": "Requisitos, SDLC, REST/JSON/async como fundamentos genéricos, control de versiones y refactoring como metodología",
+      "file": "ingenieria-de-software.json"
+    },
+    {
+      "title": "Frameworks Agénticos de Terceros",
+      "description": "Strands Agents, LangGraph y PydanticAI: qué resuelve cada uno frente al Claude Agent SDK",
+      "file": "frameworks-agenticos.json"
     },
     {
       "title": "Conceptos",
@@ -136,6 +156,11 @@
           "title": "Capacidades Avanzadas",
           "file": "api-avanzado.json",
           "description": "MCP Connector, Extended Thinking, Files API, Managed Agents"
+        },
+        {
+          "title": "Claude Agent SDK",
+          "file": "api-agent-sdk.json",
+          "description": "Instalación, arquitectura del loop agéntico, herramientas incluidas y cuándo usarlo frente a la Messages API directa o Managed Agents"
         },
         {
           "title": "Claude en Vertex AI",

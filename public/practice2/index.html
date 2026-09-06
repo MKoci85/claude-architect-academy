@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Practice Exam — Claude Certified Developer (CCDV-F)</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/practice2/style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<div id="app"></div>
+<button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
+
+<script>
+/* ====================== THEME ====================== */
+(function(){
+  const saved = localStorage.getItem('practice-theme');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  if(saved === 'dark' || (!saved && prefersDark)){
+    document.documentElement.setAttribute('data-theme','dark');
+  }
+})();
+
+function toggleTheme(){
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  document.documentElement.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('practice-theme', isDark ? 'light' : 'dark');
+  document.getElementById('themeBtn').textContent = isDark ? '🌙' : '☀️';
+}
+
+function initThemeBtn(){
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.textContent = isDark ? '☀️' : '🌙';
+}
+
+/* ====================== DOMAIN METADATA ====================== */
+const DOMAINS = [
+  {id:1, name:'Agents and Workflows', weight:14.7},
+  {id:2, name:'Applications and Integration', weight:33.1},
+  {id:3, name:'Claude Code', weight:3.1},
+  {id:4, name:'Eval, Testing, and Debugging', weight:2.6},
+  {id:5, name:'Model Selection and Optimization', weight:16.8},
+  {id:6, name:'Prompt and Context Engineering', weight:11.0},
+  {id:7, name:'Security and Safety', weight:8.1},
+  {id:8, name:'Tools and MCPs', weight:10.6}
+];
+
+const EXAM_COUNTS = {1:8, 2:18, 3:2, 4:1, 5:9, 6:6, 7:4, 8:5};
+const EXAM_LENGTH = Object.values(EXAM_COUNTS).reduce((a,b)=>a+b,0);
+const MIN_MULTI_RATIO = 0.30;
+const TOTAL_SECONDS = 120*60;
+
+function domainName(id){return DOMAINS.find(d=>d.id===id).name;}
+
+/* ====================== POOL CONSTRUCTION ====================== */
+let POOLS = {1:[],2:[],3:[],4:[],5:[],6:[],7:[],8:[]};
+let POOL_TOTAL = 0;
+
+function buildPoolsFromJson(data){
+  data.exam.domains.forEach(dom=>{
+    POOLS[dom.id] = dom.questions.map(q=>{
+      const isMulti = Array.isArray(q.correctAnswers);
+      return {
+        domain: dom.id,
+        q: q.text,
+        options: q.options,
+        type: isMulti ? 'multi' : 'single',
+        correct: isMulti ? q.correctAnswers.slice() : q.correctAnswer,
+        explanation: q.explanation
+      };
+    });
+  });
+  POOL_TOTAL = Object.values(POOLS).reduce((a,arr)=>a+arr.length,0);
+}
+
+/* Compares the given answer against the correct one(s), works for single and multi questions */
+function answerMatches(q, ans){
+  if(q.type==='multi'){
+    const a = Array.isArray(ans) ? ans.slice().sort((x,y)=>x-y) : [];
+    const c = q.correct.slice().sort((x,y)=>x-y);
+    return a.length===c.length && a.every((v,idx)=>v===c[idx]);
+  }
+  return ans===q.correct;
+}
+
+/* Treats a single question as "answered" if selected, or a multi question if at least one option is marked */
+function isAnswered(ans){
+  if(ans===null || ans===undefined) return false;
+  if(Array.isArray(ans)) return ans.length>0;
+  return true;
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for(let i=a.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [a[i],a[j]] = [a[j],a[i]];
+  }
+  return a;
+}
+
+function interleave(lists){
+  const result = [];
+  const idx = lists.map(()=>0);
+  let remaining = true;
+  while(remaining){
+    remaining = false;
+    for(let i=0;i<lists.length;i++){
+      if(idx[i] < lists[i].length){
+        result.push(lists[i][idx[i]]);
+        idx[i]++;
+        remaining = true;
+      }
+    }
+  }
+  return result;
+}
+
+/* Builds the domain sample guaranteeing a floor of multi-response questions, the rest is filled randomly from what's left in the pool */
+function pickDomainQuestions(domainId, n){
+  const multiPool = shuffle(POOLS[domainId].filter(q=>q.type==='multi'));
+  const singlePool = shuffle(POOLS[domainId].filter(q=>q.type!=='multi'));
+  const guaranteed = Math.min(Math.ceil(n * MIN_MULTI_RATIO), multiPool.length, n);
+  const chosen = multiPool.slice(0, guaranteed);
+  const rest = shuffle(multiPool.slice(guaranteed).concat(singlePool));
+  chosen.push(...rest.slice(0, n - chosen.length));
+  return shuffle(chosen);
+}
+
+function sampleDomain(domainId, n){
+  const pool = pickDomainQuestions(domainId, n);
+  return pool.map(q=>{
+    const order = shuffle(q.options.map((_,idx)=>idx));
+    const newOptions = order.map(i=>q.options[i]);
+    const newCorrect = q.type==='multi'
+      ? q.correct.map(c=>order.indexOf(c)).sort((a,b)=>a-b)
+      : order.indexOf(q.correct);
+    return {domain:q.domain, situation:q.situation, q:q.q, type:q.type, options:newOptions, correct:newCorrect, explanation:q.explanation};
+  });
+}
+
+function sampleExam(){
+  const perDomain = DOMAINS.map(d=>sampleDomain(d.id, EXAM_COUNTS[d.id]));
+  return interleave(perDomain);
+}
+
+/* ====================== STATE ====================== */
+let QUESTIONS = [];
+let TOTAL_Q = 0;
+
+const state = {
+  screen:'intro',
+  current:0,
+  answers:[],
+  timeLeft:TOTAL_SECONDS,
+  timerId:null,
+  navOpen:false,
+  reviewFilter:'all'
+};
+
+function formatTime(s){
+  const m = Math.floor(s/60);
+  const sec = s%60;
+  return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0');
+}
+
+function startTimer(){
+  if(state.timerId) return;
+  state.timerId = setInterval(()=>{
+    state.timeLeft--;
+    if(state.timeLeft<=0){
+      state.timeLeft = 0;
+      clearInterval(state.timerId);
+      finishExam();
+      return;
+    }
+    const t = document.getElementById('timerDisplay');
+    if(t){
+      t.textContent = formatTime(state.timeLeft);
+      t.className = 'timer'+(state.timeLeft<=300?' low':'');
+    }
+  },1000);
+}
+
+async function startExam(){
+  if(POOL_TOTAL === 0){
+    state.screen='loading';
+    render();
+    try{
+      const res = await fetch('/practice2/examen_ccdv_f_en.json');
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const data = await res.json();
+      buildPoolsFromJson(data);
+    }catch(e){
+      state.screen='error';
+      render();
+      return;
+    }
+  }
+  QUESTIONS = sampleExam();
+  TOTAL_Q = QUESTIONS.length;
+  state.screen='exam';
+  state.current=0;
+  state.answers = new Array(TOTAL_Q).fill(null);
+  state.timeLeft = TOTAL_SECONDS;
+  state.navOpen = false;
+  startTimer();
+  render();
+}
+
+function selectOption(qIdx, optIdx){
+  const q = QUESTIONS[qIdx];
+  if(q.type==='multi'){
+    const cur = state.answers[qIdx] ? state.answers[qIdx].slice() : [];
+    const pos = cur.indexOf(optIdx);
+    if(pos===-1) cur.push(optIdx); else cur.splice(pos,1);
+    cur.sort((a,b)=>a-b);
+    state.answers[qIdx] = cur;
+  } else {
+    state.answers[qIdx]=optIdx;
+  }
+  render();
+}
+
+function goTo(i){
+  state.current = Math.max(0, Math.min(TOTAL_Q-1, i));
+  state.navOpen=false;
+  render();
+}
+function next(){goTo(state.current+1);}
+function prev(){goTo(state.current-1);}
+function toggleNav(){state.navOpen=!state.navOpen; render();}
+
+function finishExam(){
+  if(state.timerId){clearInterval(state.timerId); state.timerId=null;}
+  state.screen='results';
+  render();
+}
+
+function confirmFinish(){
+  const unanswered = state.answers.filter(a=>!isAnswered(a)).length;
+  if(unanswered>0){
+    const ok = confirm('You have '+unanswered+' unanswered question(s). Finish anyway?');
+    if(!ok) return;
+  }
+  finishExam();
+}
+
+function restart(){
+  state.screen='intro';
+  state.current=0;
+  state.answers=[];
+  state.timeLeft=TOTAL_SECONDS;
+  state.navOpen=false;
+  state.reviewFilter='all';
+  if(state.timerId){clearInterval(state.timerId);state.timerId=null;}
+  render();
+}
+
+function goReview(filter){
+  state.screen='review';
+  state.reviewFilter=filter||'all';
+  render();
+}
+
+function setReviewFilter(f){
+  state.reviewFilter=f;
+  render();
+}
+
+function computeScore(){
+  let correct=0;
+  const byDomain={};
+  DOMAINS.forEach(d=>byDomain[d.id]={correct:0,total:0});
+  QUESTIONS.forEach((q,i)=>{
+    byDomain[q.domain].total++;
+    if(answerMatches(q, state.answers[i])){correct++; byDomain[q.domain].correct++;}
+  });
+  return {correct, total:TOTAL_Q, byDomain};
+}
+
+/* ====================== RENDER ====================== */
+function render(){
+  const app = document.getElementById('app');
+  if(state.screen==='intro') app.innerHTML = renderIntro();
+  else if(state.screen==='loading') app.innerHTML = '<div style="padding:80px 20px;text-align:center;font-size:17px;color:var(--text-secondary)">Loading questions…</div>';
+  else if(state.screen==='error') app.innerHTML = '<div style="padding:80px 20px;text-align:center;font-size:17px;color:var(--danger)">Error loading the question bank. Try reloading the page.</div>';
+  else if(state.screen==='exam') app.innerHTML = renderExam();
+  else if(state.screen==='results') app.innerHTML = renderResults();
+  else if(state.screen==='review') app.innerHTML = renderReview();
+}
+
+function renderIntro(){
+  const rows = DOMAINS.map(d=>{
+    const poolSize = POOLS[d.id].length || '—';
+    return '<div class="domain-row"><span class="name">'+d.name+'</span><span class="meta">'+d.weight+'% · '+EXAM_COUNTS[d.id]+' of '+poolSize+' in the pool</span></div>';
+  }).join('');
+  return `
+  <div class="hero">
+    <p class="eyebrow">Unofficial practice exam</p>
+    <h1>Claude Certified Developer — Foundations (CCDV-F)</h1>
+    <p class="subtitle">${EXAM_LENGTH} questions · 120 minutes · multiple-choice and multiple-response</p>
+  </div>
+  <div class="intro-cta">
+    <button class="btn-primary" onclick="startExam()">Start exam</button>
+  </div>
+  <div class="domain-list">${rows}</div>
+  <div class="disclaimer">
+    Unofficial simulation based on the domains and weights published by Anthropic for the CCDV-F. It does not reproduce real exam questions and is not affiliated with Anthropic. The real exam does not group questions by domain narrative the way CCAR-F's 6-scenario format does — this simulator draws each attempt by weighted domain instead. Pool of <b>${POOL_TOTAL} questions</b> — each attempt draws ${EXAM_LENGTH} at random with shuffled options.
+  </div>
+  `;
+}
+
+function renderExam(){
+  const i = state.current;
+  const q = QUESTIONS[i];
+  const selected = state.answers[i];
+  const isMulti = q.type==='multi';
+  const selectedArr = isMulti ? (selected||[]) : null;
+  const optionsHtml = q.options.map((opt,oi)=>{
+    const sel = isMulti ? (selectedArr.includes(oi)?' selected':'') : (selected===oi?' selected':'');
+    const letter = String.fromCharCode(65+oi);
+    return `<div class="option${sel}" onclick="selectOption(${i},${oi})">
+      <span class="option-letter">${letter}</span>
+      <span>${opt}</span>
+    </div>`;
+  }).join('');
+
+  const navGrid = QUESTIONS.map((qq,qi)=>{
+    let cls='navgrid-item';
+    if(isAnswered(state.answers[qi])) cls+=' answered';
+    if(qi===i) cls+=' current';
+    return `<div class="${cls}" onclick="goTo(${qi})">${qi+1}</div>`;
+  }).join('');
+
+  const answeredCount = state.answers.filter(a=>isAnswered(a)).length;
+
+  return `
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="topbar-left">Question <b>${i+1}</b> of ${TOTAL_Q} · ${answeredCount} answered</div>
+      <div id="timerDisplay" class="timer${state.timeLeft<=300?' low':''}">${formatTime(state.timeLeft)}</div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" style="width:${((i+1)/TOTAL_Q*100)}%"></div></div>
+  </div>
+  <div class="question-wrap">
+    <div class="domain-tag">${domainName(q.domain)}</div>
+    <p class="q-number">Question ${i+1}</p>
+    ${q.situation?`<div class="situation-card"><span class="situation-label">Situation</span>${q.situation}</div>`:''}
+    <p class="q-text">${q.q}</p>
+    ${isMulti?`<p style="margin:-8px 0 14px;font-size:14px;color:var(--text-secondary);font-style:italic;">Select exactly ${q.correct.length} answers (${selectedArr.length} selected).</p>`:''}
+    <div class="options">${optionsHtml}</div>
+
+    ${state.navOpen?`<div class="navgrid-panel"><div class="navgrid">${navGrid}</div></div>`:''}
+
+    <div class="navrow">
+      <button class="btn-secondary" onclick="prev()" ${i===0?'disabled':''}>Previous</button>
+      <div class="navrow-center"><button class="link-btn" onclick="toggleNav()">${state.navOpen?'Hide map':'Question map'}</button></div>
+      ${i===TOTAL_Q-1
+        ? '<button class="btn-primary" onclick="confirmFinish()">Finish exam</button>'
+        : '<button class="btn-primary" onclick="next()">Next</button>'}
+    </div>
+    <div class="actions" style="margin-top:18px;">
+      <button class="link-btn" onclick="confirmFinish()">Finish exam now</button>
+    </div>
+  </div>
+  `;
+}
+
+function renderResults(){
+  const s = computeScore();
+  const pct = Math.round(s.correct/s.total*100);
+  const domainBars = DOMAINS.map(d=>{
+    const b = s.byDomain[d.id];
+    const p = b.total ? Math.round(b.correct/b.total*100) : 0;
+    return `<div class="domain-bar-row">
+      <div class="top"><span class="name">${d.name}</span><span class="score">${b.correct}/${b.total} · ${p}%</span></div>
+      <div class="bar-track"><div class="bar-fill" style="width:${p}%"></div></div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="score-hero">
+    <p class="eyebrow">Result</p>
+    <div class="score-circle" style="--pct:${pct}">
+      <span class="num">${pct}%</span>
+      <span class="lbl">${s.correct} / ${s.total} correct</span>
+    </div>
+    <p class="score-note">Anthropic requires a scaled score of 720 out of 1000 to pass the real exam — it's not a simple % of correct answers, since they use a scaling model to equalize difficulty across different exam versions. Use this result as a reference for your domain proficiency, not an exact pass prediction.</p>
+  </div>
+  <h1 style="font-size:20px;margin-bottom:18px;">Performance by domain</h1>
+  <div class="domain-bars">${domainBars}</div>
+  <div class="actions">
+    <button class="btn-primary" onclick="goReview('all')">Review all answers</button>
+    <button class="btn-secondary" onclick="goReview('incorrect')">Review errors only</button>
+    <button class="btn-secondary" onclick="restart()">New exam (different questions)</button>
+  </div>
+  `;
+}
+
+function renderReview(){
+  let items = QUESTIONS.map((q,i)=>({q,i}));
+  if(state.reviewFilter==='incorrect'){
+    items = items.filter(({q,i})=>!answerMatches(q, state.answers[i]));
+  }
+
+  const html = items.map(({q,i})=>{
+    const selected = state.answers[i];
+    const isMulti = q.type==='multi';
+    const selArr = isMulti ? (Array.isArray(selected)?selected:[]) : null;
+    const isCorrect = answerMatches(q, selected);
+    const optsHtml = q.options.map((opt,oi)=>{
+      let cls='review-opt';
+      const isCorrectOpt = isMulti ? q.correct.includes(oi) : oi===q.correct;
+      const isSelectedOpt = isMulti ? selArr.includes(oi) : oi===selected;
+      if(isCorrectOpt) cls+=' correct';
+      else if(isSelectedOpt) cls+=' incorrect-selected';
+      const letter = String.fromCharCode(65+oi);
+      return `<div class="${cls}">${letter}. ${opt}</div>`;
+    }).join('');
+    const icon = !isAnswered(selected)
+      ? '<span class="result-icon bad">UNANSWERED</span>'
+      : (isCorrect ? '<span class="result-icon ok">CORRECT</span>' : '<span class="result-icon bad">INCORRECT</span>');
+
+    return `<div class="review-item">
+      <div class="domain-tag">${domainName(q.domain)}</div>
+      ${icon}
+      ${q.situation?`<div class="situation-card"><span class="situation-label">Situation</span>${q.situation}</div>`:''}
+      <p class="q-text">${i+1}. ${q.q}</p>
+      ${optsHtml}
+      <div class="review-explain">${q.explanation}</div>
+    </div>`;
+  }).join('');
+
+  return `
+  <div class="hero" style="padding-top:40px;">
+    <p class="eyebrow">Review</p>
+    <h1 style="font-size:26px;">Answer review</h1>
+  </div>
+  <div class="filter-row">
+    <button class="filter-btn${state.reviewFilter==='all'?' active':''}" onclick="setReviewFilter('all')">All (${QUESTIONS.length})</button>
+    <button class="filter-btn${state.reviewFilter==='incorrect'?' active':''}" onclick="setReviewFilter('incorrect')">Errors only (${QUESTIONS.filter((q,i)=>!answerMatches(q, state.answers[i])).length})</button>
+  </div>
+  ${html || '<p style="color:var(--text-secondary);">No questions match this filter. Great job!</p>'}
+  <div class="actions" style="margin-top:24px;">
+    <button class="btn-secondary" onclick="state.screen='results';render();">Back to result</button>
+    <button class="btn-primary" onclick="restart()">New exam (different questions)</button>
+  </div>
+  <footer class="note">Unofficial practice material · Not affiliated with Anthropic · Pool of ${POOL_TOTAL} questions</footer>
+  `;
+}
+
+// Preload the pool so renderIntro() shows real sizes
+(async function preload(){
+  try{
+    const res = await fetch('/practice2/examen_ccdv_f_en.json');
+    if(!res.ok) return;
+    const data = await res.json();
+    buildPoolsFromJson(data);
+    POOL_TOTAL = Object.values(POOLS).reduce((a,arr)=>a+arr.length,0);
+    render(); // re-render con los datos del pool ya disponibles
+  }catch(e){}
+})();
+
+render();
+initThemeBtn();
+</script>
+</body>
+</html>

@@ -246,9 +246,16 @@ body {
 }
 .lang-btn:hover { opacity: 0.8; }
 
-.exam-btn {
+.exam-btns {
   flex-shrink: 0;
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exam-btn {
+  flex-shrink: 0;
   height: 30px;
   padding: 0 13px;
   border-radius: 6px;
@@ -267,6 +274,13 @@ body {
   letter-spacing: 0.01em;
 }
 .exam-btn:hover { background: var(--accent-hover); }
+
+.exam-btn-ccdv {
+  background: #2563EB;
+}
+.exam-btn-ccdv:hover { background: #1D4ED8; }
+[data-theme="dark"] .exam-btn-ccdv { background: #3B82F6; }
+[data-theme="dark"] .exam-btn-ccdv:hover { background: #60A5FA; }
 
 .exercises-btn {
   flex-shrink: 0;

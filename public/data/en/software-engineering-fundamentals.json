@@ -1,0 +1,379 @@
+{
+  "title": "Software Engineering Fundamentals",
+  "sections": [
+    {
+      "title": "Understanding Requirements",
+      "articles": [
+        {
+          "id": "ing-requisitos",
+          "title": "From Business Requirements to Technical Requirements",
+          "summary": "The three layers of requirements that separate what the business asks for from what a system actually ends up building, and how to tell a verifiable requirement from an ambiguous one",
+          "subsections": [
+            {
+              "title": "Three layers, not one",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "\"Requirements\" is usually treated as a single thing, but in practice it's three layers with different owners and different languages. Conflating them is the most common reason a technically correct system fails to solve the real problem."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Business requirements",
+                      "body": "The problem or opportunity, in the business's own language: \"we're losing customers because support takes 48 hours to respond.\" No systems or technology mentioned yet."
+                    },
+                    {
+                      "title": "Functional requirements",
+                      "body": "What the system must do to address that business requirement: \"the system must classify incoming tickets by urgency and auto-assign them to the correct queue.\" This is the translation of the problem into observable behavior."
+                    },
+                    {
+                      "title": "Infrastructure / non-functional requirements",
+                      "body": "How the system must behave while doing the above: maximum latency, availability, expected throughput, security and compliance requirements. A system can meet every functional requirement and still be unusable if it ignores these."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The most common mistake: jumping straight to functional",
+                  "content": "Starting to design system behavior without having verified the business requirement produces systems that work exactly as specified but don't solve the problem that motivated them — because nobody validated that the problem was that one."
+                }
+              ]
+            },
+            {
+              "title": "Ambiguous requirement vs. verifiable requirement",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Ambiguous",
+                    "rows": [
+                      { "key": "Example", "value": "\"The system should respond fast\"" },
+                      { "key": "Problem", "value": "Doesn't define what \"fast\" means, under what load, or how it's measured" },
+                      { "key": "Consequence", "value": "Every part of the team interprets it differently; nobody can say whether it's met" }
+                    ]
+                  },
+                  "right": {
+                    "head": "Verifiable",
+                    "rows": [
+                      { "key": "Example", "value": "\"P95 latency under 300ms at 500 concurrent requests/sec\"" },
+                      { "key": "Advantage", "value": "Defines a metric, a threshold, and a load condition" },
+                      { "key": "Consequence", "value": "It's an acceptance criterion: it can be automated as a test or SLO" }
+                    ]
+                  }
+                },
+                {
+                  "type": "text",
+                  "content": "A verifiable requirement can always be rephrased as a yes/no question backed by a concrete measurement. If the only way to check it is \"seems right to me,\" it's still a business requirement disguised as a technical one."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Systems Life Cycle (SDLC)",
+      "articles": [
+        {
+          "id": "ing-sdlc",
+          "title": "The Life Cycle of a System",
+          "summary": "The classic phases of managing a software project, and the two process models that organize them differently",
+          "subsections": [
+            {
+              "title": "Classic SDLC phases",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Don't confuse this with \"session lifecycle\"",
+                  "content": "SDLC (Systems/Software Development Life Cycle) is an IT project management discipline — how a system is planned, built, and maintained over months or years. It's a completely different concept from the technical \"lifecycle\" of a hooks session or an MCP connection, which lasts seconds or minutes and describes the order of events within a single execution."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Planning",
+                      "body": "Defining scope, feasibility, and resources before committing development work."
+                    },
+                    {
+                      "title": "Analysis",
+                      "body": "Gathering and documenting requirements — the stage where the three layers of requirements get applied."
+                    },
+                    {
+                      "title": "Design",
+                      "body": "Translating requirements into architecture: components, the contracts between them, the data model."
+                    },
+                    {
+                      "title": "Implementation",
+                      "body": "Building the system according to the agreed design."
+                    },
+                    {
+                      "title": "Testing",
+                      "body": "Verifying the system meets its functional and non-functional requirements before exposing it to real users."
+                    },
+                    {
+                      "title": "Deployment",
+                      "body": "Putting the system into production in a controlled way."
+                    },
+                    {
+                      "title": "Maintenance",
+                      "body": "The longest phase in real time: bugs, updates, and new requirements that restart the cycle."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Waterfall vs. iterative models",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Waterfall",
+                    "rows": [
+                      { "key": "Structure", "value": "Phases run once, in strict sequence; you don't go back to Analysis once you're in Design" },
+                      { "key": "Advantage", "value": "Predictable when requirements are stable and well understood from the start" },
+                      { "key": "Risk", "value": "A misunderstood requirement in Analysis isn't caught until Testing, when it's already expensive to fix" }
+                    ]
+                  },
+                  "right": {
+                    "head": "Agile / Iterative",
+                    "rows": [
+                      { "key": "Structure", "value": "Phases repeat in short cycles (sprints), each producing a deliverable increment" },
+                      { "key": "Advantage", "value": "Misunderstood requirements are caught in the next cycle, not months later" },
+                      { "key": "Risk", "value": "Without architectural discipline, fast iteration can accumulate technical debt invisible until it scales" }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Integration Fundamentals",
+      "articles": [
+        {
+          "id": "ing-rest-json-async",
+          "title": "REST, JSON, and Asynchronous Programming as Generic Fundamentals",
+          "summary": "The three pillars of how modern systems communicate, treated as general concepts — not as details specific to the Anthropic API",
+          "subsections": [
+            {
+              "title": "REST beyond any specific API",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "REST (Representational State Transfer) is an architectural style, not a protocol: it defines how to model a system as a set of resources addressable by URL, manipulated with a fixed vocabulary of HTTP verbs."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Principle", "What it means"],
+                  "rows": [
+                    ["Resources, not actions", "The URL identifies an entity (`/orders/42`), not a function (`/getOrder?id=42`)"],
+                    ["HTTP verbs with fixed meaning", "GET doesn't modify state; POST creates; PUT/PATCH update; DELETE removes — the verb, not the URL, defines the operation"],
+                    ["Statelessness", "Every request carries all the information needed to process it; the server doesn't rely on a prior session held in memory"],
+                    ["Meaningful status codes", "2xx success, 4xx client error, 5xx server error — a well-written client can react without parsing the body"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Statelessness isn't the same as \"no conversational memory\"",
+                  "content": "A stateless API in the REST sense simply doesn't rely on the server remembering previous requests to process the current one — every request is self-sufficient. This is fully compatible with sending conversation history inside each request's body, which is exactly how LLM-based messaging APIs work: conversational state travels in the payload, it doesn't live on the server between requests."
+                }
+              ]
+            },
+            {
+              "title": "JSON as a data contract",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Beyond being the most common exchange format, JSON works as a contract: a JSON Schema declares what shape a payload must have — which fields are required, their types, allowed values — so that both producer and consumer can validate against the same definition without needing to read each other's code. That's the structural reason explicit schemas (in tool definitions, in API contracts, in request validation) reduce integration errors: they replace an implicit assumption (\"I assume this field is always present\") with a checkable rule."
+                }
+              ]
+            },
+            {
+              "title": "Why asynchronous programming exists",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The problem asynchronous programming solves is concrete: most of what a system does (reading from a database, calling another API, writing to disk) spends most of its time waiting on I/O, not computing. Running those waits synchronously blocks the entire thread — while it waits for a response, that thread can't handle anything else."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "⏸️",
+                      "title": "Callbacks",
+                      "description": "The original pattern: pass a function to run once the operation finishes. Scales poorly in readability once several dependent operations get chained (\"callback hell\")."
+                    },
+                    {
+                      "icon": "🔗",
+                      "title": "Promises / Futures",
+                      "description": "An object representing a value that will eventually exist, with methods to chain transformations without nesting callbacks."
+                    },
+                    {
+                      "icon": "➡️",
+                      "title": "async/await",
+                      "description": "Syntax that lets you write asynchronous code with the linear shape of synchronous code, while the runtime keeps freeing the thread during each I/O wait."
+                    },
+                    {
+                      "icon": "🔁",
+                      "title": "Event loop",
+                      "description": "The mechanism that makes all of the above possible in single-threaded runtimes (Node.js, Python's asyncio): a loop that handles other tasks while an I/O operation is pending, and resumes the original function once the result arrives."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The applied case already covered on this site",
+                  "content": "Response streaming and rate-limit handling in the API's Practical Guides section are concrete instances of this same generic problem: I/O operations of variable duration that shouldn't block the rest of the system while in flight."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Version Control",
+      "articles": [
+        {
+          "id": "ing-control-versiones",
+          "title": "Git as a Fundamental, Not Just a Claude Code Tool",
+          "summary": "Version control as an engineering discipline — why it exists, what problem it solves, and the two most common branching strategies",
+          "subsections": [
+            {
+              "title": "The problem version control solves",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "A version control system exists to answer three questions an unversioned directory of files can't: what changed, who changed it and why, and how to get back to a known prior state without losing the work in between. Those three capabilities — history, attribution, and reversibility — are the foundation of collaboration on any team, regardless of whether the code is written by a person or an agent."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "📜",
+                      "title": "History",
+                      "description": "Every commit is a restore point with an explicit diff against the previous one — no need to remember what changed, you can just look it up."
+                    },
+                    {
+                      "icon": "✍️",
+                      "title": "Attribution",
+                      "description": "Every change is tied to an author and a moment in time, which enables code review and after-the-fact auditing."
+                    },
+                    {
+                      "icon": "↩️",
+                      "title": "Reversibility",
+                      "description": "A problematic change can be surgically reverted without losing unrelated changes that happened afterward."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Trunk-based vs. feature branching",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Trunk-based",
+                    "rows": [
+                      { "key": "Strategy", "value": "Everyone integrates into the main branch frequently (at least daily), with small changes" },
+                      { "key": "Advantage", "value": "Small, frequent merge conflicts instead of one big one at the end" },
+                      { "key": "Requirement", "value": "Feature flags to hide incomplete functionality that's already integrated" }
+                    ]
+                  },
+                  "right": {
+                    "head": "Feature branching",
+                    "rows": [
+                      { "key": "Strategy", "value": "Each feature is developed on its own branch until it's finished, then integrated at the end" },
+                      { "key": "Advantage", "value": "The main branch always reflects complete, tested functionality" },
+                      { "key": "Risk", "value": "Long-lived branches accumulate drift and produce large, conflict-heavy merges" }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "The case already covered on this site",
+                  "content": "Using git worktrees to run subagents in parallel without stepping on the main checkout, covered in Introduction to Claude Code, is a specific application of this same version-control discipline to an agentic workflow — not a separate mechanism."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Refactoring",
+      "articles": [
+        {
+          "id": "ing-refactoring",
+          "title": "Refactoring as a Methodology: Small Scale vs. Large Scale",
+          "summary": "Why refactoring a function and refactoring an architecture are activities with different risks and tactics, even though they share a name",
+          "subsections": [
+            {
+              "title": "Small-scale refactoring",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Renaming a variable, extracting a function, removing local duplication: changes that alter the code's internal structure without changing its observable behavior. They're safe to the extent that test coverage exists to confirm behavior really didn't change — without that safety net, a \"small\" refactor can introduce a silent regression."
+                }
+              ]
+            },
+            {
+              "title": "Large-scale refactoring",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Changing an architectural pattern, migrating from one library to another, restructuring how modules communicate: changes where rewriting everything at once is exactly the risk you want to avoid, because it leaves the system in a non-functional state for the entire migration."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🌿",
+                      "title": "Strangler fig pattern",
+                      "description": "The new system grows around the old one, progressively intercepting traffic, until the old one is unused and can be removed without an abrupt cutover."
+                    },
+                    {
+                      "icon": "🚩",
+                      "title": "Feature flags",
+                      "description": "New and old code coexist behind a flag, allowing the new path to be enabled for a subset of traffic before a full rollout."
+                    },
+                    {
+                      "icon": "📈",
+                      "title": "Incremental migration",
+                      "description": "Migrating one module or use case at a time, validating in production before moving to the next, instead of a big-bang cutover."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "The risk isn't the size of the diff, it's reversibility",
+                  "content": "A large refactor done well can have a huge diff and still be low-risk, if every intermediate step is independently reversible and verifiable. A small refactor can be high-risk if it touches a critical path with no test coverage."
+                }
+              ]
+            },
+            {
+              "title": "Refactoring and code review",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "No large-scale refactor should be merged without code review — the multi-pass review mechanism with independent instances is already covered in the API's Prompt Evaluation section, and applies just as well to reviewing a refactor plan as to reviewing agent-generated code."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -152,9 +152,10 @@ src/
 | `src/styles.css` | Tailwind directives + CSS custom properties for light/dark theme |
 | `public/data/es/content.json` | Master collection index, Spanish (complete) |
 | `public/data/en/content.json` | Master collection index, English (only translated collections) |
-| `public/practice/index.html` | Standalone practice exam (separate HTML page, English only, no `es`/`en` split) |
+| `public/practice/index.html` | Standalone practice exam for CCAR-F (separate HTML page, English only, no `es`/`en` split) |
+| `public/practice2/index.html` | Standalone practice exam for CCDV-F — same engine copy-pasted from `practice/index.html` (identical `sampleExam`/`pickDomainQuestions`/scoring logic), re-parametrized `DOMAINS`/`EXAM_COUNTS` for CCDV-F's 8-domain blueprint. Deliberately a separate file rather than a shared parametrized component — see the CCDV-F section below for why |
 | `src/hooks/useHashRoute.js` | Hash routing — `parseHash`/`buildHash`/`useHashRoute`, see Routing above |
-| `vite.config.js` | Includes `practiceRoutePlugin` (serves `/practice`) and `dataIndexPlugin` (regenerates `index.json` + `search-index.json`) |
+| `vite.config.js` | Includes `practiceRoutePlugin` (serves `/practice` and `/practice2`) and `dataIndexPlugin` (regenerates `index.json` + `search-index.json`) |
 | `scripts/build-index.mjs` | Generates `public/data/{lang}/index.json` + `search-index.json` from `content.json` + the full collection files |
 
 ### App state
@@ -321,4 +322,28 @@ When writing new questions:
 > - C) The tool returning document chunks has a bug that starts returning duplicate pages after page 60.
 > - D) The system prompt is too long and should be shortened to leave room for the document.
 >
+> **Answer: B** — Degrading coherence without errors is the classic symptom of context window pressure, not hallucination or tool bugs. The fix is architectural: summarize processed sections or use retrieval to keep only relevant content in the active window. Switching models (A) delays but doesn't solve the structural problem.
+
+## CCDV-F Exam — Reference for Practice Content
+
+Sibling credential to CCAR-F: **Claude Certified Developer – Foundations**, exam code **CCDV-F** (official Exam Guide v1.0, July 2026). Targets developers who build/integrate/ship Claude-powered apps — not architects making high-level design tradeoffs, which is CCAR-F's audience. Practice simulator lives at `/practice2` (`public/practice2/`), a deliberately separate copy of the CCAR-F engine (same `sampleExam`/scoring/review logic) rather than a shared parametrized component — this was an explicit scope decision to avoid touching the working CCAR-F simulator's code.
+
+**Logistics** (from the official guide): 53 questions, 120 minutes, passing score 720/1000, $125 USD/attempt, Pearson VUE delivery, 12-month validity. Same MC/multi-response format and 30%-per-domain multi-response floor convention as CCAR-F's simulator (`MIN_MULTI_RATIO` in `public/practice2/index.html`). **No 4-of-6 scenario mechanism** — unlike CCAR-F, the real CCDV-F exam groups questions by domain directly, so the simulator's per-domain sampling isn't an approximation here, it's the actual format.
+
+**Domain numbering convention (repo-invented, not from the official guide):** the CCDV-F Exam Guide lists each domain's skills by name and weight but never numbers them (unlike CCAR-F's guide, which gives real numbered Task Statements like "1.2"). To keep a `taskStatement` audit field on each question anyway, this repo assigns `<domain>.<skill order as listed in the guide>` — e.g. Domain 1 "Agents and Workflows" lists Agent Architecture, Agent Construction with Claude, Agent Patterns and Frameworks in that order, so they're tagged "1.1", "1.2", "1.3". Full mapping:
+
+| Domain | Skills (in guide order → taskStatement) |
+|---|---|
+| 1. Agents and Workflows (14.7%) | Agent Architecture (1.1) · Agent Construction with Claude (1.2) · Agent Patterns and Frameworks (1.3) |
+| 2. Applications and Integration (33.1%) | Understanding Requirements (2.1) · Systems Life Cycle (2.2) · Claude API Mechanics (2.3) · Software Engineering Foundations (2.4) · Claude Application Design (2.5) · Configuration Management (2.6) |
+| 3. Claude Code (3.1%) | Claude Code Operation (3.1) |
+| 4. Eval, Testing, and Debugging (2.6%) | Debugging and Error Handling (4.1) |
+| 5. Model Selection and Optimization (16.8%) | LLM Fundamentals (5.1) · Technical Fundamentals (5.2) · Model Selection and Tradeoffs (5.3) · Cost and Token Management (5.4) |
+| 6. Prompt and Context Engineering (11.0%) | Context Engineering (6.1) · Prompt Engineering (6.2) · Output Handling (6.3) |
+| 7. Security and Safety (8.1%) | AI Application Security (7.1) · Guardrails and Safe Deployment (7.2) · Claude Hooks (7.3) · Identity, Secrets, and Key Management (7.4) |
+| 8. Tools and MCPs (10.6%) | Tool Implementation (8.1) · MCP Server Development (8.2) · Agentic Customization (8.3) |
+
+This numbering matches the domain `id` order in both `public/practice2/examen_ccdv_f_en.json` and the `DOMAINS` array in `public/practice2/index.html` directly — there's no CCAR-F-style numbering mismatch to worry about here, since this scheme was defined alongside the repo's own domain order rather than borrowed from an external, independently-numbered source.
+
+**Question bank**: `examen_ccdv_f_en.json` holds 150 questions (pool sized roughly proportional to each domain's exam weight — e.g. Domain 2 at 33.1% has 40 pooled questions, Domain 4 at 2.6% has 6), split single-answer (4 options) and multi-response (5 options, 2 correct, `correctAnswers`+`selectCount`) at roughly the same ~30-35%-multi ratio per domain as CCAR-F's bank. Same authoring guidelines apply as the CCAR-F bank above (half-right traps on the hardest multi-response distractor, no invented CLI flags/SDK methods/MCP details, current-generation model IDs only) — the main style difference is that CCDV-F's official sample questions (Section 8 of its guide) are shorter and more concretely technical than CCAR-F's dense multi-agent narratives: 2-4 sentences of setup, one crisp production decision, not a multi-turn orchestration scenario. There is no CCDV-F equivalent of `ejercicios.json` — its Exam Guide has only 3 illustrative sample questions, no Section 8 "Preparation Exercises" to mirror step-for-step the way CCAR-F's 4 exercises do.
 > **Answer: B** — Degrading coherence without errors is the classic symptom of context window pressure, not hallucination or tool bugs. The fix is architectural: summarize processed sections or use retrieval to keep only relevant content in the active window. Switching models (A) delays but doesn't solve the structural problem.

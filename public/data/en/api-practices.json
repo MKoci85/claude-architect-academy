@@ -34,6 +34,109 @@
                   "code": "import Anthropic from \"@anthropic-ai/sdk\";\n\nconst client = new Anthropic();\n\nconst stream = await client.messages.stream({\n  model: \"claude-opus-4-8\",\n  max_tokens: 1024,\n  messages: [{role: \"user\", content: \"Tell me a joke\"}]\n});\n\nfor await (const chunk of stream) {\n  if (chunk.type === \"content_block_delta\") {\n    process.stdout.write(chunk.delta.text);\n  }\n}"
                 }
               ]
+            },
+            {
+              "title": "Why it's SSE, not WebSockets",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Messages API streaming is Server-Sent Events (SSE) over HTTP, not WebSockets. The difference isn't a technicality: they're two different transport primitives for two different problems."
+                },
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "SSE (what Claude uses)",
+                    "rows": [
+                      { "key": "Direction", "value": "One-way: server → client" },
+                      { "key": "Transport", "value": "Plain HTTP, a single long-lived response" },
+                      { "key": "Fits", "value": "A request that triggers one long response — exactly the shape of a message to Claude" }
+                    ]
+                  },
+                  "right": {
+                    "head": "WebSockets",
+                    "rows": [
+                      { "key": "Direction", "value": "Bidirectional: either side can send at any time" },
+                      { "key": "Transport", "value": "A separate persistent connection with its own handshake" },
+                      { "key": "Fits", "value": "Real-time messaging where the client also pushes data without having made a new request — multi-user chat, live collaboration" }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Where a WebSocket does fit into a Claude-powered app",
+                  "content": "Not for talking to the Anthropic API — that's always HTTP + SSE. A WebSocket shows up in the layer between your backend and the end user's browser, when the application needs to push events to the client that aren't the response to that client's own request (notifications from other users, shared state in a collaborative session). The typical pattern: your server consumes Claude's SSE stream and re-emits those same chunks over the WebSocket it already keeps open with the browser."
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "title": "Cost Management",
+          "subsections": [
+            {
+              "title": "The Usage & Cost Admin API",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Beyond the token counts returned with every response (`usage.input_tokens`, `usage.output_tokens`), Anthropic exposes a dedicated Admin API to monitor consumption and cost across an entire organization: the same data shown on the Usage and Cost pages of Claude Console, but programmable. It requires Admin API credentials — a regular workspace API key isn't enough."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Endpoint", "What it's for"],
+                  "rows": [
+                    ["`GET /v1/organizations/usage_report/messages`", "Token consumption by time bucket (1m/1h/1d), filterable and groupable by model, workspace, API key, service tier, or `speed` (fast mode)"],
+                    ["`GET /v1/organizations/cost_report`", "Cost in USD, groupable by workspace or description — daily granularity only"]
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "bash",
+                  "code": "curl \"https://api.anthropic.com/v1/organizations/usage_report/messages?\\\nstarting_at=2026-01-01T00:00:00Z&\\\nending_at=2026-01-08T00:00:00Z&\\\ngroup_by[]=model&\\\nbucket_width=1d\" \\\n  -H \"anthropic-version: 2023-06-01\" \\\n  -H \"x-api-key: $ANTHROPIC_ADMIN_KEY\""
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Code execution doesn't show up in the usage endpoint",
+                  "content": "Code execution cost is only visible in the Cost Report, grouped under the \"Code Execution Usage\" description — the Usage Report doesn't include it. Conversely, Priority Tier shows up in usage (by filtering `service_tier=priority`) but not in the Cost Report, which uses a different billing model."
+                }
+              ]
+            },
+            {
+              "title": "Real-world use cases",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🧾",
+                      "title": "Cost reconciliation",
+                      "description": "Cross-check internal usage records against Anthropic's actual billing for finance teams."
+                    },
+                    {
+                      "icon": "📉",
+                      "title": "Per-workspace chargebacks",
+                      "description": "Group by `workspace_id` to split cost across teams sharing the same organization."
+                    },
+                    {
+                      "icon": "🎯",
+                      "title": "Prompt caching efficiency",
+                      "description": "The data separates cached vs. non-cached input tokens — lets you measure whether caching is actually working, instead of just assuming it."
+                    },
+                    {
+                      "icon": "🔔",
+                      "title": "Budget alerts",
+                      "description": "A periodic job against the Usage Report can fire an alert once spend crosses a threshold, before the invoice arrives."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Data freshness and polling",
+                  "content": "Usage and cost data typically appears within 5 minutes of a request completing. Recommended polling frequency is once per minute for sustained use — for dashboards that need to update more often, cache the result instead of increasing polling frequency."
+                }
+              ]
             }
           ]
         },

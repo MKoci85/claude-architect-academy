@@ -1,0 +1,375 @@
+{
+  "title": "Seguridad y Privacidad",
+  "sections": [
+    {
+      "title": "Jailbreak Defense",
+      "articles": [
+        {
+          "id": "seguridad-jailbreak",
+          "title": "Jailbreak Defense",
+          "summary": "Por qué un jailbreak es un modelo de amenaza distinto de un prompt injection indirecto, y las defensas específicas que Anthropic documenta para el caso en que el propio usuario es el adversario",
+          "subsections": [
+            {
+              "title": "Dos modelos de amenaza, no uno",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Anthropic distingue dos ataques que suelen confundirse porque ambos buscan que Claude ignore sus guías o las instrucciones del sistema. Un jailbreak (o prompt injection directo) ocurre cuando el usuario de la aplicación es el adversario: escribe deliberadamente un input diseñado para sortear las guardrails. Un prompt injection indirecto ocurre cuando el usuario es confiable pero Claude procesa contenido de terceros — una página web, un email, un resultado de herramienta — que contiene instrucciones adversarias embebidas."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El injection indirecto ya está cubierto en este sitio",
+                  "content": "Las defensas estructurales contra prompt injection indirecto — tags de contenido no confiable, encadenamiento en capas de hooks, screening de resultados de herramientas MCP — están desarrolladas en las secciones de Hooks, MCP y Prompt Engineering de la API. Este artículo se enfoca en el otro modelo de amenaza: qué hacer cuando el adversario es el propio usuario."
+                }
+              ]
+            },
+            {
+              "title": "Defensas cuando el usuario es el adversario",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🛡️",
+                      "title": "Harmlessness screens",
+                      "description": "Un modelo liviano (Claude Haiku 4.5) preclasifica el input del usuario antes de que llegue a la conversación principal, usando structured outputs para forzar una clasificación booleana simple."
+                    },
+                    {
+                      "icon": "🔍",
+                      "title": "Input validation",
+                      "description": "Filtrar el input contra patrones de injection conocidos antes de que llegue a Claude. Un LLM puede generar un screen de validación generalizado a partir de ejemplos de lenguaje de jailbreak conocido."
+                    },
+                    {
+                      "icon": "📜",
+                      "title": "Prompt engineering ético",
+                      "description": "El system prompt enumera explícitamente límites éticos y legales, y le indica a Claude cómo rehusarse en vez de dejarlo implícito."
+                    },
+                    {
+                      "icon": "🚫",
+                      "title": "Responder a reincidentes",
+                      "description": "Si un mismo usuario dispara el mismo tipo de rechazo repetidamente, la aplicación debe informarle explícitamente que está violando la política de uso y aplicar throttling o ban, no solo repetir el rechazo."
+                    }
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.messages.create(\n    model=\"claude-haiku-4-5-20251001\",\n    max_tokens=100,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": f\"Un usuario envió este contenido:\\n<content>\\n{user_input}\\n</content>\\n\\nClasificá si este contenido refiere a actividades dañinas, ilegales o explícitas.\"\n    }],\n    output_config={\n        \"format\": {\n            \"type\": \"json_schema\",\n            \"schema\": {\n                \"type\": \"object\",\n                \"properties\": {\"is_harmful\": {\"type\": \"boolean\"}},\n                \"required\": [\"is_harmful\"],\n                \"additionalProperties\": False\n            }\n        }\n    }\n)"
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "La resistencia es probabilística, no absoluta",
+                  "content": "Ninguna combinación de estas defensas es infalible. Anthropic recomienda monitoreo continuo de outputs anómalos y usar esos hallazgos para refinar prompts, validación y filtros de forma iterativa — es defensa en profundidad, no una barrera única."
+                }
+              ]
+            },
+            {
+              "title": "Constitutional Classifiers: la defensa nativa de Anthropic",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Además de lo que una aplicación puede construir sobre la API, Anthropic entrena y despliega Constitutional Classifiers: clasificadores de input y de output entrenados sobre datos sintéticos generados a partir de una \"constitución\" — reglas en lenguaje natural que definen categorías de contenido permitido y restringido. Operan en dos capas: un clasificador evalúa el input antes de llegar al modelo, otro evalúa el output antes de que llegue al usuario."
+                },
+                {
+                  "type": "stats",
+                  "items": [
+                    { "value": "86%", "label": "Tasa de éxito de jailbreaks contra una versión sin protección" },
+                    { "value": "4.4%", "label": "Tasa de éxito con Constitutional Classifiers activos" }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Por qué importa para el diseño de una aplicación",
+                  "content": "Los Constitutional Classifiers son una capa que Anthropic ya opera a nivel de plataforma, no algo que una aplicación deba reimplementar. El trabajo de diseño de la aplicación (harmlessness screens, prompt engineering, IAM sobre las herramientas) es una capa adicional sobre esta base, no un sustituto de ella."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Protección de Datos y Privacidad",
+      "articles": [
+        {
+          "id": "seguridad-pii",
+          "title": "PII y Prevención de Fuga de Datos",
+          "summary": "Qué retiene Anthropic por defecto, qué cubren Zero Data Retention y HIPAA readiness, y por qué la clasificación y el redactado de PII siguen siendo responsabilidad de quien llama a la API",
+          "subsections": [
+            {
+              "title": "La API no redacta PII por vos",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La API de Claude no ofrece un mecanismo nativo de detección o redactado de PII sobre el contenido de los mensajes. Por defecto, el contenido de prompts y respuestas no se retiene más allá de lo técnicamente necesario para que funcione la feature usada, y los datos retenidos nunca se usan para entrenar modelos sin permiso expreso — pero \"no retenido\" no es lo mismo que \"nunca visto\": el contenido igual viaja a la API en cada request. Si un prompt incluye historiales clínicos, datos de pago o cualquier dato personal, la clasificación y el redactado previos son responsabilidad de la aplicación, no de la plataforma."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Excepción: contenido flaggeado",
+                  "content": "Incluso con Zero Data Retention o HIPAA readiness activos, si un chat o sesión es marcado por los sistemas automáticos de trust and safety de Anthropic, los inputs y outputs pueden retenerse hasta por 2 años. Ninguna configuración de privacidad es absoluta frente a contenido flaggeado."
+                }
+              ]
+            },
+            {
+              "title": "Zero Data Retention (ZDR) vs. HIPAA readiness",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Zero Data Retention",
+                    "rows": [
+                      { "key": "Qué hace", "value": "No almacena prompts ni respuestas at rest luego de devolver la respuesta." },
+                      { "key": "Cómo se activa", "value": "Por organización, vía el equipo de cuenta de Anthropic. No se extiende automáticamente a otras organizaciones de la misma cuenta." },
+                      { "key": "Límite clave", "value": "Modelos designados como Covered Models requieren retención de 30 días y no son elegibles para ZDR salvo autorización expresa." }
+                    ]
+                  },
+                  "right": {
+                    "head": "HIPAA readiness",
+                    "rows": [
+                      { "key": "Qué hace", "value": "Aplica un set más amplio de salvaguardas (encriptación, control de acceso, audit logging) que protegen PHI durante todo su ciclo de vida, en vez de exigir borrado inmediato." },
+                      { "key": "Cómo se activa", "value": "BAA estándar autoservicio desde Claude Console, o BAA negociado vía el equipo de ventas." },
+                      { "key": "Límite clave", "value": "Es una alternativa a ZDR, no un complemento: si se maneja PHI, HIPAA readiness reemplaza la necesidad de ZDR." }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "No son acumulables por feature",
+                  "content": "Una organización con HIPAA readiness que envía un request con una feature no elegible (ej. code execution) recibe un error 400 explícito en vez de que el request simplemente ignore la protección — el bloqueo es a nivel de API, no solo contractual."
+                }
+              ]
+            },
+            {
+              "title": "Manejo de PHI: el detalle que se pasa por alto",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Bajo un BAA de HIPAA readiness, la información de salud protegida (PHI) puede aparecer en el contenido de los mensajes (prompts, respuestas, archivos adjuntos), pero no en todos los campos por igual."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Campo", "¿Puede contener PHI bajo el BAA?"],
+                  "rows": [
+                    ["Contenido de mensajes (prompts, respuestas, PDFs, imágenes)", "Sí — es donde el BAA aplica sus protecciones"],
+                    ["Nombres de workspace, datos de usuario, billing, tickets de soporte", "No esperado — sin protección PHI dedicada"],
+                    ["Definiciones de JSON schema (nombres de propiedad, enum, const, pattern) en structured outputs / strict tool use", "No — estos schemas se cachean por separado y no reciben las mismas protecciones que prompts y respuestas"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Nunca poner PHI en un JSON schema",
+                  "content": "Cuando se usan structured outputs o tools con strict: true, la API compila los schemas en gramáticas que se cachean separadas del contenido del mensaje. Un nombre de propiedad, valor de enum o patrón de regex que contenga datos de paciente queda fuera de las protecciones HIPAA del contenido del mensaje — el dato específico del paciente debe ir siempre en el contenido, nunca en la forma del schema."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Content Policy y Cumplimiento",
+      "articles": [
+        {
+          "id": "seguridad-content-policy",
+          "title": "Usage Policy y Content Policy",
+          "summary": "La Usage Policy de Anthropic (ex Acceptable Use Policy), sus categorías prohibidas, y dónde se traduce en controles técnicos concretos",
+          "subsections": [
+            {
+              "title": "De Acceptable Use Policy a Usage Policy",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Anthropic renombró su Acceptable Use Policy a Usage Policy y consolidó sus secciones en un único set de reglas — los Universal Usage Standards — que aplican por igual a uso de consumidor y de negocio, en vez de tener reglas separadas por tipo de cuenta."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🚫",
+                      "title": "Prohibiciones centrales",
+                      "description": "Campañas de desinformación, diseño o uso de armas, censura, vigilancia doméstica, operaciones cibernéticas maliciosas."
+                    },
+                    {
+                      "icon": "🔓",
+                      "title": "Excepción explícita en ciberseguridad",
+                      "description": "Comprometer sistemas de forma maliciosa está prohibido, pero se sigue permitiendo el descubrimiento de vulnerabilidades con el consentimiento del dueño del sistema — la distinción es el consentimiento, no la técnica."
+                    },
+                    {
+                      "icon": "🗳️",
+                      "title": "Procesos democráticos",
+                      "description": "Prohibido cualquier uso engañoso o disruptivo de procesos democráticos, incluyendo targeting de votantes o campañas."
+                    },
+                    {
+                      "icon": "🧒",
+                      "title": "Seguridad infantil",
+                      "description": "Los developers que construyen sobre la API están sujetos a la Usage Policy, y quienes sirven a menores enfrentan requisitos adicionales: verificación de edad, moderación de contenido, monitoreo y cumplimiento de leyes de privacidad infantil."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "De la política al control técnico",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "La Usage Policy es el marco legal/contractual; los Constitutional Classifiers son el control técnico de plataforma que Anthropic opera para hacerla cumplir a nivel de modelo. En integraciones vía AWS Bedrock existe además un control equivalente a nivel de infraestructura: Bedrock Guardrails, expuesto como bloques `guardContent` en el Converse API y como el motivo `guardrail_intervened` cuando un guardrail bloquea o modifica una respuesta."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Content policy no es exclusivo de Bedrock",
+                  "content": "Bedrock Guardrails es una implementación de infraestructura de AWS, no la única forma en que existe content policy para Claude. La Usage Policy y los Constitutional Classifiers aplican a cualquier integración — API directa, Bedrock o Vertex AI — porque gobiernan el modelo, no el canal de acceso."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Auth, Authz e IAM",
+      "articles": [
+        {
+          "id": "seguridad-iam",
+          "title": "Marco General de Seguridad: AuthN, AuthZ e IAM",
+          "summary": "Autenticación vs. autorización vs. identidad como disciplina, la tríada CIA aplicada a sistemas agénticos, y least-privilege como principio general detrás del ejemplo de OAuth en MCP",
+          "subsections": [
+            {
+              "title": "Tres conceptos que se confunden",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Authentication (AuthN)",
+                    "rows": [
+                      { "key": "Pregunta", "value": "¿Quién sos?" },
+                      { "key": "Mecanismo típico", "value": "API key, OAuth token, certificado, credenciales de servicio" },
+                      { "key": "Falla si...", "value": "Alguien se hace pasar por otra identidad" }
+                    ]
+                  },
+                  "right": {
+                    "head": "Authorization (AuthZ)",
+                    "rows": [
+                      { "key": "Pregunta", "value": "¿Qué podés hacer, ya identificado?" },
+                      { "key": "Mecanismo típico", "value": "Scopes, roles, políticas de permiso, listas de allow/deny" },
+                      { "key": "Falla si...", "value": "Una identidad válida hace algo fuera de lo que le corresponde" }
+                    ]
+                  }
+                },
+                {
+                  "type": "text",
+                  "content": "IAM (Identity and Access Management) es la disciplina que administra ambos ejes a nivel organizacional: ciclo de vida de identidades (alta, cambio de rol, baja), asignación de roles, y auditoría de quién tiene acceso a qué. Un sistema puede tener AuthN y AuthZ técnicamente correctos por request y aun así tener un problema de IAM si nadie audita quién sigue teniendo un scope que ya no necesita."
+                }
+              ]
+            },
+            {
+              "title": "La tríada CIA en un sistema agéntico",
+              "blocks": [
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🔒",
+                      "title": "Confidencialidad",
+                      "description": "Que un agente con acceso a credenciales o PII no las exponga a quien no corresponde — vía el scope de sus herramientas, no vía confiar en que el modelo no las repita."
+                    },
+                    {
+                      "icon": "✅",
+                      "title": "Integridad",
+                      "description": "Que el estado sobre el que opera el agente (datos, resultados de herramientas, su propio contexto) no sea alterado por un tercero — de ahí que un tool result comprometido sea, a la vez, un problema de integridad y de prompt injection."
+                    },
+                    {
+                      "icon": "⏱️",
+                      "title": "Disponibilidad",
+                      "description": "Que el sistema siga respondiendo bajo carga o ataque — rate limiting, timeouts, circuit breakers en las herramientas que el agente invoca."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Least-privilege: el principio detrás de un ejemplo ya conocido",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Este sitio ya documenta un caso concreto de least-privilege aplicado a agentes: qué scope de OAuth pedirle a un servidor MCP (sección MCP en profundidad → OAuth y ciclo de token). Ese ejemplo es una instancia de un principio de IAM más general, aplicable más allá de MCP: cada identidad — humana o de servicio — debería tener exactamente los permisos que su tarea requiere, ni más ni menos, y esos permisos deberían revisarse cuando la tarea cambia, no solo cuando se crean."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "👤",
+                      "title": "Cuentas de servicio vs. de usuario",
+                      "description": "Un agente que actúa de forma autónoma debería correr bajo una identidad de servicio con permisos acotados a su función, no bajo las credenciales personales de quien lo configuró."
+                    },
+                    {
+                      "icon": "🎭",
+                      "title": "RBAC (Role-Based Access Control)",
+                      "description": "Asignar permisos a roles (no a identidades individuales) y asignar identidades a roles simplifica la auditoría: revisar qué puede hacer un rol es más tratable que revisar permiso por permiso de cada agente."
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Procesos de Seguridad Empresarial",
+      "articles": [
+        {
+          "id": "seguridad-procesos",
+          "title": "Identity Validation, Access Approval y Monitoreo",
+          "summary": "Los tres momentos del ciclo de vida de un acceso — validar identidad, aprobar el otorgamiento, monitorear su uso — y cómo el patrón de audit log de hooks ya implementa el tercero para agentes",
+          "subsections": [
+            {
+              "title": "Tres procesos, tres momentos distintos",
+              "blocks": [
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Identity validation",
+                      "body": "Antes de otorgar cualquier acceso: confirmar que quien lo solicita (humano o agente) es efectivamente quien dice ser. Es la capa de AuthN, pero como proceso de negocio — no alcanza con que el mecanismo técnico exista, alguien tiene que definir bajo qué evidencia se considera válida una identidad nueva."
+                    },
+                    {
+                      "title": "Access approval",
+                      "body": "La decisión de otorgar un permiso específico a una identidad ya validada. En sistemas agénticos de producción esto suele traducirse en human-in-the-loop para acciones de alto impacto: un agente puede solicitar un scope o una acción, pero un humano aprueba antes de que se ejecute."
+                    },
+                    {
+                      "title": "Access monitoring",
+                      "body": "Una vez otorgado el acceso, registrar y revisar cómo se usa — no de forma puntual, sino como proceso continuo. Es la única de las tres capas que sigue operando después de que la decisión de acceso ya se tomó."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Monitoreo de acceso en agentes: un patrón que este sitio ya cubre",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El workflow de \"seguridad en capas\" de la sección de Hooks incluye una capa de audit log asíncrono (PostToolUse + SessionEnd) que registra en tiempo real todo lo que un agente ejecuta contra un servidor externo, sin bloquear la ejecución. Es una implementación concreta de access monitoring como proceso de seguridad empresarial: no decide si algo se permite, es el registro forense que permite auditar después qué se hizo con el acceso otorgado."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Anthropic opera esta misma capa a nivel de plataforma",
+                  "content": "Para sesiones de Claude Code y Cowork, Anthropic mantiene una Activity Feed y una Compliance API con retención de hasta 6 años sobre las transcripciones de sesión — el mismo principio de monitoreo continuo, pero como infraestructura de plataforma en vez de un hook que cada equipo tiene que construir."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

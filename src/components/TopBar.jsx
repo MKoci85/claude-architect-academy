@@ -110,9 +110,14 @@ export function TopBar({ search, onSearch, searchResults, onResultClick, theme, 
       <button className="exercises-btn" onClick={onExercises}>
         {t.exercises}
       </button>
-      <a className="exam-btn" href="/practice" target="_blank" rel="noopener noreferrer">
-        {t.exam}
-      </a>
+      <div className="exam-btns">
+        <a className="exam-btn" href="/practice" target="_blank" rel="noopener noreferrer">
+          {t.examCcarF}
+        </a>
+        <a className="exam-btn exam-btn-ccdv" href="/practice2" target="_blank" rel="noopener noreferrer">
+          {t.examCcdvF}
+        </a>
+      </div>
     </header>
   );
 }

@@ -158,6 +158,40 @@
               ]
             }
           ]
+        },
+        {
+          "title": "Fast mode",
+          "subsections": [
+            {
+              "title": "What it speeds up, and what it doesn't",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Fast mode runs the same model with a faster inference configuration — it isn't a different model, and it doesn't change its capabilities. It delivers up to 2.5x higher output tokens per second (OTPS), but that benefit is specifically in generation speed, not time to first token (TTFT): how long until the first token arrives doesn't improve, what improves is how fast the following ones arrive."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.beta.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=4096,\n    speed=\"fast\",\n    betas=[\"fast-mode-2026-02-01\"],\n    messages=[{\"role\": \"user\", \"content\": \"Refactor this module\"}],\n)\n\nprint(response.usage.speed)  # \"fast\" or \"standard\""
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Research preview, with uneven model support",
+                  "content": "Only Claude Opus 5 and Claude Opus 4.8 support it. Requesting it on Opus 4.7 returns an error; requesting it on Opus 4.6 doesn't error but silently runs at standard speed and bills at the standard rate — which is why it's worth checking `usage.speed` in the response instead of assuming `speed: \"fast\"` in the request guarantees it was used. Available only on the direct API and Claude Managed Agents; not on Bedrock, Claude Platform on AWS, Google Cloud, or Microsoft Foundry."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Not available with", "Why"],
+                  "rows": [
+                    ["Batch API", "Incompatible with batch's async processing model"],
+                    ["A Priority Tier commitment", "Two separate rate-limit mechanisms — they don't combine"],
+                    ["Switching speed mid-conversation", "Invalidates the prompt cache — fast and standard don't share cached prefixes"]
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     }

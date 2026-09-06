@@ -158,6 +158,40 @@
               ]
             }
           ]
+        },
+        {
+          "title": "Fast mode",
+          "subsections": [
+            {
+              "title": "Qué acelera y qué no",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Fast mode ejecuta el mismo modelo con una configuración de inferencia más rápida — no es un modelo distinto ni cambia sus capacidades. Entrega hasta 2.5x más output tokens por segundo (OTPS), pero ese beneficio es específicamente en velocidad de generación, no en time to first token (TTFT): el tiempo hasta que llega el primer token no mejora, lo que mejora es qué tan rápido llegan los siguientes."
+                },
+                {
+                  "type": "code",
+                  "language": "python",
+                  "code": "response = client.beta.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=4096,\n    speed=\"fast\",\n    betas=[\"fast-mode-2026-02-01\"],\n    messages=[{\"role\": \"user\", \"content\": \"Refactorizá este módulo\"}],\n)\n\nprint(response.usage.speed)  # \"fast\" o \"standard\""
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Research preview, y con soporte de modelo desparejo",
+                  "content": "Solo Claude Opus 5 y Claude Opus 4.8 lo soportan. Pedirlo en Opus 4.7 devuelve error; pedirlo en Opus 4.6 no da error pero se ejecuta silenciosamente a velocidad estándar y factura a tarifa estándar — por eso conviene siempre revisar `usage.speed` en la response en vez de asumir que `speed: \"fast\"` en el request garantiza que se usó. Disponible solo en la API directa y en Claude Managed Agents; no en Bedrock, Claude Platform on AWS, Google Cloud ni Microsoft Foundry."
+                },
+                {
+                  "type": "table",
+                  "headers": ["No disponible con", "Motivo"],
+                  "rows": [
+                    ["Batch API", "Incompatible con el modo asíncrono de batch"],
+                    ["Compromiso de Priority Tier", "Son dos mecanismos de rate limit distintos, no se combinan"],
+                    ["Cambiar de velocidad a mitad de conversación", "Invalida el prompt cache — fast y standard no comparten prefijos cacheados"]
+                  ]
+                }
+              ]
+            }
+          ]
         }
       ]
     }

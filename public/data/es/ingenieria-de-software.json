@@ -1,0 +1,379 @@
+{
+  "title": "Fundamentos de Ingeniería de Software",
+  "sections": [
+    {
+      "title": "Entendiendo Requisitos",
+      "articles": [
+        {
+          "id": "ing-requisitos",
+          "title": "De Requisitos de Negocio a Requisitos Técnicos",
+          "summary": "Las tres capas de requisitos que separan lo que el negocio pide de lo que un sistema termina construyendo, y cómo distinguir un requisito verificable de uno ambiguo",
+          "subsections": [
+            {
+              "title": "Tres capas, no una",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "\"Requisitos\" suele tratarse como una sola cosa, pero en la práctica son tres capas con dueños y lenguajes distintos. Confundirlas es la causa más común de que un sistema técnicamente correcto no resuelva el problema real."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Requisitos de negocio",
+                      "body": "El problema o la oportunidad, en el lenguaje del negocio: \"estamos perdiendo clientes porque el soporte tarda 48hs en responder\". No menciona sistemas ni tecnología todavía."
+                    },
+                    {
+                      "title": "Requisitos funcionales",
+                      "body": "Lo que el sistema debe hacer para atender ese requisito de negocio: \"el sistema debe clasificar tickets entrantes por urgencia y asignarlos automáticamente a la cola correcta\". Es la traducción del problema a comportamiento observable."
+                    },
+                    {
+                      "title": "Requisitos de infraestructura / no funcionales",
+                      "body": "Cómo debe comportarse el sistema mientras hace lo anterior: latencia máxima, disponibilidad, throughput esperado, requisitos de seguridad y cumplimiento. Un sistema puede cumplir todos los requisitos funcionales y ser inutilizable si ignora estos."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "El error más común: saltar directo a funcional",
+                  "content": "Empezar a diseñar el comportamiento del sistema sin haber verificado el requisito de negocio produce sistemas que funcionan según lo especificado pero no resuelven el problema que los originó — porque nadie validó que el problema fuera ese."
+                }
+              ]
+            },
+            {
+              "title": "Requisito ambiguo vs. requisito verificable",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Ambiguo",
+                    "rows": [
+                      { "key": "Ejemplo", "value": "\"El sistema debe responder rápido\"" },
+                      { "key": "Problema", "value": "No define qué es \"rápido\", bajo qué carga, ni cómo se mide" },
+                      { "key": "Consecuencia", "value": "Cada parte del equipo lo interpreta distinto; nadie puede decir si está cumplido" }
+                    ]
+                  },
+                  "right": {
+                    "head": "Verificable",
+                    "rows": [
+                      { "key": "Ejemplo", "value": "\"P95 de latencia bajo 300ms con 500 requests/seg concurrentes\"" },
+                      { "key": "Ventaja", "value": "Define métrica, umbral y condición de carga" },
+                      { "key": "Consecuencia", "value": "Es un criterio de aceptación: se puede automatizar como test o SLO" }
+                    ]
+                  }
+                },
+                {
+                  "type": "text",
+                  "content": "Un requisito verificable siempre se puede reformular como una pregunta de sí/no con una medición concreta detrás. Si la única forma de verificarlo es \"me parece que sí\", todavía es un requisito de negocio disfrazado de requisito técnico."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Systems Life Cycle (SDLC)",
+      "articles": [
+        {
+          "id": "ing-sdlc",
+          "title": "El Ciclo de Vida de un Sistema",
+          "summary": "Las fases clásicas de gestión de un proyecto de software y los dos modelos de proceso que las organizan de forma distinta",
+          "subsections": [
+            {
+              "title": "Fases clásicas del SDLC",
+              "blocks": [
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "No confundir con \"ciclo de vida de sesión\"",
+                  "content": "SDLC (Systems/Software Development Life Cycle) es una disciplina de gestión de proyectos de TI — cómo se planifica, construye y mantiene un sistema a lo largo de meses o años. Es un concepto completamente distinto del \"ciclo de vida\" técnico de una sesión de hooks o una conexión MCP, que dura segundos o minutos y describe el orden de eventos dentro de una sola ejecución."
+                },
+                {
+                  "type": "steps",
+                  "items": [
+                    {
+                      "title": "Planning",
+                      "body": "Definir alcance, viabilidad y recursos antes de comprometer trabajo de desarrollo."
+                    },
+                    {
+                      "title": "Analysis",
+                      "body": "Levantar y documentar requisitos — la etapa donde se aplican las tres capas de requisitos."
+                    },
+                    {
+                      "title": "Design",
+                      "body": "Traducir requisitos a arquitectura: componentes, contratos entre ellos, modelo de datos."
+                    },
+                    {
+                      "title": "Implementation",
+                      "body": "Construir el sistema según el diseño acordado."
+                    },
+                    {
+                      "title": "Testing",
+                      "body": "Verificar que el sistema cumple los requisitos funcionales y no funcionales antes de exponerlo a usuarios reales."
+                    },
+                    {
+                      "title": "Deployment",
+                      "body": "Poner el sistema en producción de forma controlada."
+                    },
+                    {
+                      "title": "Maintenance",
+                      "body": "La fase más larga en tiempo real: bugs, actualizaciones, y requisitos nuevos que reinician el ciclo."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Waterfall vs. modelos iterativos",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Waterfall",
+                    "rows": [
+                      { "key": "Estructura", "value": "Las fases se ejecutan una vez, en secuencia estricta; no se vuelve a Analysis una vez en Design" },
+                      { "key": "Ventaja", "value": "Predecible cuando los requisitos son estables y bien entendidos desde el inicio" },
+                      { "key": "Riesgo", "value": "Un requisito mal entendido en Analysis no se detecta hasta Testing, cuando ya es costoso corregirlo" }
+                    ]
+                  },
+                  "right": {
+                    "head": "Agile / Iterativo",
+                    "rows": [
+                      { "key": "Estructura", "value": "Las fases se repiten en ciclos cortos (sprints), cada uno produciendo un incremento entregable" },
+                      { "key": "Ventaja", "value": "Los requisitos mal entendidos se detectan en el ciclo siguiente, no meses después" },
+                      { "key": "Riesgo", "value": "Sin disciplina de arquitectura, la iteración rápida puede acumular deuda técnica no visible hasta que escala" }
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Fundamentos de Integración",
+      "articles": [
+        {
+          "id": "ing-rest-json-async",
+          "title": "REST, JSON y Programación Asíncrona como Fundamentos Genéricos",
+          "summary": "Los tres pilares de cómo se comunican los sistemas modernos, tratados como conceptos generales — no como detalles específicos de la API de Anthropic",
+          "subsections": [
+            {
+              "title": "REST más allá de cualquier API específica",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "REST (Representational State Transfer) es un estilo arquitectónico, no un protocolo: define cómo modelar un sistema como un conjunto de recursos direccionables por URL, manipulados con un vocabulario fijo de verbos HTTP."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Principio", "Qué significa"],
+                  "rows": [
+                    ["Recursos, no acciones", "La URL identifica una entidad (`/orders/42`), no una función (`/getOrder?id=42`)"],
+                    ["Verbos HTTP con significado fijo", "GET no modifica estado; POST crea; PUT/PATCH actualizan; DELETE elimina — el verbo, no la URL, define la operación"],
+                    ["Sin estado (stateless)", "Cada request lleva toda la información necesaria para procesarse; el servidor no depende de una sesión previa en memoria"],
+                    ["Códigos de status con significado", "2xx éxito, 4xx error del cliente, 5xx error del servidor — un cliente bien escrito puede reaccionar sin parsear el body"]
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Statelessness no es lo mismo que \"sin memoria conversacional\"",
+                  "content": "Una API stateless en el sentido REST simplemente no depende de que el servidor recuerde requests anteriores para procesar el actual — cada request es autosuficiente. Esto es compatible con enviar historial de conversación dentro del body de cada request, que es justamente cómo funcionan las APIs de mensajería basadas en LLMs: el estado conversacional viaja en el payload, no vive en el servidor entre requests."
+                }
+              ]
+            },
+            {
+              "title": "JSON como contrato de datos",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Más allá de ser el formato de intercambio más común, JSON funciona como un contrato: un JSON Schema declara qué forma debe tener un payload — qué campos son obligatorios, sus tipos, valores permitidos — de forma que tanto quien produce como quien consume el dato puedan validar contra la misma definición sin necesidad de leer el código del otro lado. Esa es la razón estructural por la que schemas explícitos (en tool definitions, en contratos de API, en validación de requests) reducen errores de integración: reemplazan una suposición implícita (\"asumo que este campo siempre viene\") por una regla verificable."
+                }
+              ]
+            },
+            {
+              "title": "Por qué existe la programación asíncrona",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "El problema que resuelve la programación asíncrona es concreto: la mayoría de las operaciones de un sistema (leer de una base de datos, llamar a otra API, escribir a disco) pasan la mayor parte del tiempo esperando I/O, no computando. Ejecutar esas esperas de forma síncrona bloquea el hilo entero — mientras espera una respuesta, ese hilo no puede atender nada más."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "⏸️",
+                      "title": "Callbacks",
+                      "description": "El patrón original: pasar una función a ejecutar cuando la operación termine. Escala mal en legibilidad cuando se encadenan varias operaciones dependientes (\"callback hell\")."
+                    },
+                    {
+                      "icon": "🔗",
+                      "title": "Promises / Futures",
+                      "description": "Un objeto que representa un valor que existirá eventualmente, con métodos para encadenar transformaciones sin anidar callbacks."
+                    },
+                    {
+                      "icon": "➡️",
+                      "title": "async/await",
+                      "description": "Sintaxis que permite escribir código asíncrono con la forma lineal de código síncrono, mientras el runtime sigue liberando el hilo durante cada espera de I/O."
+                    },
+                    {
+                      "icon": "🔁",
+                      "title": "Event loop",
+                      "description": "El mecanismo que hace posible todo lo anterior en runtimes single-threaded (Node.js, el asyncio de Python): un bucle que atiende otras tareas mientras una operación de I/O está pendiente, y retoma la función original cuando el resultado llega."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El caso aplicado ya cubierto en este sitio",
+                  "content": "El streaming de respuestas y el manejo de rate limiting de la sección de Guías Prácticas de la API son instancias concretas de este mismo problema genérico: operaciones de I/O de duración variable que no deben bloquear el resto del sistema mientras están en curso."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Control de Versiones",
+      "articles": [
+        {
+          "id": "ing-control-versiones",
+          "title": "Git como Fundamento, no Solo como Herramienta de Claude Code",
+          "summary": "Control de versiones como disciplina de ingeniería — por qué existe, qué problema resuelve, y las dos estrategias de branching más comunes",
+          "subsections": [
+            {
+              "title": "El problema que resuelve el control de versiones",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Un sistema de control de versiones existe para responder tres preguntas que un directorio de archivos sin versionar no puede responder: qué cambió, quién lo cambió y por qué, y cómo volver a un estado anterior conocido sin perder el trabajo intermedio. Esas tres capacidades — historial, atribución y reversibilidad — son la base de la colaboración en cualquier equipo, independientemente de si el código lo escribe una persona o un agente."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "📜",
+                      "title": "Historial",
+                      "description": "Cada commit es un punto de restauración con un diff explícito respecto al anterior — no hace falta recordar qué cambió, se puede consultar."
+                    },
+                    {
+                      "icon": "✍️",
+                      "title": "Atribución",
+                      "description": "Cada cambio queda asociado a un autor y un momento, lo que habilita revisión de código y auditoría después del hecho."
+                    },
+                    {
+                      "icon": "↩️",
+                      "title": "Reversibilidad",
+                      "description": "Un cambio problemático se puede revertir de forma quirúrgica sin perder los cambios no relacionados que ocurrieron después."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "title": "Trunk-based vs. feature branching",
+              "blocks": [
+                {
+                  "type": "compare",
+                  "left": {
+                    "head": "Trunk-based",
+                    "rows": [
+                      { "key": "Estrategia", "value": "Todos integran a la rama principal frecuentemente (al menos diario), con cambios chicos" },
+                      { "key": "Ventaja", "value": "Conflictos de merge chicos y frecuentes en vez de uno grande al final" },
+                      { "key": "Requisito", "value": "Feature flags para ocultar funcionalidad incompleta que ya está integrada" }
+                    ]
+                  },
+                  "right": {
+                    "head": "Feature branching",
+                    "rows": [
+                      { "key": "Estrategia", "value": "Cada funcionalidad se desarrolla en su propia rama hasta estar terminada, y se integra al final" },
+                      { "key": "Ventaja", "value": "La rama principal siempre refleja funcionalidad completa y probada" },
+                      { "key": "Riesgo", "value": "Ramas de larga vida acumulan divergencia y producen merges grandes y conflictivos" }
+                    ]
+                  }
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "El caso ya cubierto en este sitio",
+                  "content": "El uso de worktrees de git para correr subagentes en paralelo sin pisar el checkout principal, cubierto en Introducción a Claude Code, es una aplicación puntual de esta misma disciplina de control de versiones a un flujo de trabajo agéntico — no un mecanismo aparte."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Refactoring",
+      "articles": [
+        {
+          "id": "ing-refactoring",
+          "title": "Refactoring como Metodología: Escala Chica vs. Grande",
+          "summary": "Por qué el refactoring de una función y el refactoring de una arquitectura son actividades con riesgos y tácticas distintas, aunque compartan el nombre",
+          "subsections": [
+            {
+              "title": "Refactoring de escala chica",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Renombrar una variable, extraer una función, eliminar duplicación local: cambios que alteran la estructura interna del código sin cambiar su comportamiento observable. Son seguros en la medida en que exista cobertura de tests que confirme que el comportamiento efectivamente no cambió — sin esa red, un refactor \"chico\" puede introducir una regresión silenciosa."
+                }
+              ]
+            },
+            {
+              "title": "Refactoring de escala grande",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Cambiar un patrón arquitectónico, migrar de una librería a otra, reestructurar cómo se comunican los módulos: cambios donde reescribir todo de una vez es exactamente el riesgo que se quiere evitar, porque deja al sistema en un estado no funcional durante toda la migración."
+                },
+                {
+                  "type": "cards",
+                  "items": [
+                    {
+                      "icon": "🌿",
+                      "title": "Strangler fig pattern",
+                      "description": "El sistema nuevo crece alrededor del viejo, interceptando tráfico progresivamente, hasta que el viejo queda sin uso y se puede eliminar sin un corte abrupto."
+                    },
+                    {
+                      "icon": "🚩",
+                      "title": "Feature flags",
+                      "description": "El código nuevo y el viejo conviven detrás de un flag, permitiendo activar el nuevo para un subconjunto de tráfico antes de un rollout completo."
+                    },
+                    {
+                      "icon": "📈",
+                      "title": "Migración incremental",
+                      "description": "Migrar un módulo o un caso de uso a la vez, validando en producción antes de continuar con el siguiente, en vez de un big-bang cutover."
+                    }
+                  ]
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "El riesgo no es el tamaño del diff, es la reversibilidad",
+                  "content": "Un refactor grande bien hecho puede tener un diff enorme y seguir siendo de bajo riesgo, si cada paso intermedio es reversible y verificable de forma independiente. Un refactor chico puede ser de alto riesgo si toca una ruta crítica sin cobertura de tests."
+                }
+              ]
+            },
+            {
+              "title": "Refactoring y revisión de código",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Ningún refactor de escala grande debería integrarse sin pasar por revisión de código — el mecanismo de revisión multi-pass con instancias independientes ya está cubierto en la sección de Evaluación de Prompts de la API, y aplica igual de bien a revisar un plan de refactor que a revisar código generado por un agente."
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -159,6 +159,49 @@
               ]
             },
             {
+              "title": "Adaptive Thinking in depth",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "With `thinking: {\"type\": \"adaptive\"}` there's no fixed token budget: on every request, Claude evaluates the input's complexity and decides for itself whether to think and how much. A simple factual question can come back with no `thinking` block at all; a multistep math problem triggers deeper reasoning. The decision is per request, not per conversation — the same thread can have turns with and without thinking."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Two different parameters, don't conflate them",
+                  "content": "`thinking` controls whether Claude reasons in `thinking` blocks before answering. `effort` controls how much work it puts into the whole response — in adaptive mode, that includes how often and how deeply it thinks. `adaptive` is a `thinking` mode, never a valid `effort` value."
+                },
+                {
+                  "type": "table",
+                  "headers": ["Effort level", "Thinking behavior"],
+                  "rows": [
+                    ["max", "Claude always thinks, with no constraint on depth"],
+                    ["xhigh", "Always thinks deeply, with extended exploration"],
+                    ["high (default)", "Thinks almost always; deep reasoning on complex tasks"],
+                    ["medium", "Moderate thinking; may skip it on simple queries"],
+                    ["low", "Minimizes thinking; skips it on simple tasks where speed matters most"]
+                  ]
+                },
+                {
+                  "type": "code",
+                  "language": "json",
+                  "code": "{\n  \"model\": \"claude-opus-5\",\n  \"max_tokens\": 4096,\n  \"thinking\": { \"type\": \"adaptive\" },\n  \"output_config\": { \"effort\": \"medium\" },\n  \"messages\": [{ \"role\": \"user\", \"content\": \"...\" }]\n}"
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "No token budget, two cost controls instead",
+                  "content": "`max_tokens` is still the hard cap on the total (thinking + response) — Claude never exceeds it. `effort` is soft guidance on how much of that total it spends thinking, not a guaranteed token count. If `stop_reason: \"max_tokens\"` shows up at `high` effort or above, the fix is either raising `max_tokens` (if the long reasoning was worth it) or lowering `effort` (if it was overthinking)."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Changing effort invalidates the prompt cache",
+                  "content": "The `effort` value is rendered into the prompt, so changing it between requests in the same conversation invalidates already-established cache breakpoints — just like changing `budget_tokens` does in manual mode. The recommendation is to pick one effort level per conversation and keep it; to vary it without losing cache, some models (Opus 5, Fable 5.1, Mythos 5.1) support changing it mid-conversation with an empty-content `role: \"system\"` message carrying its own `output_config.effort`, via the `mid-conversation-output-config-2026-07-01` beta header."
+                }
+              ]
+            },
+            {
               "title": "Redacted thinking",
               "blocks": [
                 {
