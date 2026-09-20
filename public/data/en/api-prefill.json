@@ -22,7 +22,7 @@
                   "type": "callout",
                   "style": "warning",
                   "title": "Removed in current models",
-                  "content": "Prefill isn't supported in claude-sonnet-4-6, claude-opus-4-8, or claude-haiku-4-5-20251001. Requests that use it return a 400 error. Anthropic removed it because it was a generation trick, not a real guarantee: it didn't ensure valid JSON, consumed context tokens with no clear attribution, and conflicts with extended thinking, where the model needs to control its own response flow."
+                  "content": "Prefill isn't supported in claude-sonnet-5, claude-opus-5, or claude-haiku-4-5-20251001. Requests that use it return a 400 error. Anthropic removed it because it was a generation trick, not a real guarantee: it didn't ensure valid JSON, consumed context tokens with no clear attribution, and conflicts with extended thinking, where the model needs to control its own response flow."
                 }
               ]
             },
@@ -89,7 +89,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"What is the Latin word for ant? (A) Apoidea (B) Formicidae\",\n    }],\n    tool_choice={\"type\": \"tool\", \"name\": \"answer\"},\n    tools=[{\n        \"name\": \"answer\",\n        \"description\": \"Records the chosen option\",\n        \"strict\": True,\n        \"input_schema\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"choice\": {\"type\": \"string\", \"enum\": [\"A\", \"B\"]}\n            },\n            \"required\": [\"choice\"],\n            \"additionalProperties\": False,\n        },\n    }],\n)\n# response.content[0].input == {\"choice\": \"B\"} — guaranteed, no text parsing needed"
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"What is the Latin word for ant? (A) Apoidea (B) Formicidae\",\n    }],\n    tool_choice={\"type\": \"tool\", \"name\": \"answer\"},\n    tools=[{\n        \"name\": \"answer\",\n        \"description\": \"Records the chosen option\",\n        \"strict\": True,\n        \"input_schema\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"choice\": {\"type\": \"string\", \"enum\": [\"A\", \"B\"]}\n            },\n            \"required\": [\"choice\"],\n            \"additionalProperties\": False,\n        },\n    }],\n)\n# response.content[0].input == {\"choice\": \"B\"} — guaranteed, no text parsing needed"
                 },
                 {
                   "type": "callout",
@@ -109,7 +109,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"Extract the name and email from: Juan Pérez, juan@email.com\",\n    }],\n    output_config={\n        \"format\": {\n            \"type\": \"json_schema\",\n            \"schema\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"name\": {\"type\": \"string\"},\n                    \"email\": {\"type\": \"string\"},\n                },\n                \"required\": [\"name\", \"email\"],\n                \"additionalProperties\": False,\n            },\n        }\n    },\n)\n# response.content[0].text is guaranteed valid JSON, ready for json.loads()\nimport json\ndata = json.loads(response.content[0].text)\nprint(data[\"name\"])   # \"Juan Pérez\"\nprint(data[\"email\"])  # \"juan@email.com\""
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"Extract the name and email from: Juan Pérez, juan@email.com\",\n    }],\n    output_config={\n        \"format\": {\n            \"type\": \"json_schema\",\n            \"schema\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"name\": {\"type\": \"string\"},\n                    \"email\": {\"type\": \"string\"},\n                },\n                \"required\": [\"name\", \"email\"],\n                \"additionalProperties\": False,\n            },\n        }\n    },\n)\n# response.content[0].text is guaranteed valid JSON, ready for json.loads()\nimport json\ndata = json.loads(response.content[0].text)\nprint(data[\"name\"])   # \"Juan Pérez\"\nprint(data[\"email\"])  # \"juan@email.com\""
                 },
                 {
                   "type": "callout",
@@ -124,7 +124,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "extraction_schema = {\n    \"name\": \"record_article_data\",\n    \"description\": \"Records the structured data extracted from the article\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"title\": {\"type\": \"string\"},\n            \"author\": {\"type\": \"string\"},\n            \"key_points\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        },\n        \"required\": [\"title\", \"author\", \"key_points\"],\n    },\n}\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": f\"Extract the data from this article:\\n\\n{article_text}\"}],\n    tools=[extraction_schema],\n    tool_choice={\"type\": \"tool\", \"name\": \"record_article_data\"},\n)\n\ndata = response.content[0].input  # already a dict, no need for json.loads()"
+                  "code": "extraction_schema = {\n    \"name\": \"record_article_data\",\n    \"description\": \"Records the structured data extracted from the article\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"title\": {\"type\": \"string\"},\n            \"author\": {\"type\": \"string\"},\n            \"key_points\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        },\n        \"required\": [\"title\", \"author\", \"key_points\"],\n    },\n}\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": f\"Extract the data from this article:\\n\\n{article_text}\"}],\n    tools=[extraction_schema],\n    tool_choice={\"type\": \"tool\", \"name\": \"record_article_data\"},\n)\n\ndata = response.content[0].input  # already a dict, no need for json.loads()"
                 },
                 {
                   "type": "callout",
@@ -179,7 +179,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    system=\"Always respond in character as Detective Morgan: dry tone, \"\n           \"precise observations, no beating around the bush. Never break \"\n           \"character or add explanations outside their voice.\",\n    messages=[\n        {\"role\": \"user\", \"content\": \"What did you find at the scene?\"},\n    ],\n)\n# Claude responds directly as Detective Morgan,\n# with no preamble or breaking of character"
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    system=\"Always respond in character as Detective Morgan: dry tone, \"\n           \"precise observations, no beating around the bush. Never break \"\n           \"character or add explanations outside their voice.\",\n    messages=[\n        {\"role\": \"user\", \"content\": \"What did you find at the scene?\"},\n    ],\n)\n# Claude responds directly as Detective Morgan,\n# with no preamble or breaking of character"
                 },
                 {
                   "type": "callout",

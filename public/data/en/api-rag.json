@@ -315,7 +315,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "context = \"\\n\\n---\\n\\n\".join(chunk_text for chunk_text, _ in top_k)\n\nprompt = f\"\"\"\n<context>\n{context}\n</context>\n\nAnswer the following question using only the information in the context.\nIf the answer isn't in the context, say you don't have that information.\n\nQuestion: what is the return policy?\n\"\"\"\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": prompt}],\n)"
+                  "code": "context = \"\\n\\n---\\n\\n\".join(chunk_text for chunk_text, _ in top_k)\n\nprompt = f\"\"\"\n<context>\n{context}\n</context>\n\nAnswer the following question using only the information in the context.\nIf the answer isn't in the context, say you don't have that information.\n\nQuestion: what is the return policy?\n\"\"\"\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": prompt}],\n)"
                 }
               ]
             },

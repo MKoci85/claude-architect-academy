@@ -80,7 +80,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\nimport json\n\nclient = anthropic.Anthropic()\n\ntools = [\n    {\n        \"name\": \"calculator\",\n        \"description\": \"Performs mathematical calculations\",\n        \"input_schema\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"expression\": {\n                    \"type\": \"string\",\n                    \"description\": \"Mathematical expression (e.g.: '2 + 2')\"\n                }\n            },\n            \"required\": [\"expression\"]\n        }\n    }\n]\n\nmessages = [\n    {\"role\": \"user\", \"content\": \"What is 15 * 8?\"}\n]\n\nresponse = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    tools=tools,\n    messages=messages\n)\n\nif response.stop_reason == \"tool_use\":\n    for content_block in response.content:\n        if content_block.type == \"tool_use\":\n            result = eval(content_block.input[\"expression\"])\n            messages.append({\"role\": \"assistant\", \"content\": response.content})\n            messages.append({\n                \"role\": \"user\",\n                \"content\": [\n                    {\n                        \"type\": \"tool_result\",\n                        \"tool_use_id\": content_block.id,\n                        \"content\": str(result)\n                    }\n                ]\n            })\n\nfinal_response = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    tools=tools,\n    messages=messages\n)\n\nprint(final_response.content[0].text)"
+                  "code": "import anthropic\nimport json\n\nclient = anthropic.Anthropic()\n\ntools = [\n    {\n        \"name\": \"calculator\",\n        \"description\": \"Performs mathematical calculations\",\n        \"input_schema\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"expression\": {\n                    \"type\": \"string\",\n                    \"description\": \"Mathematical expression (e.g.: '2 + 2')\"\n                }\n            },\n            \"required\": [\"expression\"]\n        }\n    }\n]\n\nmessages = [\n    {\"role\": \"user\", \"content\": \"What is 15 * 8?\"}\n]\n\nresponse = client.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=1024,\n    tools=tools,\n    messages=messages\n)\n\nif response.stop_reason == \"tool_use\":\n    for content_block in response.content:\n        if content_block.type == \"tool_use\":\n            result = eval(content_block.input[\"expression\"])\n            messages.append({\"role\": \"assistant\", \"content\": response.content})\n            messages.append({\n                \"role\": \"user\",\n                \"content\": [\n                    {\n                        \"type\": \"tool_result\",\n                        \"tool_use_id\": content_block.id,\n                        \"content\": str(result)\n                    }\n                ]\n            })\n\nfinal_response = client.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=1024,\n    tools=tools,\n    messages=messages\n)\n\nprint(final_response.content[0].text)"
                 }
               ]
             }
@@ -94,11 +94,11 @@
               "blocks": [
                 {
                   "type": "text",
-                  "content": "A token is a small unit of text. Roughly, 1 token = 4 characters or 1 word."
+                  "content": "Claude doesn't read characters or words directly: it reads tokens, and how many characters fit in each one depends on that model's tokenizer. That tokenizer changed between generations: Claude 4.7 and later models use a newer tokenizer that produces roughly 30% more tokens than earlier models for the same input text (the exact increase depends on the content). So any \"1 token ≈ 4 characters\" rule is only a rough guide — Anthropic recommends recounting against the actual model with `count_tokens` (see below) instead of reusing a count measured against an earlier model."
                 },
                 {
                   "type": "text",
-                  "content": "The API charges by tokens: input (the ones you send) and output (the ones you receive). Counting tokens before sending lets you estimate costs."
+                  "content": "Everything the model processes counts as tokens, not just the text you type: the system prompt, the full conversation history, the tool definitions you declare, the results those tools return, and the response the model generates. The API charges for input and output tokens separately, so thinking in tokens — not words — is the right habit for estimating cost or budget."
                 }
               ]
             },
@@ -108,7 +108,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.messages.count_tokens(\n    model=\"claude-opus-4-8\",\n    messages=[\n        {\"role\": \"user\", \"content\": \"Hi, how many tokens does this message have?\"}\n    ]\n)\n\nprint(f\"Tokens: {response.input_tokens}\")"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.messages.count_tokens(\n    model=\"claude-opus-5\",\n    messages=[\n        {\"role\": \"user\", \"content\": \"Hi, how many tokens does this message have?\"}\n    ]\n)\n\nprint(f\"Tokens: {response.input_tokens}\")"
                 }
               ]
             },
@@ -120,6 +120,16 @@
                   "style": "info",
                   "title": "200K token context",
                   "content": "All current Claude models support 200K tokens of context (roughly 150 pages of text). You can send long conversations, large documents, or multiple files."
+                },
+                {
+                  "type": "text",
+                  "content": "The context window is a fixed budget that includes everything at once: system prompt, history, tool definitions, tool results, and the output (including extended thinking). It has two distinct edge behaviors. If the input already exceeds the window before generating a single word, the API rejects the request with a `400 invalid_request_error` (\"prompt is too long\"). If the input fits but generation approaches the limit while the model is still producing text, the model stops and returns what it generated so far with `stop_reason: \"model_context_window_exceeded\"` instead of failing with an error — this clean cutoff is the default behavior from Claude 4.5 onward; earlier models require the `model-context-window-exceeded-2025-08-26` beta header, and Haiku 4.5 doesn't support it (see API Reference)."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Keeping a long session running is the app's job",
+                  "content": "The model doesn't trim or summarize anything on its own. If a conversation or an agentic loop is going to run long, you need to trim or summarize the history before the window fills up — see \"Context compaction\" in Memory System (Claude Code's mechanism) or long-history handling in Agents and Workflows (the equivalent pattern in a custom loop)."
                 }
               ]
             }
@@ -147,7 +157,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\nimport base64\n\nclient = anthropic.Anthropic()\n\nwith open(\"image.jpg\", \"rb\") as f:\n    image_data = base64.standard_b64encode(f.read()).decode(\"utf-8\")\n\nmessage = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    messages=[\n        {\n            \"role\": \"user\",\n            \"content\": [\n                {\n                    \"type\": \"image\",\n                    \"source\": {\n                        \"type\": \"base64\",\n                        \"media_type\": \"image/jpeg\",\n                        \"data\": image_data,\n                    },\n                },\n                {\n                    \"type\": \"text\",\n                    \"text\": \"What do you see in this image?\"\n                }\n            ],\n        }\n    ],\n)\n\nprint(message.content[0].text)"
+                  "code": "import anthropic\nimport base64\n\nclient = anthropic.Anthropic()\n\nwith open(\"image.jpg\", \"rb\") as f:\n    image_data = base64.standard_b64encode(f.read()).decode(\"utf-8\")\n\nmessage = client.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=1024,\n    messages=[\n        {\n            \"role\": \"user\",\n            \"content\": [\n                {\n                    \"type\": \"image\",\n                    \"source\": {\n                        \"type\": \"base64\",\n                        \"media_type\": \"image/jpeg\",\n                        \"data\": image_data,\n                    },\n                },\n                {\n                    \"type\": \"text\",\n                    \"text\": \"What do you see in this image?\"\n                }\n            ],\n        }\n    ],\n)\n\nprint(message.content[0].text)"
                 }
               ]
             }
@@ -156,6 +166,19 @@
         {
           "title": "Batch Processing",
           "subsections": [
+            {
+              "title": "Two patterns for high-volume work, two different problems",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "The Python SDK exposes an async client (`AsyncAnthropic`) that uses non-blocking `async`/`await` to make API calls without tying up the application's thread. In the TypeScript SDK, the standard `Anthropic` client is already Promise-based, so you `await` each call directly — there's no separate async client class. Either way the request still returns in real time; what changes is that your application can handle other work while it waits. This is the right pattern for concurrency without blocking, not for lowering cost per token."
+                },
+                {
+                  "type": "text",
+                  "content": "The Message Batches API is a separate pattern, for bulk offline work: you submit a large set of requests in one call, get back an identifier, and poll until it's done. It's the right choice when what matters is cost per token and no one is waiting on each result in real time — the rest of this section covers that case in detail."
+                }
+              ]
+            },
             {
               "title": "When to use the Batch API?",
               "blocks": [

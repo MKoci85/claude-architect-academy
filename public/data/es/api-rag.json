@@ -315,7 +315,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "contexto = \"\\n\\n---\\n\\n\".join(chunk_texto for chunk_texto, _ in top_k)\n\nprompt = f\"\"\"\n<contexto>\n{contexto}\n</contexto>\n\nRespondé la siguiente pregunta usando únicamente la información del contexto.\nSi la respuesta no está en el contexto, decí que no tenés esa información.\n\nPregunta: ¿cuál es la política de devoluciones?\n\"\"\"\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": prompt}],\n)"
+                  "code": "contexto = \"\\n\\n---\\n\\n\".join(chunk_texto for chunk_texto, _ in top_k)\n\nprompt = f\"\"\"\n<contexto>\n{contexto}\n</contexto>\n\nRespondé la siguiente pregunta usando únicamente la información del contexto.\nSi la respuesta no está en el contexto, decí que no tenés esa información.\n\nPregunta: ¿cuál es la política de devoluciones?\n\"\"\"\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": prompt}],\n)"
                 }
               ]
             },

@@ -335,7 +335,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.beta.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=800,\n    messages=[{\"role\": \"user\", \"content\": \"How much stock is left for SKU ABC-123?\"}],\n    mcp_servers=[{\n        \"type\": \"url\",\n        \"url\": \"https://my-mcp-server.mycompany.com/sse\",\n        \"name\": \"inventory\",\n        \"authorization_token\": \"TOKEN_OBTAINED_VIA_OAUTH\",\n        \"tool_configuration\": {\n            \"enabled\": True,\n            \"allowed_tools\": [\"check_stock\"],  # tool whitelist\n        },\n    }],\n)"
+                  "code": "response = client.beta.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=800,\n    messages=[{\"role\": \"user\", \"content\": \"How much stock is left for SKU ABC-123?\"}],\n    mcp_servers=[{\n        \"type\": \"url\",\n        \"url\": \"https://my-mcp-server.mycompany.com/sse\",\n        \"name\": \"inventory\",\n        \"authorization_token\": \"TOKEN_OBTAINED_VIA_OAUTH\",\n        \"tool_configuration\": {\n            \"enabled\": True,\n            \"allowed_tools\": [\"check_stock\"],  # tool whitelist\n        },\n    }],\n)"
                 },
                 {
                   "type": "callout",

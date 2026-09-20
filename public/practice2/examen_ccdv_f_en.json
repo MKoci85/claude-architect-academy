@@ -1018,7 +1018,7 @@
             "taskStatement": "2.6",
             "concept": "settings-precedence-project-over-user",
             "difficulty": "medium",
-            "text": "A developer sets `\"model\": \"claude-haiku-4-5-20251001\"` in `~/.claude/settings.json` to save costs on personal projects, but on one particular project the model always launches as `claude-opus-4-8` instead, no matter what they set in the user file. What is the most likely explanation?",
+            "text": "A developer sets `\"model\": \"claude-haiku-4-5-20251001\"` in `~/.claude/settings.json` to save costs on personal projects, but on one particular project the model always launches as `claude-opus-5` instead, no matter what they set in the user file. What is the most likely explanation?",
             "options": [
               "The user-level `settings.json` only takes effect for a project when that project doesn't define its own `.claude/settings.json` at all — once a project has any settings file, even one that doesn't mention `model`, the personal default stops applying there and only the project's own values are used.",
               "A more specific settings file for that project — such as `.claude/settings.json` or `.claude/settings.local.json` — or an organization-managed settings file, also sets `model`, and takes precedence over the user-level file.",
@@ -1387,22 +1387,22 @@
             "taskStatement": "5.1",
             "concept": "effort-parameter-vs-thinking-budget",
             "difficulty": "hard",
-            "text": "A team migrating a production app from claude-sonnet-4-6 wants to control how much reasoning depth the model applies to a batch classification task, aiming to reduce latency without disabling extended thinking entirely. Which configuration is correct for this model?",
+            "text": "A team migrating a production app from claude-sonnet-5 wants to control how much reasoning depth the model applies to a batch classification task, aiming to reduce latency without disabling extended thinking entirely. Which configuration is correct for this model?",
             "options": [
-              "Set output_config.effort to a lower value such as \"low\" or \"medium\", since claude-sonnet-4-6 uses adaptive thinking controlled via the effort parameter rather than a manually specified token budget.",
+              "Set output_config.effort to a lower value such as \"low\" or \"medium\", since claude-sonnet-5 uses adaptive thinking controlled via the effort parameter rather than a manually specified token budget.",
               "Set thinking.budget_tokens to a small fixed value below max_tokens, since this fixed-budget mechanism is the one universal lever every current-generation Claude model exposes for controlling reasoning depth.",
               "Turn thinking off for this batch job and compensate with a more detailed prompt instead, since effort's granularity is tuned for interactive latency targets rather than throughput-oriented batch workloads, making it an ineffective lever here.",
               "Lower max_tokens on the request, since the output ceiling and the model's internal reasoning budget are drawn from the same shared pool, so shrinking the ceiling proportionally reduces reasoning."
             ],
             "correctAnswer": 0,
-            "explanation": "claude-sonnet-4-6 uses adaptive thinking, where depth is tuned through output_config.effort rather than a hand-specified token budget; the fixed budget_tokens form still works as a transitional escape hatch but is not the recommended lever for a model that supports adaptive thinking. Reaching for budget_tokens here is the half-right trap: it is a real mechanism, just the wrong one for this model and use case."
+            "explanation": "claude-sonnet-5 uses adaptive thinking, where depth is tuned through output_config.effort rather than a hand-specified token budget; the fixed budget_tokens form is removed entirely on this model, not just deprecated. Reaching for budget_tokens here is the half-right trap: it is a real mechanism on other models, just the wrong one for this model and use case."
           },
           {
             "id": "D5-Q05",
             "taskStatement": "5.1",
             "concept": "adaptive-thinking-tier-support-multi-select",
             "difficulty": "hard",
-            "text": "A developer copies a thinking-enabled request using output_config.effort, built and tested against claude-sonnet-4-6, and reuses it unchanged against claude-haiku-4-5-20251001 to cut cost on a high-volume endpoint. Which two statements correctly describe what happens and why?",
+            "text": "A developer copies a thinking-enabled request using output_config.effort, built and tested against claude-sonnet-5, and reuses it unchanged against claude-haiku-4-5-20251001 to cut cost on a high-volume endpoint. Which two statements correctly describe what happens and why?",
             "options": [
               "claude-haiku-4-5-20251001 does not support adaptive thinking, so the effort parameter is not a valid way to control its reasoning depth.",
               "On claude-haiku-4-5-20251001, thinking depth must instead be set with the older fixed-budget form, thinking.budget_tokens, which requires a value below max_tokens with a 1024-token minimum.",
@@ -1460,7 +1460,7 @@
             "text": "A backend engineer is deciding whether to call the Claude REST API directly with a generic HTTP client or use the official Anthropic SDK for a new service. Which statement best characterizes what the SDK adds over raw REST calls?",
             "options": [
               "The SDK wraps the same REST endpoints but adds typed request/response models, built-in retry and pagination handling, and convenience methods like streaming helpers and token counting, without exposing new capabilities unavailable over REST.",
-              "The SDK is required to access claude-opus-4-8 and claude-sonnet-4-6, since raw REST calls made without the official client libraries are restricted by Anthropic to the smallest available model tier.",
+              "The SDK is required to access claude-opus-5 and claude-sonnet-5, since raw REST calls made without the official client libraries are restricted by Anthropic to the smallest available model tier.",
               "The SDK negotiates a persistent binary transport distinct from plain HTTP, which is the main reason well-instrumented SDK-based integrations see measurably lower latency than hand-rolled REST clients hitting the same endpoints over a standard connection.",
               "The SDK ships with a separate, privileged credential-exchange mechanism that bypasses the standard API-key header scheme, letting first-party libraries authenticate through a channel unavailable to raw REST."
             ],
@@ -1609,10 +1609,10 @@
             "difficulty": "medium",
             "text": "A product has three Claude-powered features: (1) real-time typeahead query classification with a strict 200ms latency budget, (2) a nightly batch job synthesizing long-form legal risk memos from case law, and (3) a customer-facing chatbot handling moderately complex multi-turn support. Which model-tier assignment best matches this repo's current model lineup to the tradeoffs involved?",
             "options": [
-              "claude-haiku-4-5-20251001 for typeahead classification, claude-opus-4-8 for the legal risk memos, and claude-sonnet-4-6 for the support chatbot.",
-              "claude-opus-4-8 for all three features, since using the single most capable model everywhere removes any risk of quality regressions across the typeahead, memo, and chatbot workloads.",
+              "claude-haiku-4-5-20251001 for typeahead classification, claude-opus-5 for the legal risk memos, and claude-sonnet-5 for the support chatbot.",
+              "claude-opus-5 for all three features, since using the single most capable model everywhere removes any risk of quality regressions across the typeahead, memo, and chatbot workloads.",
               "claude-haiku-4-5-20251001 for all three features, since minimizing latency and cost across the whole product is the dominant business priority here, and the legal memos and support chatbot can absorb Haiku's lighter reasoning depth by being broken into more, smaller prompts.",
-              "claude-sonnet-4-6 for typeahead classification, claude-haiku-4-5-20251001 for the legal risk memos, and claude-opus-4-8 for the customer-facing multi-turn support chatbot."
+              "claude-sonnet-5 for typeahead classification, claude-haiku-4-5-20251001 for the legal risk memos, and claude-opus-5 for the customer-facing multi-turn support chatbot."
             ],
             "correctAnswer": 0,
             "explanation": "This assignment matches each task's dominant constraint: Haiku's speed for a hard 200ms latency budget on a simple classification task, Opus's top-tier reasoning capacity for high-stakes, complex long-form synthesis where quality matters most and latency is not binding, and Sonnet's balance for a moderately complex, real-time-ish chat use case. Using Opus everywhere is the tempting-but-wrong 'more capable is always safer' answer — it ignores that Opus's higher cost and latency are a poor fit for the strict real-time typeahead constraint."
@@ -1622,15 +1622,15 @@
             "taskStatement": "5.3",
             "concept": "adaptive-thinking-model-support-boundary",
             "difficulty": "hard",
-            "text": "A team standardizes their thinking-enabled prompt template across all three model tiers used in their app (claude-opus-4-8, claude-sonnet-4-6, claude-haiku-4-5-20251001) using output_config.effort for every call. What will happen, and what is the correct remediation?",
+            "text": "A team standardizes their thinking-enabled prompt template across all three model tiers used in their app (claude-opus-5, claude-sonnet-5, claude-haiku-4-5-20251001) using output_config.effort for every call. What will happen, and what is the correct remediation?",
             "options": [
-              "Calls to claude-opus-4-8 and claude-sonnet-4-6 will work as intended since both support adaptive thinking via effort, but the claude-haiku-4-5-20251001 call will fail or be rejected since Haiku only supports the older fixed thinking.budget_tokens form; the template needs a per-model branch.",
+              "Calls to claude-opus-5 and claude-sonnet-5 will work as intended since both support adaptive thinking via effort, but the claude-haiku-4-5-20251001 call will fail or be rejected since Haiku only supports the older fixed thinking.budget_tokens form; the template needs a per-model branch.",
               "All three calls will succeed and behave equivalently, since parameter compatibility for thinking-related fields across model tiers within the same API version is something Anthropic engineers for by default.",
-              "Only claude-opus-4-8 supports thinking at all among these three; both claude-sonnet-4-6 and claude-haiku-4-5-20251001 will reject any thinking-related parameter outright, adaptive or fixed-budget.",
+              "Only claude-opus-5 supports thinking at all among these three; both claude-sonnet-5 and claude-haiku-4-5-20251001 will reject any thinking-related parameter outright, adaptive or fixed-budget.",
               "The effort parameter is silently ignored on all three models and has no measurable effect on reasoning depth, latency, or the resulting token cost of any of the three requests being standardized."
             ],
             "correctAnswer": 0,
-            "explanation": "claude-opus-4-8 and claude-sonnet-4-6 support adaptive thinking controlled by output_config.effort, but claude-haiku-4-5-20251001 does not support adaptive thinking and only accepts the older fixed-budget thinking.budget_tokens form, so a single universal template will break specifically on the Haiku path. Assuming only Opus supports thinking at all incorrectly excludes Sonnet, which also supports the adaptive form."
+            "explanation": "claude-opus-5 and claude-sonnet-5 support adaptive thinking controlled by output_config.effort, but claude-haiku-4-5-20251001 does not support adaptive thinking and only accepts the older fixed-budget thinking.budget_tokens form, so a single universal template will break specifically on the Haiku path. Assuming only Opus supports thinking at all incorrectly excludes Sonnet, which also supports the adaptive form."
           },
           {
             "id": "D5-Q19",
@@ -1641,7 +1641,7 @@
             "options": [
               "Fast mode is restricted to Opus-tier models and requires enabling a beta header plus the speed parameter on the request.",
               "Fast mode is billed at a premium price in exchange for roughly 2.5x faster output token throughput, so it's worth enabling only when this call's latency is business-critical enough to justify the added cost.",
-              "Fast mode is available across all three model tiers in this lineup, including claude-sonnet-4-6 and claude-haiku-4-5-20251001.",
+              "Fast mode is available across all three model tiers in this lineup, including claude-sonnet-5 and claude-haiku-4-5-20251001.",
               "Fast mode uses the same per-token pricing as standard requests, just with a faster response, so there's no additional cost consideration when deciding whether to enable it.",
               "Fast mode is a purely client-side network optimization that reduces round-trip time without changing how the model itself generates output."
             ],
@@ -1900,15 +1900,15 @@
             "taskStatement": "6.2",
             "concept": "prefill-removed-current-models",
             "difficulty": "hard",
-            "text": "A developer wants claude-opus-4-8 to always start its response with the character `{` so downstream code can safely assume the output begins with JSON, using an assistant-message prefill containing `{`. Is this a valid approach on this model?",
+            "text": "A developer wants claude-opus-5 to always start its response with the character `{` so downstream code can safely assume the output begins with JSON, using an assistant-message prefill containing `{`. Is this a valid approach on this model?",
             "options": [
-              "Yes — prefill is a documented way to steer where a response starts, and since claude-opus-4-8 is largely backward-compatible with prior-generation API behavior, prefill should still work here the same way it did on older models.",
-              "No — assistant message prefill is not supported on claude-opus-4-8 (and other current-generation models); use a structured output configuration or clear system-prompt instructions instead.",
+              "Yes — prefill is a documented way to steer where a response starts, and since claude-opus-5 is largely backward-compatible with prior-generation API behavior, prefill should still work here the same way it did on older models.",
+              "No — assistant message prefill is not supported on claude-opus-5 (and other current-generation models); use a structured output configuration or clear system-prompt instructions instead.",
               "Yes, but only if extended thinking is disabled for that request, since prefill and extended thinking cannot coexist in the same call on current-generation models.",
               "No — but this restriction has applied since prefill was first introduced, so teams relying on it for structured output on older Claude model generations were already leaning on an unsupported technique the whole time."
             ],
             "correctAnswer": 1,
-            "explanation": "Assistant message prefill is disallowed on current-generation models including claude-opus-4-8 and errors rather than being silently accepted — it's a technique that worked on older models but doesn't carry forward. The fix is a real structured-output mechanism or explicit system instructions, not a prefill workaround. The thinking-toggle option is the trap: it correctly flags thinking as model behavior worth checking, but wrongly implies disabling it re-enables prefill — prefill removal is independent of the thinking setting. The other two wrong options both get the model-generation history backwards: prefill did work on prior generations (so assuming continued backward compatibility, or assuming it was never supported at all, are both mistaken)."
+            "explanation": "Assistant message prefill is disallowed on current-generation models including claude-opus-5 and errors rather than being silently accepted — it's a technique that worked on older models but doesn't carry forward. The fix is a real structured-output mechanism or explicit system instructions, not a prefill workaround. The thinking-toggle option is the trap: it correctly flags thinking as model behavior worth checking, but wrongly implies disabling it re-enables prefill — prefill removal is independent of the thinking setting. The other two wrong options both get the model-generation history backwards: prefill did work on prior generations (so assuming continued backward compatibility, or assuming it was never supported at all, are both mistaken)."
           },
           {
             "id": "D6-Q11",

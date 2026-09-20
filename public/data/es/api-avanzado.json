@@ -63,7 +63,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.beta.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1000,\n    messages=[{\"role\": \"user\", \"content\": \"¿Qué eventos tengo hoy?\"}],\n    mcp_servers=[\n        {\n            \"type\": \"url\",\n            \"url\": \"https://mi-servidor-mcp.example.com/sse\",\n            \"name\": \"google-calendar\",\n            \"authorization_token\": \"mi-token-oauth\"\n        }\n    ],\n    tools=[\n        {\n            \"type\": \"mcp_toolset\",\n            \"mcp_server_name\": \"google-calendar\"\n        }\n    ],\n    betas=[\"mcp-client-2025-11-20\"]\n)"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.beta.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=1000,\n    messages=[{\"role\": \"user\", \"content\": \"¿Qué eventos tengo hoy?\"}],\n    mcp_servers=[\n        {\n            \"type\": \"url\",\n            \"url\": \"https://mi-servidor-mcp.example.com/sse\",\n            \"name\": \"google-calendar\",\n            \"authorization_token\": \"mi-token-oauth\"\n        }\n    ],\n    tools=[\n        {\n            \"type\": \"mcp_toolset\",\n            \"mcp_server_name\": \"google-calendar\"\n        }\n    ],\n    betas=[\"mcp-client-2025-11-20\"]\n)"
                 }
               ]
             },
@@ -142,7 +142,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=16000,\n    thinking={\n        \"type\": \"enabled\",\n        \"budget_tokens\": 10000  # máximo tokens para razonar\n    },\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"¿Hay infinitos números primos de la forma 4n+3?\"\n    }]\n)\n\nfor block in response.content:\n    if block.type == \"thinking\":\n        print(f\"Razonamiento: {block.thinking}\")\n    elif block.type == \"text\":\n        print(f\"Respuesta: {block.text}\")"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=16000,\n    thinking={\n        \"type\": \"enabled\",\n        \"budget_tokens\": 10000  # máximo tokens para razonar\n    },\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"¿Hay infinitos números primos de la forma 4n+3?\"\n    }]\n)\n\nfor block in response.content:\n    if block.type == \"thinking\":\n        print(f\"Razonamiento: {block.thinking}\")\n    elif block.type == \"text\":\n        print(f\"Respuesta: {block.text}\")"
                 },
                 {
                   "type": "callout",
@@ -192,6 +192,12 @@
                   "style": "info",
                   "title": "Sin presupuesto de tokens, dos controles de costo",
                   "content": "`max_tokens` sigue siendo el límite duro sobre el total (thinking + respuesta) — Claude nunca lo excede. `effort` es guía blanda sobre cuánto de ese total dedica a pensar, no una garantía de cantidad de tokens. Si aparece `stop_reason: \"max_tokens\"` en niveles `high` o superiores, la solución es subir `max_tokens` (si el razonamiento largo valía la pena) o bajar `effort` (si estaba sobrepensando)."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "El thinking viene oculto por default en los modelos recientes",
+                  "content": "En Opus 5, Sonnet 5, Fable 5.1 y Mythos 5.1, el bloque `thinking` no llega en la respuesta a menos que se pida explícitamente: el valor por default de `display` es `\"omitted\"`. Para verlo hay que pedir `thinking: {\"type\": \"adaptive\", \"display\": \"summarized\"}` (un resumen del razonamiento, no la traza completa) o, con el beta header `thinking-display-updates-2026-08-18`, `\"display\": \"updates\"`. Si el código espera bloques `thinking` en la respuesta y no los pide con `display`, simplemente no van a estar — no es un bug del modelo."
                 },
                 {
                   "type": "callout",
@@ -256,7 +262,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\nimport base64\n\nclient = anthropic.Anthropic()\n\ndef codificar(ruta):\n    with open(ruta, \"rb\") as f:\n        return base64.b64encode(f.read()).decode(\"utf-8\")\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=400,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": codificar(\"pantalla_antes.png\")}},\n            {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": codificar(\"pantalla_despues.png\")}},\n            {\"type\": \"text\", \"text\": \"Comparando estas dos capturas, ¿qué cambió?\"},\n        ],\n    }],\n)"
+                  "code": "import anthropic\nimport base64\n\nclient = anthropic.Anthropic()\n\ndef codificar(ruta):\n    with open(ruta, \"rb\") as f:\n        return base64.b64encode(f.read()).decode(\"utf-8\")\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=400,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": codificar(\"pantalla_antes.png\")}},\n            {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": codificar(\"pantalla_despues.png\")}},\n            {\"type\": \"text\", \"text\": \"Comparando estas dos capturas, ¿qué cambió?\"},\n        ],\n    }],\n)"
                 },
                 {
                   "type": "callout",
@@ -296,7 +302,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import base64\n\nwith open(\"reporte_anual.pdf\", \"rb\") as f:\n    pdf_b64 = base64.b64encode(f.read()).decode(\"utf-8\")\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=600,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\"type\": \"document\", \"source\": {\"type\": \"base64\", \"media_type\": \"application/pdf\", \"data\": pdf_b64}},\n            {\"type\": \"text\", \"text\": \"Resumí los riesgos mencionados en la sección 4\"},\n        ],\n    }],\n)"
+                  "code": "import base64\n\nwith open(\"reporte_anual.pdf\", \"rb\") as f:\n    pdf_b64 = base64.b64encode(f.read()).decode(\"utf-8\")\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=600,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\"type\": \"document\", \"source\": {\"type\": \"base64\", \"media_type\": \"application/pdf\", \"data\": pdf_b64}},\n            {\"type\": \"text\", \"text\": \"Resumí los riesgos mencionados en la sección 4\"},\n        ],\n    }],\n)"
                 }
               ]
             },
@@ -325,7 +331,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "# citations sobre un documento de texto\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\n                \"type\": \"document\",\n                \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": texto_politica},\n                \"citations\": {\"enabled\": True},\n            },\n            {\"type\": \"text\", \"text\": \"¿Cuánto tiempo se conservan los datos del usuario?\"},\n        ],\n    }],\n)\n# cada bloque de texto de la respuesta puede traer un campo \"citations\"\n# con el documento y el rango exacto que respalda esa frase\n\n# citations en RAG: cada chunk como documento independiente\ndocumentos = [\n    {\n        \"type\": \"document\",\n        \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": chunk_texto},\n        \"citations\": {\"enabled\": True},\n    }\n    for chunk_texto, _ in top_k\n]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": documentos + [{\"type\": \"text\", \"text\": \"¿cuál es la política de devoluciones?\"}]}],\n)"
+                  "code": "# citations sobre un documento de texto\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=500,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\n                \"type\": \"document\",\n                \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": texto_politica},\n                \"citations\": {\"enabled\": True},\n            },\n            {\"type\": \"text\", \"text\": \"¿Cuánto tiempo se conservan los datos del usuario?\"},\n        ],\n    }],\n)\n# cada bloque de texto de la respuesta puede traer un campo \"citations\"\n# con el documento y el rango exacto que respalda esa frase\n\n# citations en RAG: cada chunk como documento independiente\ndocumentos = [\n    {\n        \"type\": \"document\",\n        \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": chunk_texto},\n        \"citations\": {\"enabled\": True},\n    }\n    for chunk_texto, _ in top_k\n]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": documentos + [{\"type\": \"text\", \"text\": \"¿cuál es la política de devoluciones?\"}]}],\n)"
                 }
               ]
             }
@@ -387,7 +393,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "herramientas = [tool_clima, tool_calendario]\nherramientas[-1][\"cache_control\"] = {\"type\": \"ephemeral\"}  # breakpoint #1: cachea todas las tools\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=500,\n    tools=herramientas,\n    system=[\n        {\n            \"type\": \"text\",\n            \"text\": documentacion_interna_completa,  # varios miles de tokens, estable\n            \"cache_control\": {\"type\": \"ephemeral\", \"ttl\": \"1h\"},  # breakpoint #2: TTL extendido\n        }\n    ],\n    messages=[{\"role\": \"user\", \"content\": \"¿Cómo configuro el rate limiting?\"}],\n)\n\n# verificar si se usó el cache\nprint(response.usage.cache_creation_input_tokens, response.usage.cache_read_input_tokens)"
+                  "code": "herramientas = [tool_clima, tool_calendario]\nherramientas[-1][\"cache_control\"] = {\"type\": \"ephemeral\"}  # breakpoint #1: cachea todas las tools\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=500,\n    tools=herramientas,\n    system=[\n        {\n            \"type\": \"text\",\n            \"text\": documentacion_interna_completa,  # varios miles de tokens, estable\n            \"cache_control\": {\"type\": \"ephemeral\", \"ttl\": \"1h\"},  # breakpoint #2: TTL extendido\n        }\n    ],\n    messages=[{\"role\": \"user\", \"content\": \"¿Cómo configuro el rate limiting?\"}],\n)\n\n# verificar si se usó el cache\nprint(response.usage.cache_creation_input_tokens, response.usage.cache_read_input_tokens)"
                 },
                 {
                   "type": "callout",
@@ -519,7 +525,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# 1. Subir el archivo una sola vez\nwith open(\"balance_anual.pdf\", \"rb\") as f:\n    archivo = client.beta.files.upload(\n        file=(\"balance_anual.pdf\", f, \"application/pdf\"),\n        betas=[\"files-api-2025-04-14\"],\n    )\n\n# 2. Reutilizarlo en múltiples requests, sin volver a codificarlo\nfor pregunta in [\"Resume el documento\", \"¿Cuál es la conclusión?\", \"Lista los riesgos\"]:\n    response = client.beta.messages.create(\n        model=\"claude-opus-4-8\",\n        max_tokens=1024,\n        betas=[\"files-api-2025-04-14\"],\n        messages=[{\n            \"role\": \"user\",\n            \"content\": [\n                {\"type\": \"text\", \"text\": pregunta},\n                {\n                    \"type\": \"document\",\n                    \"source\": {\"type\": \"file\", \"file_id\": archivo.id}\n                }\n            ]\n        }],\n    )\n    print(response.content[0].text)"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# 1. Subir el archivo una sola vez\nwith open(\"balance_anual.pdf\", \"rb\") as f:\n    archivo = client.beta.files.upload(\n        file=(\"balance_anual.pdf\", f, \"application/pdf\"),\n        betas=[\"files-api-2025-04-14\"],\n    )\n\n# 2. Reutilizarlo en múltiples requests, sin volver a codificarlo\nfor pregunta in [\"Resume el documento\", \"¿Cuál es la conclusión?\", \"Lista los riesgos\"]:\n    response = client.beta.messages.create(\n        model=\"claude-opus-5\",\n        max_tokens=1024,\n        betas=[\"files-api-2025-04-14\"],\n        messages=[{\n            \"role\": \"user\",\n            \"content\": [\n                {\"type\": \"text\", \"text\": pregunta},\n                {\n                    \"type\": \"document\",\n                    \"source\": {\"type\": \"file\", \"file_id\": archivo.id}\n                }\n            ]\n        }],\n    )\n    print(response.content[0].text)"
                 }
               ]
             },
@@ -593,7 +599,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# code_execution: Claude calcula y puede generar gráficos\nresponse = client.beta.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=2000,\n    tools=[{\"type\": \"code_execution_20250825\", \"name\": \"code_execution\"}],\n    betas=[\"code-execution-2025-08-25\"],\n    messages=[{\"role\": \"user\", \"content\": \"Calculá la media y el desvío estándar de [12, 15, 11, 19, 22, 14] y grafiá un histograma\"}],\n)\n\n# la respuesta incluye bloques de tipo \"tool_result\" con el output del código\n# y eventualmente referencias a archivos generados (gráficos como file_id)"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# code_execution: Claude calcula y puede generar gráficos\nresponse = client.beta.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=2000,\n    tools=[{\"type\": \"code_execution_20250825\", \"name\": \"code_execution\"}],\n    betas=[\"code-execution-2025-08-25\"],\n    messages=[{\"role\": \"user\", \"content\": \"Calculá la media y el desvío estándar de [12, 15, 11, 19, 22, 14] y grafiá un histograma\"}],\n)\n\n# la respuesta incluye bloques de tipo \"tool_result\" con el output del código\n# y eventualmente referencias a archivos generados (gráficos como file_id)"
                 },
                 {
                   "type": "callout",

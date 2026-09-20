@@ -11,7 +11,11 @@
               "blocks": [
                 {
                   "type": "text",
-                  "content": "En lugar de esperar la respuesta completa, recibes tokens uno a uno mientras se generan. Permite UX más responsiva."
+                  "content": "Sin streaming, un request es síncrono: se manda y se espera a que vuelva la respuesta completa de una sola vez antes de actuar sobre ella. Es el patrón más simple, y alcanza para respuestas cortas o jobs de backend donde nadie está mirando la pantalla."
+                },
+                {
+                  "type": "text",
+                  "content": "Cuando la respuesta es larga o hay un usuario esperando, streaming la entrega en pedazos a medida que el modelo la genera: el output aparece de inmediato en vez de después de una espera en blanco, y tu código reensambla los pedazos en el mensaje final."
                 }
               ]
             },
@@ -21,7 +25,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nwith client.messages.stream(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": \"Cuéntame un chiste\"}]\n) as stream:\n    for text in stream.text_stream:\n        print(text, end=\"\", flush=True)"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nwith client.messages.stream(\n    model=\"claude-opus-5\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": \"Cuéntame un chiste\"}]\n) as stream:\n    for text in stream.text_stream:\n        print(text, end=\"\", flush=True)"
                 }
               ]
             },
@@ -31,7 +35,7 @@
                 {
                   "type": "code",
                   "language": "javascript",
-                  "code": "import Anthropic from \"@anthropic-ai/sdk\";\n\nconst client = new Anthropic();\n\nconst stream = await client.messages.stream({\n  model: \"claude-opus-4-8\",\n  max_tokens: 1024,\n  messages: [{role: \"user\", content: \"Cuéntame un chiste\"}]\n});\n\nfor await (const chunk of stream) {\n  if (chunk.type === \"content_block_delta\") {\n    process.stdout.write(chunk.delta.text);\n  }\n}"
+                  "code": "import Anthropic from \"@anthropic-ai/sdk\";\n\nconst client = new Anthropic();\n\nconst stream = await client.messages.stream({\n  model: \"claude-opus-5\",\n  max_tokens: 1024,\n  messages: [{role: \"user\", content: \"Cuéntame un chiste\"}]\n});\n\nfor await (const chunk of stream) {\n  if (chunk.type === \"content_block_delta\") {\n    process.stdout.write(chunk.delta.text);\n  }\n}"
                 }
               ]
             },
@@ -162,7 +166,7 @@
                     [
                       "Modelo no encontrado",
                       "404",
-                      "Usa un modelo disponible (claude-opus-4-8, etc)"
+                      "Usa un modelo disponible (claude-opus-5, etc)"
                     ],
                     [
                       "Límite de rate excedido",
@@ -189,7 +193,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\nimport time\n\nclient = anthropic.Anthropic()\n\nmax_retries = 3\nfor attempt in range(max_retries):\n    try:\n        message = client.messages.create(\n            model=\"claude-opus-4-8\",\n            max_tokens=1024,\n            messages=[{\"role\": \"user\", \"content\": \"Hola\"}]\n        )\n        print(message.content[0].text)\n        break\n    except anthropic.RateLimitError:\n        if attempt < max_retries - 1:\n            wait_time = 2 ** attempt\n            print(f\"Rate limit, esperando {wait_time}s...\")\n            time.sleep(wait_time)\n        else:\n            raise"
+                  "code": "import anthropic\nimport time\n\nclient = anthropic.Anthropic()\n\nmax_retries = 3\nfor attempt in range(max_retries):\n    try:\n        message = client.messages.create(\n            model=\"claude-opus-5\",\n            max_tokens=1024,\n            messages=[{\"role\": \"user\", \"content\": \"Hola\"}]\n        )\n        print(message.content[0].text)\n        break\n    except anthropic.RateLimitError:\n        if attempt < max_retries - 1:\n            wait_time = 2 ** attempt\n            print(f\"Rate limit, esperando {wait_time}s...\")\n            time.sleep(wait_time)\n        else:\n            raise"
                 }
               ]
             }
@@ -344,7 +348,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=4096,\n    messages=messages\n)\n\nif response.stop_reason == \"max_tokens\":\n    # Output truncado — no continuar como si fuera válido\n    raise OutputTruncatedError(\n        f\"Respuesta truncada en {response.usage.output_tokens} tokens. \"\n        \"Aumentar max_tokens o dividir la tarea.\"\n    )\nelif response.stop_reason == \"tool_use\":\n    # Procesar tool calls y continuar el loop\n    tool_result = execute_tools(response.content)\n    messages.append({\"role\": \"assistant\", \"content\": response.content})\n    messages.append({\"role\": \"user\", \"content\": tool_result})"
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=4096,\n    messages=messages\n)\n\nif response.stop_reason == \"max_tokens\":\n    # Output truncado — no continuar como si fuera válido\n    raise OutputTruncatedError(\n        f\"Respuesta truncada en {response.usage.output_tokens} tokens. \"\n        \"Aumentar max_tokens o dividir la tarea.\"\n    )\nelif response.stop_reason == \"tool_use\":\n    # Procesar tool calls y continuar el loop\n    tool_result = execute_tools(response.content)\n    messages.append({\"role\": \"assistant\", \"content\": response.content})\n    messages.append({\"role\": \"user\", \"content\": tool_result})"
                 }
               ]
             },

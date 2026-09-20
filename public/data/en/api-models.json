@@ -11,12 +11,19 @@
               "blocks": [
                 {
                   "type": "table",
-                  "columns": ["Model", "ID", "Input tokens", "Output tokens", "Best for"],
+                  "columns": ["Model", "ID", "Context", "Price (input/output per MTok)", "Best for"],
                   "rows": [
-                    ["Haiku 4.5", "claude-haiku-4-5-20251001", "200K", "8K", "Fast, economical tasks"],
-                    ["Sonnet 4.6", "claude-sonnet-4-6", "200K", "8K", "Cost/performance balance"],
-                    ["Opus 4.8", "claude-opus-4-8", "200K", "8K", "Maximum capability and complexity"]
+                    ["Haiku 4.5", "claude-haiku-4-5-20251001", "200K", "$1 / $5", "The fastest model, with near-frontier intelligence"],
+                    ["Sonnet 5", "claude-sonnet-5", "1M", "$2 / $10", "The best combination of speed and intelligence"],
+                    ["Opus 5", "claude-opus-5", "1M", "$5 / $25", "Complex agentic coding and enterprise work"],
+                    ["Fable 5.1", "claude-fable-5-1", "1M", "$10 / $50", "Demanding reasoning and long-horizon agentic work"]
                   ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Opus 4.8, Sonnet 4.6, and earlier remain available as legacy",
+                  "content": "The catalog above is generation 5 (plus Haiku 4.5, still the latest in its family). Anthropic keeps older versions available (Opus 4.8, Opus 4.7, Sonnet 4.6, Fable 5) so existing integrations don't break, but they aren't the recommended starting point for a new project. See Model deprecations in the official docs for each one's retirement date."
                 }
               ]
             },
@@ -32,25 +39,38 @@
                         "Fastest",
                         "Most economical",
                         "200K context",
+                        "Manual extended thinking (no adaptive)",
                         "Simple, straightforward tasks"
                       ]
                     },
                     {
-                      "title": "Sonnet 4.6",
+                      "title": "Sonnet 5",
                       "items": [
-                        "Versatile",
+                        "Speed/intelligence balance",
                         "Moderate cost",
-                        "200K context",
-                        "General production use"
+                        "1M context",
+                        "Adaptive thinking",
+                        "Recommended default for production"
                       ]
                     },
                     {
-                      "title": "Opus 4.8",
+                      "title": "Opus 5",
                       "items": [
-                        "Most powerful",
+                        "Very capable",
+                        "High cost",
+                        "1M context",
+                        "Adaptive thinking",
+                        "Complex agentic coding, enterprise work"
+                      ]
+                    },
+                    {
+                      "title": "Fable 5.1",
+                      "items": [
+                        "Maximum capability",
                         "Highest cost",
-                        "200K context",
-                        "Complex tasks"
+                        "1M context",
+                        "Adaptive thinking, always on",
+                        "Reasoning and long-horizon agents"
                       ]
                     }
                   ]
@@ -111,7 +131,7 @@
               "blocks": [
                 {
                   "type": "text",
-                  "content": "Choose the model based on three factors: required speed, task complexity, and budget."
+                  "content": "Choose the model based on three factors: required speed, task complexity, and budget. The practical default is simpler than weighing all three by hand: start with Sonnet, move up a tier (to Opus, then Fable if needed) only when an eval shows the current tier missing your quality bar, and move down to Haiku only when an eval confirms the quality drop is acceptable for the task. Deciding by feel instead of by eval is the most common way to either overpay for capability you don't need, or underestimate a task that actually needs it."
                 },
                 {
                   "type": "stats",
@@ -122,16 +142,27 @@
                       "note": "For millisecond responses and low cost"
                     },
                     {
-                      "label": "Sonnet 4.6",
-                      "value": "Balanced",
-                      "note": "For most use cases"
+                      "label": "Sonnet 5",
+                      "value": "Balanced (default)",
+                      "note": "Recommended starting point for most cases"
                     },
                     {
-                      "label": "Opus 4.8",
-                      "value": "Premium",
-                      "note": "For maximum quality and complexity"
+                      "label": "Opus 5",
+                      "value": "High",
+                      "note": "Complex agentic coding and enterprise work, above Sonnet's ceiling"
+                    },
+                    {
+                      "label": "Fable 5.1",
+                      "value": "Maximum",
+                      "note": "Reasoning and long-horizon agents, the highest demand in the lineup"
                     }
                   ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Picking a model and enabling reasoning are two independent decisions",
+                  "content": "Which model to run is one decision; whether that model thinks before answering (and how much) is another, configured per request with `thinking` and `effort` — see Extended Thinking. A capable model with reasoning off is fast and direct; a smaller model with reasoning on spends more tokens thinking. The most demanding combination pairs the most capable tier with a high effort setting, but moving up a tier doesn't turn on reasoning by itself, and vice versa."
                 }
               ]
             },
@@ -146,12 +177,16 @@
                       "description": "Quick summaries, FAQ answers, simple classification, basic chatbot"
                     },
                     {
-                      "title": "Sonnet 4.6",
+                      "title": "Sonnet 5",
                       "description": "Content analysis, writing, professional translation, advanced search"
                     },
                     {
-                      "title": "Opus 4.8",
-                      "description": "Complex reasoning, advanced code, deep analysis, research"
+                      "title": "Opus 5",
+                      "description": "Complex agentic coding, enterprise work, tasks above Sonnet's envelope"
+                    },
+                    {
+                      "title": "Fable 5.1",
+                      "description": "Multi-step reasoning, long-horizon agents, the most demanding task in the stack"
                     }
                   ]
                 }

@@ -22,7 +22,7 @@
                   "type": "callout",
                   "style": "warning",
                   "title": "Retirado en modelos actuales",
-                  "content": "El prefill no está soportado en claude-sonnet-4-6, claude-opus-4-8 ni claude-haiku-4-5-20251001. Las peticiones que lo usan devuelven un error 400. Anthropic lo retiró porque era un truco de generación, no una garantía real: no aseguraba JSON válido, consumía tokens de contexto sin atribución clara, y choca con extended thinking, donde el modelo necesita controlar su propio flujo de respuesta."
+                  "content": "El prefill no está soportado en claude-sonnet-5, claude-opus-5 ni claude-haiku-4-5-20251001. Las peticiones que lo usan devuelven un error 400. Anthropic lo retiró porque era un truco de generación, no una garantía real: no aseguraba JSON válido, consumía tokens de contexto sin atribución clara, y choca con extended thinking, donde el modelo necesita controlar su propio flujo de respuesta."
                 }
               ]
             },
@@ -89,7 +89,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"¿Cuál es el latín para hormiga? (A) Apoidea (B) Formicidae\",\n    }],\n    tool_choice={\"type\": \"tool\", \"name\": \"answer\"},\n    tools=[{\n        \"name\": \"answer\",\n        \"description\": \"Registra la opción elegida\",\n        \"strict\": True,\n        \"input_schema\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"choice\": {\"type\": \"string\", \"enum\": [\"A\", \"B\"]}\n            },\n            \"required\": [\"choice\"],\n            \"additionalProperties\": False,\n        },\n    }],\n)\n# response.content[0].input == {\"choice\": \"B\"} — garantizado, no hay que parsear texto"
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"¿Cuál es el latín para hormiga? (A) Apoidea (B) Formicidae\",\n    }],\n    tool_choice={\"type\": \"tool\", \"name\": \"answer\"},\n    tools=[{\n        \"name\": \"answer\",\n        \"description\": \"Registra la opción elegida\",\n        \"strict\": True,\n        \"input_schema\": {\n            \"type\": \"object\",\n            \"properties\": {\n                \"choice\": {\"type\": \"string\", \"enum\": [\"A\", \"B\"]}\n            },\n            \"required\": [\"choice\"],\n            \"additionalProperties\": False,\n        },\n    }],\n)\n# response.content[0].input == {\"choice\": \"B\"} — garantizado, no hay que parsear texto"
                 },
                 {
                   "type": "callout",
@@ -109,7 +109,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"Extraé el nombre y el email de: Juan Pérez, juan@email.com\",\n    }],\n    output_config={\n        \"format\": {\n            \"type\": \"json_schema\",\n            \"schema\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"name\": {\"type\": \"string\"},\n                    \"email\": {\"type\": \"string\"},\n                },\n                \"required\": [\"name\", \"email\"],\n                \"additionalProperties\": False,\n            },\n        }\n    },\n)\n# response.content[0].text es JSON válido garantizado, listo para json.loads()\nimport json\ndatos = json.loads(response.content[0].text)\nprint(datos[\"name\"])   # \"Juan Pérez\"\nprint(datos[\"email\"])  # \"juan@email.com\""
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"Extraé el nombre y el email de: Juan Pérez, juan@email.com\",\n    }],\n    output_config={\n        \"format\": {\n            \"type\": \"json_schema\",\n            \"schema\": {\n                \"type\": \"object\",\n                \"properties\": {\n                    \"name\": {\"type\": \"string\"},\n                    \"email\": {\"type\": \"string\"},\n                },\n                \"required\": [\"name\", \"email\"],\n                \"additionalProperties\": False,\n            },\n        }\n    },\n)\n# response.content[0].text es JSON válido garantizado, listo para json.loads()\nimport json\ndatos = json.loads(response.content[0].text)\nprint(datos[\"name\"])   # \"Juan Pérez\"\nprint(datos[\"email\"])  # \"juan@email.com\""
                 },
                 {
                   "type": "callout",
@@ -124,7 +124,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "extraccion_schema = {\n    \"name\": \"registrar_datos_articulo\",\n    \"description\": \"Registra los datos estructurados extraídos del artículo\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"titulo\": {\"type\": \"string\"},\n            \"autor\": {\"type\": \"string\"},\n            \"puntos_clave\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        },\n        \"required\": [\"titulo\", \"autor\", \"puntos_clave\"],\n    },\n}\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": f\"Extraé los datos de este artículo:\\n\\n{texto_articulo}\"}],\n    tools=[extraccion_schema],\n    tool_choice={\"type\": \"tool\", \"name\": \"registrar_datos_articulo\"},\n)\n\ndatos = response.content[0].input  # ya es un dict, no hace falta json.loads()"
+                  "code": "extraccion_schema = {\n    \"name\": \"registrar_datos_articulo\",\n    \"description\": \"Registra los datos estructurados extraídos del artículo\",\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"titulo\": {\"type\": \"string\"},\n            \"autor\": {\"type\": \"string\"},\n            \"puntos_clave\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}},\n        },\n        \"required\": [\"titulo\", \"autor\", \"puntos_clave\"],\n    },\n}\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": f\"Extraé los datos de este artículo:\\n\\n{texto_articulo}\"}],\n    tools=[extraccion_schema],\n    tool_choice={\"type\": \"tool\", \"name\": \"registrar_datos_articulo\"},\n)\n\ndatos = response.content[0].input  # ya es un dict, no hace falta json.loads()"
                 },
                 {
                   "type": "callout",
@@ -179,7 +179,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    system=\"Respondé siempre en el personaje del Detective Morgan: tono seco, \"\n           \"observaciones precisas, sin rodeos. Nunca rompas el personaje ni \"\n           \"añadas explicaciones fuera de su voz.\",\n    messages=[\n        {\"role\": \"user\", \"content\": \"¿Qué encontraste en la escena?\"},\n    ],\n)\n# Claude responde directamente como el Detective Morgan,\n# sin preámbulo ni ruptura de personaje"
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    system=\"Respondé siempre en el personaje del Detective Morgan: tono seco, \"\n           \"observaciones precisas, sin rodeos. Nunca rompas el personaje ni \"\n           \"añadas explicaciones fuera de su voz.\",\n    messages=[\n        {\"role\": \"user\", \"content\": \"¿Qué encontraste en la escena?\"},\n    ],\n)\n# Claude responde directamente como el Detective Morgan,\n# sin preámbulo ni ruptura de personaje"
                 },
                 {
                   "type": "callout",

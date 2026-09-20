@@ -11,12 +11,19 @@
               "blocks": [
                 {
                   "type": "table",
-                  "columns": ["Modelo", "ID", "Tokens entrada", "Tokens salida", "Mejor para"],
+                  "columns": ["Modelo", "ID", "Contexto", "Precio (entrada/salida por MTok)", "Mejor para"],
                   "rows": [
-                    ["Haiku 4.5", "claude-haiku-4-5-20251001", "200K", "8K", "Tareas rápidas y económicas"],
-                    ["Sonnet 4.6", "claude-sonnet-4-6", "200K", "8K", "Balance costo/rendimiento"],
-                    ["Opus 4.8", "claude-opus-4-8", "200K", "8K", "Máxima capacidad y complejidad"]
+                    ["Haiku 4.5", "claude-haiku-4-5-20251001", "200K", "$1 / $5", "El modelo más rápido, con inteligencia casi de frontera"],
+                    ["Sonnet 5", "claude-sonnet-5", "1M", "$2 / $10", "La mejor combinación de velocidad e inteligencia"],
+                    ["Opus 5", "claude-opus-5", "1M", "$5 / $25", "Coding agéntico complejo y trabajo enterprise"],
+                    ["Fable 5.1", "claude-fable-5-1", "1M", "$10 / $50", "Razonamiento exigente y trabajo agéntico de largo horizonte"]
                   ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Opus 4.8, Sonnet 4.6 y anteriores siguen disponibles como legacy",
+                  "content": "El catálogo de arriba es la generación 5 (más Haiku 4.5, que sigue siendo el último de su familia). Anthropic mantiene disponibles versiones anteriores (Opus 4.8, Opus 4.7, Sonnet 4.6, Fable 5) para no romper integraciones existentes, pero no son el punto de partida recomendado para un proyecto nuevo. Ver Model deprecations en la documentación oficial para fechas de retiro de cada uno."
                 }
               ]
             },
@@ -32,25 +39,38 @@
                         "Más rápido",
                         "Más económico",
                         "200K contexto",
+                        "Thinking extendido manual (sin adaptativo)",
                         "Tareas simples y directas"
                       ]
                     },
                     {
-                      "title": "Sonnet 4.6",
+                      "title": "Sonnet 5",
                       "items": [
-                        "Versátil",
+                        "Balance velocidad/inteligencia",
                         "Costo moderado",
-                        "200K contexto",
-                        "Producción general"
+                        "1M contexto",
+                        "Thinking adaptativo",
+                        "Default recomendado para producción"
                       ]
                     },
                     {
-                      "title": "Opus 4.8",
+                      "title": "Opus 5",
                       "items": [
-                        "Más potente",
+                        "Muy capaz",
+                        "Costo alto",
+                        "1M contexto",
+                        "Thinking adaptativo",
+                        "Coding agéntico complejo, trabajo enterprise"
+                      ]
+                    },
+                    {
+                      "title": "Fable 5.1",
+                      "items": [
+                        "Máxima capacidad",
                         "Costo más alto",
-                        "200K contexto",
-                        "Tareas complejas"
+                        "1M contexto",
+                        "Thinking adaptativo siempre activo",
+                        "Razonamiento y agentes de largo horizonte"
                       ]
                     }
                   ]
@@ -111,7 +131,7 @@
               "blocks": [
                 {
                   "type": "text",
-                  "content": "Elige el modelo según tres factores: velocidad requerida, complejidad de la tarea, y presupuesto."
+                  "content": "Elige el modelo según tres factores: velocidad requerida, complejidad de la tarea, y presupuesto. El criterio práctico de arranque es más simple que sopesar los tres a mano: empezar con Sonnet, subir un tier (a Opus y de ahí a Fable si hace falta) solo cuando un eval muestre que el tier actual no llega a la calidad necesaria, y bajar a Haiku solo cuando un eval confirme que la caída de calidad es aceptable para esa tarea. Decidir a ojo en vez de con un eval es la forma más común de terminar pagando de más por capacidad que no se usa, o de subestimar una tarea que sí la necesita."
                 },
                 {
                   "type": "stats",
@@ -122,16 +142,27 @@
                       "note": "Para respuestas en milisegundos y bajo costo"
                     },
                     {
-                      "label": "Sonnet 4.6",
-                      "value": "Equilibrado",
-                      "note": "Para la mayoría de casos"
+                      "label": "Sonnet 5",
+                      "value": "Equilibrado (default)",
+                      "note": "Punto de partida recomendado para la mayoría de casos"
                     },
                     {
-                      "label": "Opus 4.8",
-                      "value": "Premium",
-                      "note": "Para máxima calidad y complejidad"
+                      "label": "Opus 5",
+                      "value": "Alto",
+                      "note": "Coding agéntico complejo y trabajo enterprise, por encima del techo de Sonnet"
+                    },
+                    {
+                      "label": "Fable 5.1",
+                      "value": "Máximo",
+                      "note": "Razonamiento y agentes de largo horizonte, la exigencia más alta del stack"
                     }
                   ]
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Elegir modelo y activar razonamiento son dos decisiones independientes",
+                  "content": "Qué modelo correr es una decisión; si ese modelo piensa antes de responder (y cuánto) es otra, configurable por request con `thinking` y `effort` — ver Extended Thinking. Un modelo capaz con razonamiento apagado es rápido y directo; un modelo más chico con razonamiento activado gasta más tokens pensando. La combinación más exigente empareja el tier más capaz con un effort alto, pero subir de tier no activa razonamiento por sí solo ni viceversa."
                 }
               ]
             },
@@ -146,12 +177,16 @@
                       "description": "Resúmenes rápidos, respuestas a FAQ, clasificación simple, chatbot básico"
                     },
                     {
-                      "title": "Sonnet 4.6",
+                      "title": "Sonnet 5",
                       "description": "Análisis de contenido, escritura, traducción profesional, búsqueda avanzada"
                     },
                     {
-                      "title": "Opus 4.8",
-                      "description": "Razonamiento complejo, código avanzado, análisis profundo, research"
+                      "title": "Opus 5",
+                      "description": "Coding agéntico complejo, trabajo enterprise, tareas por encima del envelope de Sonnet"
+                    },
+                    {
+                      "title": "Fable 5.1",
+                      "description": "Razonamiento de múltiples pasos, agentes de largo horizonte, la tarea más exigente del stack"
                     }
                   ]
                 }

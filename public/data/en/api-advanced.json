@@ -63,7 +63,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.beta.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1000,\n    messages=[{\"role\": \"user\", \"content\": \"What events do I have today?\"}],\n    mcp_servers=[\n        {\n            \"type\": \"url\",\n            \"url\": \"https://my-mcp-server.example.com/sse\",\n            \"name\": \"google-calendar\",\n            \"authorization_token\": \"my-oauth-token\"\n        }\n    ],\n    tools=[\n        {\n            \"type\": \"mcp_toolset\",\n            \"mcp_server_name\": \"google-calendar\"\n        }\n    ],\n    betas=[\"mcp-client-2025-11-20\"]\n)"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.beta.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=1000,\n    messages=[{\"role\": \"user\", \"content\": \"What events do I have today?\"}],\n    mcp_servers=[\n        {\n            \"type\": \"url\",\n            \"url\": \"https://my-mcp-server.example.com/sse\",\n            \"name\": \"google-calendar\",\n            \"authorization_token\": \"my-oauth-token\"\n        }\n    ],\n    tools=[\n        {\n            \"type\": \"mcp_toolset\",\n            \"mcp_server_name\": \"google-calendar\"\n        }\n    ],\n    betas=[\"mcp-client-2025-11-20\"]\n)"
                 }
               ]
             },
@@ -142,7 +142,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=16000,\n    thinking={\n        \"type\": \"enabled\",\n        \"budget_tokens\": 10000  # max tokens for reasoning\n    },\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"Are there infinitely many primes of the form 4n+3?\"\n    }]\n)\n\nfor block in response.content:\n    if block.type == \"thinking\":\n        print(f\"Reasoning: {block.thinking}\")\n    elif block.type == \"text\":\n        print(f\"Response: {block.text}\")"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=16000,\n    thinking={\n        \"type\": \"enabled\",\n        \"budget_tokens\": 10000  # max tokens for reasoning\n    },\n    messages=[{\n        \"role\": \"user\",\n        \"content\": \"Are there infinitely many primes of the form 4n+3?\"\n    }]\n)\n\nfor block in response.content:\n    if block.type == \"thinking\":\n        print(f\"Reasoning: {block.thinking}\")\n    elif block.type == \"text\":\n        print(f\"Response: {block.text}\")"
                 },
                 {
                   "type": "callout",
@@ -192,6 +192,12 @@
                   "style": "info",
                   "title": "No token budget, two cost controls instead",
                   "content": "`max_tokens` is still the hard cap on the total (thinking + response) — Claude never exceeds it. `effort` is soft guidance on how much of that total it spends thinking, not a guaranteed token count. If `stop_reason: \"max_tokens\"` shows up at `high` effort or above, the fix is either raising `max_tokens` (if the long reasoning was worth it) or lowering `effort` (if it was overthinking)."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "Thinking comes back hidden by default on recent models",
+                  "content": "On Opus 5, Sonnet 5, Fable 5.1, and Mythos 5.1, the `thinking` block isn't included in the response unless explicitly requested: `display` defaults to `\"omitted\"`. To see it, request `thinking: {\"type\": \"adaptive\", \"display\": \"summarized\"}` (a summary of the reasoning, not the full trace) or, with the `thinking-display-updates-2026-08-18` beta header, `\"display\": \"updates\"`. If your code expects `thinking` blocks in the response and doesn't request them via `display`, they simply won't be there — that's not a model bug."
                 },
                 {
                   "type": "callout",
@@ -256,7 +262,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\nimport base64\n\nclient = anthropic.Anthropic()\n\ndef encode(path):\n    with open(path, \"rb\") as f:\n        return base64.b64encode(f.read()).decode(\"utf-8\")\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=400,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": encode(\"screen_before.png\")}},\n            {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": encode(\"screen_after.png\")}},\n            {\"type\": \"text\", \"text\": \"Comparing these two screenshots, what changed?\"},\n        ],\n    }],\n)"
+                  "code": "import anthropic\nimport base64\n\nclient = anthropic.Anthropic()\n\ndef encode(path):\n    with open(path, \"rb\") as f:\n        return base64.b64encode(f.read()).decode(\"utf-8\")\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=400,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": encode(\"screen_before.png\")}},\n            {\"type\": \"image\", \"source\": {\"type\": \"base64\", \"media_type\": \"image/png\", \"data\": encode(\"screen_after.png\")}},\n            {\"type\": \"text\", \"text\": \"Comparing these two screenshots, what changed?\"},\n        ],\n    }],\n)"
                 },
                 {
                   "type": "callout",
@@ -296,7 +302,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import base64\n\nwith open(\"annual_report.pdf\", \"rb\") as f:\n    pdf_b64 = base64.b64encode(f.read()).decode(\"utf-8\")\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=600,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\"type\": \"document\", \"source\": {\"type\": \"base64\", \"media_type\": \"application/pdf\", \"data\": pdf_b64}},\n            {\"type\": \"text\", \"text\": \"Summarize the risks mentioned in section 4\"},\n        ],\n    }],\n)"
+                  "code": "import base64\n\nwith open(\"annual_report.pdf\", \"rb\") as f:\n    pdf_b64 = base64.b64encode(f.read()).decode(\"utf-8\")\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=600,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\"type\": \"document\", \"source\": {\"type\": \"base64\", \"media_type\": \"application/pdf\", \"data\": pdf_b64}},\n            {\"type\": \"text\", \"text\": \"Summarize the risks mentioned in section 4\"},\n        ],\n    }],\n)"
                 }
               ]
             },
@@ -325,7 +331,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "# citations on a text document\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\n                \"type\": \"document\",\n                \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": policy_text},\n                \"citations\": {\"enabled\": True},\n            },\n            {\"type\": \"text\", \"text\": \"How long is user data retained?\"},\n        ],\n    }],\n)\n# each text block in the response can include a \"citations\" field\n# with the document and the exact range that backs that sentence\n\n# citations in RAG: each chunk as an independent document\ndocuments = [\n    {\n        \"type\": \"document\",\n        \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": chunk_text},\n        \"citations\": {\"enabled\": True},\n    }\n    for chunk_text, _ in top_k\n]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": documents + [{\"type\": \"text\", \"text\": \"what is the return policy?\"}]}],\n)"
+                  "code": "# citations on a text document\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=500,\n    messages=[{\n        \"role\": \"user\",\n        \"content\": [\n            {\n                \"type\": \"document\",\n                \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": policy_text},\n                \"citations\": {\"enabled\": True},\n            },\n            {\"type\": \"text\", \"text\": \"How long is user data retained?\"},\n        ],\n    }],\n)\n# each text block in the response can include a \"citations\" field\n# with the document and the exact range that backs that sentence\n\n# citations in RAG: each chunk as an independent document\ndocuments = [\n    {\n        \"type\": \"document\",\n        \"source\": {\"type\": \"text\", \"media_type\": \"text/plain\", \"data\": chunk_text},\n        \"citations\": {\"enabled\": True},\n    }\n    for chunk_text, _ in top_k\n]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": documents + [{\"type\": \"text\", \"text\": \"what is the return policy?\"}]}],\n)"
                 }
               ]
             }
@@ -387,7 +393,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "tools = [weather_tool, calendar_tool]\ntools[-1][\"cache_control\"] = {\"type\": \"ephemeral\"}  # breakpoint #1: caches all tools\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=500,\n    tools=tools,\n    system=[\n        {\n            \"type\": \"text\",\n            \"text\": full_internal_documentation,  # several thousand tokens, stable\n            \"cache_control\": {\"type\": \"ephemeral\", \"ttl\": \"1h\"},  # breakpoint #2: extended TTL\n        }\n    ],\n    messages=[{\"role\": \"user\", \"content\": \"How do I configure rate limiting?\"}],\n)\n\n# check whether the cache was used\nprint(response.usage.cache_creation_input_tokens, response.usage.cache_read_input_tokens)"
+                  "code": "tools = [weather_tool, calendar_tool]\ntools[-1][\"cache_control\"] = {\"type\": \"ephemeral\"}  # breakpoint #1: caches all tools\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=500,\n    tools=tools,\n    system=[\n        {\n            \"type\": \"text\",\n            \"text\": full_internal_documentation,  # several thousand tokens, stable\n            \"cache_control\": {\"type\": \"ephemeral\", \"ttl\": \"1h\"},  # breakpoint #2: extended TTL\n        }\n    ],\n    messages=[{\"role\": \"user\", \"content\": \"How do I configure rate limiting?\"}],\n)\n\n# check whether the cache was used\nprint(response.usage.cache_creation_input_tokens, response.usage.cache_read_input_tokens)"
                 },
                 {
                   "type": "callout",
@@ -519,7 +525,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# 1. Upload the file once\nwith open(\"annual_balance.pdf\", \"rb\") as f:\n    file = client.beta.files.upload(\n        file=(\"annual_balance.pdf\", f, \"application/pdf\"),\n        betas=[\"files-api-2025-04-14\"],\n    )\n\n# 2. Reuse it across multiple requests, without re-encoding it\nfor question in [\"Summarize the document\", \"What's the conclusion?\", \"List the risks\"]:\n    response = client.beta.messages.create(\n        model=\"claude-opus-4-8\",\n        max_tokens=1024,\n        betas=[\"files-api-2025-04-14\"],\n        messages=[{\n            \"role\": \"user\",\n            \"content\": [\n                {\"type\": \"text\", \"text\": question},\n                {\n                    \"type\": \"document\",\n                    \"source\": {\"type\": \"file\", \"file_id\": file.id}\n                }\n            ]\n        }],\n    )\n    print(response.content[0].text)"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# 1. Upload the file once\nwith open(\"annual_balance.pdf\", \"rb\") as f:\n    file = client.beta.files.upload(\n        file=(\"annual_balance.pdf\", f, \"application/pdf\"),\n        betas=[\"files-api-2025-04-14\"],\n    )\n\n# 2. Reuse it across multiple requests, without re-encoding it\nfor question in [\"Summarize the document\", \"What's the conclusion?\", \"List the risks\"]:\n    response = client.beta.messages.create(\n        model=\"claude-opus-5\",\n        max_tokens=1024,\n        betas=[\"files-api-2025-04-14\"],\n        messages=[{\n            \"role\": \"user\",\n            \"content\": [\n                {\"type\": \"text\", \"text\": question},\n                {\n                    \"type\": \"document\",\n                    \"source\": {\"type\": \"file\", \"file_id\": file.id}\n                }\n            ]\n        }],\n    )\n    print(response.content[0].text)"
                 }
               ]
             },
@@ -593,7 +599,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# code_execution: Claude computes and can generate charts\nresponse = client.beta.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=2000,\n    tools=[{\"type\": \"code_execution_20250825\", \"name\": \"code_execution\"}],\n    betas=[\"code-execution-2025-08-25\"],\n    messages=[{\"role\": \"user\", \"content\": \"Calculate the mean and standard deviation of [12, 15, 11, 19, 22, 14] and plot a histogram\"}],\n)\n\n# the response includes \"tool_result\" blocks with the code's output\n# and eventually references to generated files (charts as file_id)"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# code_execution: Claude computes and can generate charts\nresponse = client.beta.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=2000,\n    tools=[{\"type\": \"code_execution_20250825\", \"name\": \"code_execution\"}],\n    betas=[\"code-execution-2025-08-25\"],\n    messages=[{\"role\": \"user\", \"content\": \"Calculate the mean and standard deviation of [12, 15, 11, 19, 22, 14] and plot a histogram\"}],\n)\n\n# the response includes \"tool_result\" blocks with the code's output\n# and eventually references to generated files (charts as file_id)"
                 },
                 {
                   "type": "callout",

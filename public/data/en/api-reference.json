@@ -17,7 +17,7 @@
                   "type": "table",
                   "columns": ["Parameter", "Type", "Description"],
                   "rows": [
-                    ["model", "string", "The model identifier, e.g. claude-sonnet-4-6. Determines cost per token, speed, and reasoning capability."],
+                    ["model", "string", "The model identifier, e.g. claude-sonnet-5. Determines cost per token, speed, and reasoning capability."],
                     ["messages", "array of objects", "The full conversation up to this point. Each object has role (user or assistant) and content. The API is stateless: you have to resend the entire history on every call."],
                     ["max_tokens", "integer", "Maximum number of tokens to generate. The model can stop earlier if it finishes naturally. If the response hits this limit exactly, stop_reason will be max_tokens."]
                   ]
@@ -92,7 +92,7 @@
                     ["tool_use", "Claude requested to execute a tool and is waiting for the result.", "Execute the tools from the content block and return the results as tool_result."],
                     ["pause_turn", "Pause related to server-side tools (web search, etc.).", "Just forward the assistant's response as-is so it can continue."],
                     ["refusal", "Claude declined to generate a response for safety reasons.", "The response may contain partial content. Don't retry with the same input."],
-                    ["model_context_window_exceeded", "The model's context window limit was reached.", "Reduce the message history or use context compaction."]
+                    ["model_context_window_exceeded", "The context window limit was reached during generation (not the same as an input that already exceeds it before generation starts — see below).", "Reduce the message history or use context compaction."]
                   ]
                 },
                 {
@@ -100,6 +100,12 @@
                   "style": "info",
                   "title": "refusal comes with stop_details for more context",
                   "content": "When stop_reason is \"refusal\", the response includes a stop_details field with type (\"refusal\"), category, and explanation. category and explanation can come back as null if the refusal doesn't map to any named policy category — don't assume they're always populated. It's better to branch on stop_reason or stop_details.type, not on category."
+                },
+                {
+                  "type": "callout",
+                  "style": "warning",
+                  "title": "model_context_window_exceeded isn't universal across models",
+                  "content": "It's the default behavior on Claude 4.5 and later models. Earlier models require sending the `model-context-window-exceeded-2025-08-26` beta header to receive it; without that header, a cutoff from hitting the window mid-generation isn't signaled this way. Haiku 4.5 doesn't support it at all. And if the problem is that the input already exceeds the window before generating a single word, the API never returns this stop_reason: it rejects the request outright with a 400 invalid_request_error (\"prompt is too long\")."
                 }
               ]
             },
@@ -109,7 +115,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=messages,\n)\n\nmatch response.stop_reason:\n    case \"end_turn\":\n        return response.content[0].text\n    case \"max_tokens\":\n        # the response may be truncated\n        continue_generation(response)\n    case \"tool_use\":\n        # extract the tool_use blocks and execute them\n        blocks = [b for b in response.content if b.type == \"tool_use\"]\n        execute_tools(blocks)\n    case \"refusal\":\n        raise ValueError(\"Claude declined to respond\")\n    case \"model_context_window_exceeded\":\n        messages = compact_history(messages)\n        retry()"
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    messages=messages,\n)\n\nmatch response.stop_reason:\n    case \"end_turn\":\n        return response.content[0].text\n    case \"max_tokens\":\n        # the response may be truncated\n        continue_generation(response)\n    case \"tool_use\":\n        # extract the tool_use blocks and execute them\n        blocks = [b for b in response.content if b.type == \"tool_use\"]\n        execute_tools(blocks)\n    case \"refusal\":\n        raise ValueError(\"Claude declined to respond\")\n    case \"model_context_window_exceeded\":\n        messages = compact_history(messages)\n        retry()"
                 }
               ]
             }
@@ -129,7 +135,7 @@
                   "type": "table",
                   "columns": ["Code", "Type", "Description"],
                   "rows": [
-                    ["400", "invalid_request_error", "Problem with the format or content of the request: a misspelled parameter, a nonexistent model, or prefill on a model that no longer supports it."],
+                    ["400", "invalid_request_error", "Problem with the format or content of the request: a misspelled parameter, a nonexistent model, an input that already exceeds the model's context window (\"prompt is too long\"), or prefill on a model that no longer supports it."],
                     ["401", "authentication_error", "There's a problem with the API key: missing, malformed, or invalid."],
                     ["403", "permission_error", "The API key doesn't have permission to use the requested resource."],
                     ["404", "not_found_error", "The requested resource doesn't exist."],
@@ -184,7 +190,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "with client.messages.stream(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": \"Write a short poem\"}],\n) as stream:\n    for text in stream.text_stream:\n        print(text, end=\"\", flush=True)\n\n# To access stop_reason and usage after the stream:\nfinal_response = stream.get_final_message()\nprint(final_response.stop_reason)\nprint(final_response.usage)"
+                  "code": "with client.messages.stream(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    messages=[{\"role\": \"user\", \"content\": \"Write a short poem\"}],\n) as stream:\n    for text in stream.text_stream:\n        print(text, end=\"\", flush=True)\n\n# To access stop_reason and usage after the stream:\nfinal_response = stream.get_final_message()\nprint(final_response.stop_reason)\nprint(final_response.usage)"
                 }
               ]
             }

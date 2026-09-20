@@ -66,7 +66,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# same document, two roles, two completely different readings\nskeptical_system = (\n    \"You are a senior financial analyst with 15 years reviewing balance sheets \"\n    \"of industrial companies. Your reading is skeptical by default: \"\n    \"you flag risks and weak assumptions before strengths.\"\n)\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=500,\n    system=skeptical_system,\n    messages=[{\"role\": \"user\", \"content\": f\"Analyze this balance sheet:\\n{balance}\"}],\n)"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic()\n\n# same document, two roles, two completely different readings\nskeptical_system = (\n    \"You are a senior financial analyst with 15 years reviewing balance sheets \"\n    \"of industrial companies. Your reading is skeptical by default: \"\n    \"you flag risks and weak assumptions before strengths.\"\n)\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=500,\n    system=skeptical_system,\n    messages=[{\"role\": \"user\", \"content\": f\"Analyze this balance sheet:\\n{balance}\"}],\n)"
                 }
               ]
             },
@@ -110,6 +110,25 @@
           "title": "Reasoning Techniques",
           "subsections": [
             {
+              "title": "How many examples: zero-shot, one-shot, multishot",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "Separate from how a prompt is worded, how many worked examples go inside it is its own decision. Zero-shot gives the instruction with no examples at all. One-shot adds one example of the input paired with the desired output. Multishot (also called few-shot) includes several. The examples aren't training data: they live inside the prompt and show the model the exact shape of the answer a description alone often fails to pin down."
+                },
+                {
+                  "type": "text",
+                  "content": "Each example added costs tokens on every call and consumes context budget, so the choice trades quality against cost. Zero-shot is enough when the task is simple and the output shape is obvious. Move to one-shot or multishot when the output has a specific structure, casing, or edge case that a description keeps missing — one or two correct examples usually fix that faster than another paragraph of instructions. The general discipline is to add the smallest amount of prompt that produces a reliable result."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Prompting mode interacts with model choice",
+                  "content": "The two are related levers: a more capable model often succeeds zero-shot on a task where a smaller model needs examples to match the required structure — adding examples can let a cheaper model do the job. Worth deciding both together: try the simplest model and the fewest examples that meet your eval, and add model capability or examples only where the eval shows you need them (see Models and Versions)."
+                }
+              ]
+            },
+            {
               "title": "Multishot prompting",
               "blocks": [
                 {
@@ -145,7 +164,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "prompt = \"\"\"\nA store bought 120 units at $850 each and sold them all at $1330.\nIt also had $9000 in fixed expenses that month.\n\nBefore answering, think through the problem step by step inside\n<reasoning></reasoning>.\nThen, inside <answer></answer>, leave only the final\nresult: the net profit in dollars, with no additional explanation.\n\"\"\"\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": prompt}],\n)\n# the app can show the reasoning (transparency)\n# or keep only <answer> for the automated flow"
+                  "code": "prompt = \"\"\"\nA store bought 120 units at $850 each and sold them all at $1330.\nIt also had $9000 in fixed expenses that month.\n\nBefore answering, think through the problem step by step inside\n<reasoning></reasoning>.\nThen, inside <answer></answer>, leave only the final\nresult: the net profit in dollars, with no additional explanation.\n\"\"\"\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\", max_tokens=500,\n    messages=[{\"role\": \"user\", \"content\": prompt}],\n)\n# the app can show the reasoning (transparency)\n# or keep only <answer> for the automated flow"
                 },
                 {
                   "type": "callout",
@@ -185,7 +204,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "def ask(prompt):\n    r = client.messages.create(\n        model=\"claude-sonnet-4-6\", max_tokens=600,\n        messages=[{\"role\": \"user\", \"content\": prompt}],\n    )\n    return r.content[0].text\n\n# one single responsibility per prompt, instead of one giant prompt\npain_points = ask(f\"Extract, as a list, the pain points from this feedback:\\n\\n{feedback}\")\nactions = ask(f\"For each pain point, propose a concrete action:\\n\\n{pain_points}\")\nsummary = ask(f\"Summarize these actions in a paragraph for a steering committee:\\n\\n{actions}\")"
+                  "code": "def ask(prompt):\n    r = client.messages.create(\n        model=\"claude-sonnet-5\", max_tokens=600,\n        messages=[{\"role\": \"user\", \"content\": prompt}],\n    )\n    return r.content[0].text\n\n# one single responsibility per prompt, instead of one giant prompt\npain_points = ask(f\"Extract, as a list, the pain points from this feedback:\\n\\n{feedback}\")\nactions = ask(f\"For each pain point, propose a concrete action:\\n\\n{pain_points}\")\nsummary = ask(f\"Summarize these actions in a paragraph for a steering committee:\\n\\n{actions}\")"
                 }
               ]
             }
@@ -233,7 +252,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "tools = [{\n    \"name\": \"extract_invoice\",\n    \"description\": \"Extracts the key fields from an invoice.\",\n    \"strict\": True,  # guarantees the output matches the schema exactly\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"vendor_name\":  { \"type\": \"string\" },\n            \"invoice_date\": { \"type\": \"string\", \"format\": \"date\" },\n            \"total_amount\": { \"type\": \"number\" },\n            \"currency\":     { \"type\": \"string\", \"enum\": [\"USD\", \"EUR\", \"GBP\", \"ARS\"] }\n        },\n        \"required\": [\"vendor_name\", \"invoice_date\", \"total_amount\", \"currency\"]\n    }\n}]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    tools=tools,\n    tool_choice={\"type\": \"tool\", \"name\": \"extract_invoice\"},\n    messages=[{\"role\": \"user\", \"content\": f\"Invoice:\\n{invoice_text}\"}],\n)\n\nresult = response.content[0].input  # dict already validated by the API"
+                  "code": "tools = [{\n    \"name\": \"extract_invoice\",\n    \"description\": \"Extracts the key fields from an invoice.\",\n    \"strict\": True,  # guarantees the output matches the schema exactly\n    \"input_schema\": {\n        \"type\": \"object\",\n        \"properties\": {\n            \"vendor_name\":  { \"type\": \"string\" },\n            \"invoice_date\": { \"type\": \"string\", \"format\": \"date\" },\n            \"total_amount\": { \"type\": \"number\" },\n            \"currency\":     { \"type\": \"string\", \"enum\": [\"USD\", \"EUR\", \"GBP\", \"ARS\"] }\n        },\n        \"required\": [\"vendor_name\", \"invoice_date\", \"total_amount\", \"currency\"]\n    }\n}]\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    tools=tools,\n    tool_choice={\"type\": \"tool\", \"name\": \"extract_invoice\"},\n    messages=[{\"role\": \"user\", \"content\": f\"Invoice:\\n{invoice_text}\"}],\n)\n\nresult = response.content[0].input  # dict already validated by the API"
                 },
                 {
                   "type": "callout",
@@ -297,7 +316,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "MAX_RETRIES = 3\n\ndef extract_with_retry(text, max_retries=MAX_RETRIES):\n    messages = [{\"role\": \"user\", \"content\": f\"Invoice:\\n{text}\"}]\n\n    for attempt in range(max_retries):\n        resp = client.messages.create(\n            model=\"claude-sonnet-4-6\", max_tokens=1024,\n            tools=tools, tool_choice={\"type\": \"tool\", \"name\": \"extract_invoice\"},\n            messages=messages,\n        )\n        data = resp.content[0].input\n        error = validate(data)  # e.g. total_amount > 0\n\n        if not error:\n            return data\n\n        # return the error to the model so it can self-correct\n        messages += [\n            {\"role\": \"assistant\", \"content\": resp.content},\n            {\"role\": \"user\",      \"content\": [{\n                \"type\": \"tool_result\",\n                \"tool_use_id\": resp.content[0].id,\n                \"content\": f\"Validation error: {error}. Fix the value and retry.\",\n                \"is_error\": True,\n            }]},\n        ]\n\n    # retries exhausted → human review\n    log_for_review(text, data)\n    return None"
+                  "code": "MAX_RETRIES = 3\n\ndef extract_with_retry(text, max_retries=MAX_RETRIES):\n    messages = [{\"role\": \"user\", \"content\": f\"Invoice:\\n{text}\"}]\n\n    for attempt in range(max_retries):\n        resp = client.messages.create(\n            model=\"claude-sonnet-5\", max_tokens=1024,\n            tools=tools, tool_choice={\"type\": \"tool\", \"name\": \"extract_invoice\"},\n            messages=messages,\n        )\n        data = resp.content[0].input\n        error = validate(data)  # e.g. total_amount > 0\n\n        if not error:\n            return data\n\n        # return the error to the model so it can self-correct\n        messages += [\n            {\"role\": \"assistant\", \"content\": resp.content},\n            {\"role\": \"user\",      \"content\": [{\n                \"type\": \"tool_result\",\n                \"tool_use_id\": resp.content[0].id,\n                \"content\": f\"Validation error: {error}. Fix the value and retry.\",\n                \"is_error\": True,\n            }]},\n        ]\n\n    # retries exhausted → human review\n    log_for_review(text, data)\n    return None"
                 },
                 {
                   "type": "callout",
@@ -381,7 +400,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "system = \"You are a senior support analyst, precise and concise.\"\n\nprompt = \"\"\"\n<instructions>\nClassify the ticket into a category and propose a response of at most 50\nwords, in a professional tone. If key information is missing, state it\ninstead of assuming data.\n</instructions>\n\n<examples>\n<example>\nTicket: \"my order #4521 hasn't arrived\"\n<reasoning>There's an order number, the complaint is clear: shipping category.</reasoning>\n<category>shipping</category>\n</example>\n</examples>\n\n<ticket>\n{new_ticket}\n</ticket>\n\nThink briefly in <reasoning></reasoning> and then fill in\n<category></category> and <answer></answer>.\n\"\"\"\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=400,\n    system=system,\n    messages=[\n        {\"role\": \"user\", \"content\": prompt},\n        {\"role\": \"assistant\", \"content\": \"<reasoning>\"},  # prefill\n    ],\n)"
+                  "code": "system = \"You are a senior support analyst, precise and concise.\"\n\nprompt = \"\"\"\n<instructions>\nClassify the ticket into a category and propose a response of at most 50\nwords, in a professional tone. If key information is missing, state it\ninstead of assuming data.\n</instructions>\n\n<examples>\n<example>\nTicket: \"my order #4521 hasn't arrived\"\n<reasoning>There's an order number, the complaint is clear: shipping category.</reasoning>\n<category>shipping</category>\n</example>\n</examples>\n\n<ticket>\n{new_ticket}\n</ticket>\n\nThink briefly in <reasoning></reasoning> and then fill in\n<category></category> and <answer></answer>.\n\"\"\"\n\nresponse = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=400,\n    system=system,\n    messages=[\n        {\"role\": \"user\", \"content\": prompt},\n        {\"role\": \"assistant\", \"content\": \"<reasoning>\"},  # prefill\n    ],\n)"
                 }
               ]
             }
@@ -429,7 +448,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-4-6\",\n    max_tokens=1024,\n    system=[\n        {\n            \"type\": \"text\",\n            \"text\": f\"You are a legal assistant. Analyze the contract:\\n\\n{contract_40_pages}\",\n            \"cache_control\": {\"type\": \"ephemeral\"},\n        }\n    ],\n    messages=[{\"role\": \"user\", \"content\": user_question}],\n)"
+                  "code": "response = client.messages.create(\n    model=\"claude-sonnet-5\",\n    max_tokens=1024,\n    system=[\n        {\n            \"type\": \"text\",\n            \"text\": f\"You are a legal assistant. Analyze the contract:\\n\\n{contract_40_pages}\",\n            \"cache_control\": {\"type\": \"ephemeral\"},\n        }\n    ],\n    messages=[{\"role\": \"user\", \"content\": user_question}],\n)"
                 },
                 {
                   "type": "callout",
@@ -527,7 +546,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "def analyze_contract(query: str, contract: str):\n    is_lookup = classify_query(query)  # own classifier\n    params = {\n        \"model\": \"claude-sonnet-4-6\",\n        \"max_tokens\": 16000,\n        \"messages\": [{\"role\": \"user\", \"content\": f\"{query}\\n\\n{contract}\"}],\n    }\n    if not is_lookup:\n        # cross-clause reasoning → Extended Thinking\n        params[\"thinking\"] = {\"type\": \"enabled\", \"budget_tokens\": 10000}\n    return client.messages.create(**params)"
+                  "code": "def analyze_contract(query: str, contract: str):\n    is_lookup = classify_query(query)  # own classifier\n    params = {\n        \"model\": \"claude-sonnet-5\",\n        \"max_tokens\": 16000,\n        \"messages\": [{\"role\": \"user\", \"content\": f\"{query}\\n\\n{contract}\"}],\n    }\n    if not is_lookup:\n        # cross-clause reasoning → Extended Thinking\n        params[\"thinking\"] = {\"type\": \"enabled\", \"budget_tokens\": 10000}\n    return client.messages.create(**params)"
                 }
               ]
             }

@@ -31,7 +31,7 @@
                   "type": "callout",
                   "style": "info",
                   "title": "@ + fecha, no el nombre corto",
-                  "content": "En la API directa de Anthropic los modelos se identifican así: `claude-sonnet-4-6`. En Vertex AI, el mismo modelo se referencia con el formato `claude-sonnet-4@20250514` — el nombre del modelo seguido de `@` y la fecha de esa versión específica. Son IDs distintos para la misma familia de modelos; no son intercambiables entre plataformas."
+                  "content": "En la API directa de Anthropic los modelos se identifican así: `claude-sonnet-5`. En Vertex AI, el mismo modelo se referencia con el formato `claude-sonnet-4@20250514` — el nombre del modelo seguido de `@` y la fecha de esa versión específica. Son IDs distintos para la misma familia de modelos; no son intercambiables entre plataformas."
                 }
               ]
             },

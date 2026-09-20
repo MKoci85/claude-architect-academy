@@ -20,6 +20,21 @@
               ]
             },
             {
+              "title": "SDK vs. raw REST",
+              "blocks": [
+                {
+                  "type": "text",
+                  "content": "At its core, the Claude API is an HTTP REST endpoint: your code sends a request with your API key and a JSON body, and reads a JSON response back. You can call that endpoint directly with any HTTP client, without using any SDK. Most commonly, you use the official SDK (available for Python and TypeScript, among others), a thin convenience layer over that same REST API that handles authentication, request construction, retries, and response parsing so you write less boilerplate."
+                },
+                {
+                  "type": "callout",
+                  "style": "info",
+                  "title": "Same endpoint, same model",
+                  "content": "The SDK and raw REST reach the same API and the same model — the SDK doesn't unlock anything REST doesn't have, it just saves you from assembling the request by hand. Everything else in this wiki builds against the SDK and the Messages API, which sit on that same foundation."
+                }
+              ]
+            },
+            {
               "title": "Common use cases",
               "blocks": [
                 {
@@ -105,7 +120,7 @@
                 {
                   "type": "code",
                   "language": "bash",
-                  "code": "curl https://api.anthropic.com/v1/messages \\\n  -H \"x-api-key: sk-ant-...\" \\\n  -H \"content-type: application/json\" \\\n  -d '{\"model\": \"claude-opus-4-8\", \"max_tokens\": 1024, \"messages\": [{\"role\": \"user\", \"content\": \"Hello\"}]}'"
+                  "code": "curl https://api.anthropic.com/v1/messages \\\n  -H \"x-api-key: sk-ant-...\" \\\n  -H \"content-type: application/json\" \\\n  -d '{\"model\": \"claude-opus-5\", \"max_tokens\": 1024, \"messages\": [{\"role\": \"user\", \"content\": \"Hello\"}]}'"
                 }
               ]
             },
@@ -136,7 +151,7 @@
                 {
                   "type": "code",
                   "language": "python",
-                  "code": "import anthropic\n\nclient = anthropic.Anthropic(api_key=\"sk-ant-...\")\n\nmessage = client.messages.create(\n    model=\"claude-opus-4-8\",\n    max_tokens=1024,\n    messages=[\n        {\"role\": \"user\", \"content\": \"Hi, how are you?\"}\n    ]\n)\n\nprint(message.content[0].text)"
+                  "code": "import anthropic\n\nclient = anthropic.Anthropic(api_key=\"sk-ant-...\")\n\nmessage = client.messages.create(\n    model=\"claude-opus-5\",\n    max_tokens=1024,\n    messages=[\n        {\"role\": \"user\", \"content\": \"Hi, how are you?\"}\n    ]\n)\n\nprint(message.content[0].text)"
                 }
               ]
             },
@@ -151,7 +166,7 @@
                 {
                   "type": "code",
                   "language": "javascript",
-                  "code": "import Anthropic from \"@anthropic-ai/sdk\";\n\nconst client = new Anthropic({\n  apiKey: process.env.ANTHROPIC_API_KEY,\n});\n\nconst message = await client.messages.create({\n  model: \"claude-opus-4-8\",\n  max_tokens: 1024,\n  messages: [\n    { role: \"user\", content: \"Hi, how are you?\" }\n  ],\n});\n\nconsole.log(message.content[0].text);"
+                  "code": "import Anthropic from \"@anthropic-ai/sdk\";\n\nconst client = new Anthropic({\n  apiKey: process.env.ANTHROPIC_API_KEY,\n});\n\nconst message = await client.messages.create({\n  model: \"claude-opus-5\",\n  max_tokens: 1024,\n  messages: [\n    { role: \"user\", content: \"Hi, how are you?\" }\n  ],\n});\n\nconsole.log(message.content[0].text);"
                 }
               ]
             }
